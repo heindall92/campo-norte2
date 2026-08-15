@@ -11,7 +11,7 @@ Este repositorio (`campo-norte2`) publica el ecosistema SaaS WMS. La base CRM/WM
 
 ---
 
-## Fases 2–12 (esta rama)
+## Fases 2–13 (esta rama)
 
 Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, movimientos en vivo, inventario cíclico, alertas, economía unitaria, planificación de turnos, onboarding, carriers, pistola RF y **operación diaria** (CRUD, prioridades, fichaje).
 
@@ -28,7 +28,7 @@ Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, mov
 | Palets | SSCC, lote, caducidad, hueco · **alta / edición** |
 | Flota eléctrica | Torito, montacargas, retráctil; batería **solo reporte real** |
 | Recepción | ASN crear / recepcionar / **ubicar y cerrar** cuando no queda palet en muelle |
-| Expedición | Pedido · ola · **cargar muelle** · **expedir lo picado** · tracking manual |
+| Expedición | Pedido · ola · **embalar cajas** · **cargar muelle** · manifiesto · tracking manual |
 | Operarios | Cupo 25/25/25 (plazas vacantes) · CRUD · PIN / fichaje |
 | Centros | Alta de hub: ciudad y layout que escriba el usuario |
 | Pistola RF | Cola derivada del snapshot: hueco → SSCC → confirmar |

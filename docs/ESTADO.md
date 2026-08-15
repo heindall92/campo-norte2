@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-15 · Cloud Agent · WMS fase 12: expedir lo picado
+**Última actualización:** 2026-08-15 · Cloud Agent · WMS fase 13: embalaje y manifiesto de muelle
 
 ---
 
@@ -163,7 +163,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–12 hechas en esta rama: operación diaria, jornada, olas, recepción ASN, RF, móvil, putaway por zona, conteo firmado y expedición de lo picado (cargar muelle / expedir sin tracking inventado).
+Fases 8–13 hechas en esta rama: operación diaria, jornada, olas, recepción ASN, RF, móvil, putaway por zona, conteo firmado, expedición de lo picado, embalaje de cajas sueltas y manifiesto de muelle. `main` ya publica en Vercel.
 
 Siguiente: terminal ZKTeco físico y APIs de flota cuando existan. Tablas WMS en Postgres cuando haya stock real.
 

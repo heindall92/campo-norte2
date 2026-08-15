@@ -11,6 +11,7 @@ import {
   nextOpenLine,
   operatorForAppUser,
   orderFulfillment,
+  packPickedLines,
   peekWmsFocus,
   shipOutboundOrder,
   skipPickLine,
@@ -718,8 +719,8 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
             <Card title={lang === "es" ? "Ola completada" : "Wave complete"}>
               <p className="mb-3 text-sm text-[var(--ink-muted)]">
                 {lang === "es"
-                  ? "Todas las líneas cerradas. Carga los palets enteros a muelle y expede solo lo picado."
-                  : "All lines closed. Stage full pallets to dock and ship only what was picked."}
+                  ? "Todas las líneas cerradas. Embala cajas sueltas, carga palets enteros y expede solo lo picado."
+                  : "All lines closed. Pack loose cases, stage full pallets and ship only what was picked."}
               </p>
               <div className="flex flex-wrap gap-2">
                 {[...new Set(wave.lines.map((l) => l.orderCode))].map((code) => {
@@ -728,6 +729,25 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                   if (!order || !fill) return null;
                   return (
                     <span key={code} className="flex flex-wrap items-center gap-2">
+                      {fill.canPack && (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white"
+                          onClick={() => {
+                            if (!gateFloor()) return;
+                            const result = packPickedLines(snap, order.id, matched?.id ?? wave.operatorId);
+                            if (!result.ok) {
+                              setFeedback(result.error);
+                              return;
+                            }
+                            setSnap(result.snap);
+                            setFeedback(null);
+                          }}
+                        >
+                          <Package className="h-4 w-4" />
+                          {lang === "es" ? `Embalar ${code}` : `Pack ${code}`}
+                        </button>
+                      )}
                       {fill.canStage && (
                         <button
                           type="button"

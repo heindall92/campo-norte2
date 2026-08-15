@@ -21,9 +21,11 @@ import {
   operatorForAppUser,
   orderFulfillment,
   outboundItinerary,
+  packPickedLines,
   rankDayPriorities,
   shipOutboundOrder,
   stageOrderToDock,
+  buildLoadManifest,
   monthCosts,
   occupancyByZone,
   type FleetStatus,
@@ -40,6 +42,7 @@ import {
   Building2,
   CircleAlert,
   ClipboardCheck,
+  ClipboardList,
   Coins,
   Forklift,
   Grid3X3,
@@ -401,6 +404,9 @@ const OUT_ERR: Record<string, { es: string; en: string }> = {
   nothing_picked: { es: "No hay mercancía picada", en: "Nothing picked" },
   pallets_not_staged: { es: "Carga primero los palets enteros a muelle", en: "Stage full pallets to dock first" },
   dock_full: { es: "No hay hueco libre en muelle", en: "No free dock slot" },
+  not_packed: { es: "Embala las cajas sueltas antes de expedir", en: "Pack loose cases before shipping" },
+  invalid_qty: { es: "No se puede embalar más de lo picado", en: "Cannot pack more than picked" },
+  line_missing: { es: "Línea no encontrada", en: "Line missing" },
 };
 
 export function WmsOutboundPanel({ lang }: { lang: Lang }) {
@@ -425,8 +431,8 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
         </h2>
         <p className="mt-1 text-sm text-[var(--ink-muted)]">
           {lang === "es"
-            ? "Pedido → ola con palets reales → cargar muelle → expedir lo picado. El tracking lo escribes tú; no se fabrica."
-            : "Order → wave from real pallets → load dock → ship what was picked. You type tracking; nothing is invented."}
+            ? "Pedido → ola → embalar cajas sueltas → cargar palets → expedir. El manifiesto solo lista lo picado; el tracking lo escribes tú."
+            : "Order → wave → pack loose cases → load pallets → ship. The manifest lists only what was picked; you type tracking."}
         </p>
       </header>
       <Card title={lang === "es" ? "Pedido diario" : "Daily order"}>
@@ -526,6 +532,21 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
                 </span>
               </span>
               <span className="flex items-center gap-2">
+                {fill?.canPack && (
+                  <button
+                    type="button"
+                    className="rounded-full border border-[var(--glass-border)] px-2 py-0.5 text-[11px] font-semibold"
+                    onClick={() => {
+                      const result = packPickedLines(snap, stop.order.id, pickerId || null);
+                      if (result.ok) {
+                        commit(result.snap);
+                        setMsg(null);
+                      } else setMsg(OUT_ERR[result.error]?.[lang] ?? result.error);
+                    }}
+                  >
+                    {lang === "es" ? "Embalar" : "Pack"}
+                  </button>
+                )}
                 {fill?.canStage && (
                   <button
                     type="button"
@@ -692,6 +713,23 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
                   </td>
                   <td className="py-2.5">
                     <div className="flex flex-wrap gap-1">
+                      {fill?.canPack && (
+                        <button
+                          type="button"
+                          className="rounded-full border border-[var(--glass-border)] px-2 py-1 text-[11px] font-semibold"
+                          onClick={() => {
+                            const result = packPickedLines(snap, o.id, pickerId || null);
+                            if (!result.ok) {
+                              setMsg(OUT_ERR[result.error]?.[lang] ?? result.error);
+                              return;
+                            }
+                            commit(result.snap);
+                            setMsg(null);
+                          }}
+                        >
+                          {lang === "es" ? "Embalar" : "Pack"}
+                        </button>
+                      )}
                       {fill?.canStage && (
                         <button
                           type="button"
@@ -726,7 +764,7 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
                           {lang === "es" ? "Expedir" : "Ship"}
                         </button>
                       )}
-                      {fill && !fill.canStage && !fill.canShip && o.status !== "expedido" && fill.hasWave && (
+                      {fill && !fill.canStage && !fill.canShip && !fill.canPack && o.status !== "expedido" && fill.hasWave && (
                         <span className="text-[11px] text-[var(--ink-muted)]">
                           {fill.openLines
                             ? lang === "es"
@@ -746,6 +784,53 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
           </table>
         </div>
       </Card>
+      {ranked.some((row) => {
+        const m = buildLoadManifest(snap, row.order.id);
+        return m && m.rows.length > 0 && row.order.status !== "expedido";
+      }) && (
+        <Card
+          title={lang === "es" ? "Manifiesto de muelle" : "Dock manifest"}
+          subtitle={lang === "es" ? "Solo palets cargados y cajas embaladas" : "Only staged pallets and packed cases"}
+        >
+          <ul className="space-y-4">
+            {ranked.map((row) => {
+              const manifest = buildLoadManifest(snap, row.order.id);
+              if (!manifest || !manifest.rows.length || row.order.status === "expedido") return null;
+              return (
+                <li key={row.order.id} className="rounded-xl border border-[var(--glass-border)] px-3 py-2">
+                  <p className="mb-2 flex flex-wrap items-center gap-2 text-sm">
+                    <ClipboardList className="h-4 w-4 text-[var(--accent)]" />
+                    <span className="font-mono text-xs font-semibold">{manifest.order.code}</span>
+                    <span className="text-[var(--ink-muted)]">
+                      {manifest.order.dock} · {manifest.carrierName ?? (lang === "es" ? "sin carrier" : "no carrier")}
+                    </span>
+                    <Badge tone="neutral">
+                      {manifest.tracking ?? (lang === "es" ? "sin tracking" : "no tracking")}
+                    </Badge>
+                  </p>
+                  <ul className="space-y-1 text-xs">
+                    {manifest.rows.map((r, i) => {
+                      const sku = snap.skus.find((s) => s.id === r.skuId);
+                      return (
+                        <li key={`${r.lineId ?? r.sscc ?? i}`} className="flex justify-between gap-2">
+                          <span>
+                            <span className="font-semibold">{r.kind === "pallet" ? "Palet" : lang === "es" ? "Caja" : "Case"}</span>
+                            {" · "}
+                            {sku?.name ?? r.skuId}
+                            {r.sscc ? ` · ${r.sscc}` : ""}
+                            {r.slotCode ? ` · ${r.slotCode}` : ""}
+                          </span>
+                          <span className="font-mono">{r.qty}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
     </div>
   );
 }

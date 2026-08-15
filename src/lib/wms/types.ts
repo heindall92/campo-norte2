@@ -45,6 +45,8 @@ export interface PickLine {
   skuId: string;
   qty: number;
   qtyPicked: number;
+  /** Unidades embaladas. Nunca mayor que qtyPicked; 0 si aún no se ha embalado. */
+  qtyPacked: number;
   slotId: string;
   palletId: string | null;
   status: PickLineStatus;

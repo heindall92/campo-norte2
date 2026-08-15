@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildLoadManifest,
   buildWmsSeed,
   confirmPick,
   createOutboundOrder,
   nextOpenLine,
   openWaveFromOrder,
   orderFulfillment,
+  packPickLine,
+  packPickedLines,
   shipOutboundOrder,
   skipPickLine,
   stageOrderToDock,
@@ -127,10 +130,51 @@ describe("fase 12 · cargar muelle y expedir", () => {
     expect(fill?.wavesClosed).toBe(true);
     expect(fill?.qtyPicked).toBeGreaterThan(0);
     expect(fill?.fullPalletsToStage).toHaveLength(0);
-    expect(fill?.canShip).toBe(true);
-    const shipped = shipOutboundOrder(current, order.id, "op-03");
+    expect(fill?.canShip).toBe(false);
+    expect(fill?.canPack).toBe(true);
+    const blocked = shipOutboundOrder(current, order.id, "op-03");
+    expect(blocked.ok).toBe(false);
+    if (!blocked.ok) expect(blocked.error).toBe("not_packed");
+
+    const packed = packPickedLines(current, order.id, "op-03");
+    expect(packed.ok).toBe(true);
+    if (!packed.ok) return;
+    expect(packed.snap.outbound.find((o) => o.id === order.id)?.status).toBe("embalaje");
+    const manifest = buildLoadManifest(packed.snap, order.id);
+    expect(manifest?.rows.every((r) => r.kind === "caja")).toBe(true);
+    expect(manifest?.caseCount).toBe(1);
+    expect(manifest?.tracking).toBeNull();
+    const shipped = shipOutboundOrder(packed.snap, order.id, "op-03");
     expect(shipped.ok).toBe(true);
     if (!shipped.ok) return;
     expect(shipped.snap.outbound.find((o) => o.id === order.id)?.status).toBe("expedido");
+  });
+
+  it("no embala más unidades de las picadas y el manifiesto no inventa SSCC", () => {
+    const snap = buildWmsSeed();
+    const wave = snap.pickWaves.find((w) => w.id === "wave-01")!;
+    const line = nextOpenLine(wave)!;
+    const slot = snap.slots.find((s) => s.id === line.slotId)!;
+    const pallet = snap.pallets.find((p) => p.id === line.palletId)!;
+    const picked = confirmPick(snap, "wave-01", line.id, {
+      slotCode: slot.code,
+      sscc: pallet.sscc,
+      qty: 2,
+    });
+    expect(picked.ok).toBe(true);
+    if (!picked.ok) return;
+    const over = packPickLine(picked.snap, "wave-01", line.id, 3);
+    expect(over.ok).toBe(false);
+    if (!over.ok) expect(over.error).toBe("invalid_qty");
+    const ok = packPickLine(picked.snap, "wave-01", line.id, 2);
+    expect(ok.ok).toBe(true);
+    if (!ok.ok) return;
+    const packedLine = ok.snap.pickWaves
+      .find((w) => w.id === "wave-01")!
+      .lines.find((l) => l.id === line.id);
+    expect(packedLine?.qtyPacked).toBe(2);
+    const order = ok.snap.outbound.find((o) => o.code === line.orderCode)!;
+    const manifest = buildLoadManifest(ok.snap, order.id);
+    expect(manifest?.rows.some((r) => r.kind === "caja" && r.qty === 2 && r.sscc === null)).toBe(true);
   });
 });

@@ -98,6 +98,7 @@ export function openWaveFromOrder(
       skuId: row.sku.id,
       qty: row.pallet.qty,
       qtyPicked: 0,
+      qtyPacked: 0,
       slotId: row.slot.id,
       palletId: row.pallet.id,
       status: i === 0 ? ("en_curso" as const) : ("pendiente" as const),

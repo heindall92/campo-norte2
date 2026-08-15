@@ -76,11 +76,17 @@
 - Conteo cíclico firma el desvío con `operatorId`
 - Inicio móvil: atajos a ubicar y conteo
 
-## Fase 12 — Expedir lo picado (esta entrega)
+## Fase 12 — Expedir lo picado
 - Palet entero vaciado en picking libera el hueco
 - Cargar a muelle solo palets con qty 0 ya picados
 - Expedir exige ola cerrada y al menos una línea picada; no inventa tracking
 - Cajas sueltas (pick parcial) salen en el movimiento de picking; no se fabrica un palet nuevo
+
+## Fase 13 — Embalaje y manifiesto (esta entrega)
+- Embala solo cajas sueltas; no se puede superar lo picado
+- El palet entero no se vuelve a embalar: ya es unidad de carga
+- Manifiesto de muelle: palets cargados + cajas embaladas; tracking vacío si no lo escribes
+- CSP de Vercel permite las fuentes de Google (la web deja de verse sin tipografía)
 
 ## Siguiente
 - Agente pyzk en la LAN cuando haya terminal físico
