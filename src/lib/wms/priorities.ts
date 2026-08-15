@@ -90,7 +90,29 @@ export function rankDayPriorities(
     });
 }
 
-export function navigateWmsSection(section: string): void {
+export function navigateWmsSection(
+  section: string,
+  extra?: { waveId?: string; orderId?: string },
+): void {
   if (typeof window === "undefined") return;
+  try {
+    if (extra?.waveId) sessionStorage.setItem("cn-wms-focus-wave", extra.waveId);
+    else sessionStorage.removeItem("cn-wms-focus-wave");
+    if (extra?.orderId) sessionStorage.setItem("cn-wms-focus-order", extra.orderId);
+    else sessionStorage.removeItem("cn-wms-focus-order");
+  } catch {
+    /* ignore */
+  }
   window.dispatchEvent(new CustomEvent("mps-navigate", { detail: section }));
+}
+
+export function peekWmsFocus(): { waveId: string | null; orderId: string | null } {
+  try {
+    return {
+      waveId: sessionStorage.getItem("cn-wms-focus-wave"),
+      orderId: sessionStorage.getItem("cn-wms-focus-order"),
+    };
+  } catch {
+    return { waveId: null, orderId: null };
+  }
 }

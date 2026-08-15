@@ -15,7 +15,11 @@ import {
   computeUnitEconomics,
   computeWmsAlerts,
   fleetUtilization,
+  createOutboundOrder,
   navigateWmsSection,
+  openWaveFromOrder,
+  operatorForAppUser,
+  outboundItinerary,
   rankDayPriorities,
   monthCosts,
   occupancyByZone,
@@ -42,7 +46,9 @@ import {
   Users,
   Warehouse,
 } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 import { useState } from "react";
+import { WmsJornadaCard } from "./WmsJornadaCard";
 import { useWmsLive } from "./useWmsLive";
 import {
   Bar,
@@ -74,7 +80,9 @@ function statusTone(
 }
 
 export function WmsDashboardPanel({ lang }: { lang: Lang }) {
-  const { snap } = useWmsLive();
+  const { user } = useAuth();
+  const { snap, commit } = useWmsLive();
+  const matched = operatorForAppUser(snap, user);
   const [siteId, setSiteId] = useState(snap.sites[0]?.id ?? "");
   const kpis = computeTowerKpis(snap, "2026-08", siteId);
   const occ = occupancyByZone(snap.slots.filter((s) => s.siteId === siteId));
@@ -120,6 +128,8 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
           </Badge>
         </div>
       </header>
+
+      {matched && <WmsJornadaCard lang={lang} snap={snap} operatorId={matched.id} onChange={commit} />}
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -308,7 +318,15 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
             <li key={row.order.id}>
               <button
                 type="button"
-                onClick={() => navigateWmsSection("expedicion")}
+                onClick={() => {
+                  const waveId = snap.pickWaves.find(
+                    (w) => w.status !== "cerrada" && w.lines.some((l) => l.orderCode === row.order.code),
+                  )?.id;
+                  navigateWmsSection(waveId ? "picking" : "expedicion", {
+                    waveId,
+                    orderId: row.order.id,
+                  });
+                }}
                 className="flex w-full items-start justify-between gap-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2.5 text-left text-sm"
               >
                 <span>
@@ -377,6 +395,13 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
   const { snap, commit } = useWmsLive();
   const carriers = snap.carriers.filter((c) => c.active && c.orgId === snap.org.id);
   const ranked = rankDayPriorities(snap);
+  const itinerary = outboundItinerary(snap);
+  const [customer, setCustomer] = useState("");
+  const [dock, setDock] = useState("M-05");
+  const [cutOff, setCutOff] = useState("2026-08-15T18:00");
+  const [siteId, setSiteId] = useState(snap.sites[0]?.id ?? "");
+  const [pallets, setPallets] = useState(3);
+  const [msg, setMsg] = useState<string | null>(null);
 
   return (
     <div className="space-y-4">
@@ -386,10 +411,102 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
         </h2>
         <p className="mt-1 text-sm text-[var(--ink-muted)]">
           {lang === "es"
-            ? "Misma heurística que Prioridades del día: express · urgente · cut-off · palets. El tracking lo escribes tú."
-            : "Same heuristic as Today's priorities: express · urgent · cut-off · pallets. You type the tracking."}
+            ? "Pedido del día → itinerario de muelle → abrir ola con palets reales del pasillo. El tracking lo escribes tú."
+            : "Daily order → dock itinerary → open a wave from real pick-face pallets. You type the tracking."}
         </p>
       </header>
+      <Card title={lang === "es" ? "Pedido diario" : "Daily order"}>
+        <form
+          className="grid gap-2 md:grid-cols-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const result = createOutboundOrder(snap, {
+              customer,
+              cutOff: new Date(cutOff).toISOString(),
+              dock,
+              siteId,
+              lines: pallets,
+              pallets,
+              priority: "urgente",
+            });
+            if (!result.ok) {
+              setMsg(lang === "es" ? "Faltan datos del pedido" : "Order data missing");
+              return;
+            }
+            commit(result.snap);
+            setCustomer("");
+            setMsg(null);
+          }}
+        >
+          <input
+            required
+            value={customer}
+            onChange={(e) => setCustomer(e.target.value)}
+            placeholder={lang === "es" ? "Cliente / tienda" : "Customer / store"}
+            className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+          />
+          <input
+            type="datetime-local"
+            value={cutOff}
+            onChange={(e) => setCutOff(e.target.value)}
+            className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+          />
+          <input
+            value={dock}
+            onChange={(e) => setDock(e.target.value)}
+            className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+          />
+          <select
+            value={siteId}
+            onChange={(e) => setSiteId(e.target.value)}
+            className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+          >
+            {snap.sites.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.city}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            min={1}
+            value={pallets}
+            onChange={(e) => setPallets(Number(e.target.value))}
+            className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+          />
+          <button type="submit" className="rounded-full bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white">
+            {lang === "es" ? "Crear pedido" : "Create order"}
+          </button>
+        </form>
+        {msg && <p className="mt-2 text-xs font-semibold text-[var(--danger)]">{msg}</p>}
+      </Card>
+      <Card
+        title={lang === "es" ? "Itinerario de muelle" : "Dock itinerary"}
+        subtitle={lang === "es" ? "Orden de salida según ventana y prioridad" : "Outbound sequence by window and priority"}
+      >
+        <ol className="space-y-2">
+          {itinerary.map((stop) => (
+            <li
+              key={stop.order.id}
+              className="flex items-center justify-between gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2 text-sm"
+            >
+              <span>
+                <span className="mr-2 font-semibold text-[var(--accent)]">{stop.seq}</span>
+                <span className="font-mono text-xs">{stop.order.code}</span>
+                <span className="ml-2 text-[var(--ink-muted)]">
+                  {stop.order.dock} · {stop.order.customer}
+                </span>
+              </span>
+              <Badge tone="neutral">
+                {new Date(stop.windowStart ?? stop.order.cutOff).toLocaleTimeString(lang === "es" ? "es-ES" : "en-GB", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </Badge>
+            </li>
+          ))}
+        </ol>
+      </Card>
       <div className="flex flex-wrap gap-2">
         {carriers.map((c) => (
           <Badge key={c.id} tone="neutral">
@@ -471,9 +588,44 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
                   </td>
                   <td className="py-2.5 pr-3 font-semibold">{o.pallets}</td>
                   <td className="py-2.5 text-xs text-[var(--ink-muted)]">
-                    {row.waveCodes.length
-                      ? `${row.waveCodes.join(", ")} · ${row.pickDone}/${row.pickTotal}`
-                      : "—"}
+                    {row.waveCodes.length ? (
+                      <button
+                        type="button"
+                        className="font-semibold text-[var(--accent)]"
+                        onClick={() =>
+                          navigateWmsSection("picking", {
+                            waveId: snap.pickWaves.find((w) => row.waveCodes.includes(w.code))?.id,
+                            orderId: o.id,
+                          })
+                        }
+                      >
+                        {row.waveCodes.join(", ")} · {row.pickDone}/{row.pickTotal}
+                      </button>
+                    ) : row.done ? (
+                      "—"
+                    ) : (
+                      <button
+                        type="button"
+                        className="rounded-full border border-[var(--glass-border)] px-2 py-1 text-[11px] font-semibold"
+                        onClick={() => {
+                          const result = openWaveFromOrder(snap, o.id);
+                          if (!result.ok) {
+                            setMsg(
+                              result.error === "no_free_pallets"
+                                ? lang === "es"
+                                  ? "No hay palets libres en cara de picking"
+                                  : "No free pick-face pallets"
+                                : result.error,
+                            );
+                            return;
+                          }
+                          commit(result.snap);
+                          navigateWmsSection("picking", { waveId: result.waveId, orderId: o.id });
+                        }}
+                      >
+                        {lang === "es" ? "Abrir ola" : "Open wave"}
+                      </button>
+                    )}
                   </td>
                 </tr>
               );

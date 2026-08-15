@@ -1,12 +1,17 @@
 import { Badge, Card } from "@/components/CrmChrome";
+import { useAuth } from "@/lib/auth";
 import type { Lang } from "@/lib/i18n";
 import {
   FLEET_KIND_LABEL,
+  assertCanPick,
   confirmPick,
   markShortage,
   nextOpenLine,
+  operatorForAppUser,
+  peekWmsFocus,
   skipPickLine,
   type ConfirmPickError,
+  type PickGateError,
   type PickWave,
   type Slot,
 } from "@/lib/wms";
@@ -24,7 +29,16 @@ import {
   UserRound,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { WmsJornadaCard } from "./WmsJornadaCard";
 import { useWmsLive } from "./useWmsLive";
+
+const GATE_ERR: Record<PickGateError, { es: string; en: string }> = {
+  operator_missing: { es: "No hay operario de planta en esta sesión", en: "No floor operator on this session" },
+  operator_vacant: { es: "Plaza vacante", en: "Vacant seat" },
+  not_clocked: { es: "Ficha la entrada antes de picar", en: "Clock in before picking" },
+  pin_required: { es: "Introduce el PIN de picking", en: "Enter the picking PIN" },
+  pin_mismatch: { es: "PIN incorrecto", en: "Wrong PIN" },
+};
 
 const PICK_ERROR: Record<ConfirmPickError, { es: string; en: string }> = {
   wave_missing: { es: "Ola no encontrada", en: "Wave not found" },
@@ -339,9 +353,16 @@ export function WmsSlotsPanel({ lang }: { lang: Lang }) {
 
 /** Flujo operario: ticket → hueco → escáner → confirmar. */
 export function WmsPickingPanel({ lang }: { lang: Lang }) {
+  const { user } = useAuth();
   const { snap, commit: setSnap } = useWmsLive();
-  const [waveId, setWaveId] = useState(snap.pickWaves[0]?.id ?? "");
-  const wave = snap.pickWaves.find((w) => w.id === waveId) ?? snap.pickWaves[0];
+  const matched = operatorForAppUser(snap, user);
+  const isFloor = user?.role === "guide";
+  const visibleWaves = useMemo(() => {
+    if (!isFloor || !matched) return snap.pickWaves;
+    return snap.pickWaves.filter((w) => w.operatorId === matched.id || w.operatorId === null);
+  }, [isFloor, matched, snap.pickWaves]);
+  const [waveId, setWaveId] = useState(() => peekWmsFocus().waveId ?? visibleWaves[0]?.id ?? "");
+  const wave = visibleWaves.find((w) => w.id === waveId) ?? visibleWaves[0];
   const line = wave ? nextOpenLine(wave) : null;
   const slot = line ? snap.slots.find((s) => s.id === line.slotId) : null;
   const sku = line ? snap.skus.find((s) => s.id === line.skuId) : null;
@@ -352,13 +373,25 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
   const [scanSlot, setScanSlot] = useState("");
   const [scanSscc, setScanSscc] = useState("");
   const [qty, setQty] = useState(line?.qty ?? 0);
+  const [pickPin, setPickPin] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const done = wave?.lines.filter((l) => l.status === "picada").length ?? 0;
   const total = wave?.lines.length ?? 0;
 
+  function gateFloor(): boolean {
+    if (!isFloor || !matched) return true;
+    const gate = assertCanPick(snap, matched.id, pickPin || null, true);
+    if (!gate.ok) {
+      setFeedback(GATE_ERR[gate.error][lang]);
+      return false;
+    }
+    return true;
+  }
+
   function applyConfirm() {
     if (!wave || !line) return;
+    if (!gateFloor()) return;
     const result = confirmPick(snap, wave.id, line.id, {
       slotCode: scanSlot,
       sscc: scanSscc,
@@ -413,13 +446,24 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
             setScanSscc("");
           }}
         >
-          {snap.pickWaves.map((w) => (
+          {visibleWaves.map((w) => (
             <option key={w.id} value={w.id}>
               {w.code} · {w.aisle} · {w.kind} · {w.status}
             </option>
           ))}
         </select>
       </header>
+
+      {matched && (
+        <WmsJornadaCard lang={lang} snap={snap} operatorId={matched.id} onChange={setSnap} />
+      )}
+      {isFloor && !matched && (
+        <p className="rounded-xl bg-[var(--warn-bg)] px-3 py-2 text-xs font-semibold text-[var(--warn-ink)]">
+          {lang === "es"
+            ? "Esta sesión de planta no está vinculada a un operario del snapshot (el nombre debe coincidir)."
+            : "This floor session is not linked to a snapshot operator (the name must match)."}
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <Badge tone={wave.kind === "reposicion" ? "warn" : "brand"}>
@@ -552,6 +596,16 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                     className="mt-1 w-full rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
                   />
                 </label>
+                {isFloor && matched?.fingerprintEnrolled && (
+                  <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+                    {lang === "es" ? "PIN de picking" : "Picking PIN"}
+                    <input
+                      value={pickPin}
+                      onChange={(e) => setPickPin(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+                    />
+                  </label>
+                )}
                 {feedback && (
                   <p className="mb-3 rounded-xl bg-[var(--warn-bg)] px-3 py-2 text-xs font-semibold text-[var(--warn-ink)]">
                     {feedback}
@@ -581,6 +635,7 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                   <button
                     type="button"
                     onClick={() => {
+                      if (!gateFloor()) return;
                       const result = skipPickLine(snap, wave.id, line.id);
                       if (!result.ok) {
                         setFeedback(PICK_ERROR[result.error][lang]);
@@ -602,6 +657,7 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                   <button
                     type="button"
                     onClick={() => {
+                      if (!gateFloor()) return;
                       const result = markShortage(snap, wave.id, line.id, 0);
                       if (!result.ok) {
                         setFeedback(PICK_ERROR[result.error][lang]);

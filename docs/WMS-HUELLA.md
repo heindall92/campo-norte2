@@ -8,8 +8,10 @@ una “lectura de huella” en JavaScript.
 
 - Enrolamiento de **PIN de 4–6 dígitos** por operario (hash local). Sirve para
   picking y para marcar entrada/salida. **No es plantilla biométrica.**
-- `ingestAdapterPunch`: el backend/agente local puede empujar un punch ya
-  ocurrido (`operatorId`, `entrada|salida`, `at`, `deviceId`).
+- Jornada en **Picar mercancía** (rol planta) y en la torre si el login coincide
+  con un operario: entrada/salida, horas vs ventana del turno, PIN o punch pegado.
+- `ingestAdapterPunch` + campo «Pegar punch pyzk» (JSON).
+- Ejemplo de agente: `scripts/wms-zk-agent.example.py` (sin IP no conecta).
 - Las plazas «Alta pendiente» no fichan: no tienen identidad.
 
 ## Qué existe en GitHub (open source real)

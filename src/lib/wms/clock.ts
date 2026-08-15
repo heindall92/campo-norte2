@@ -21,7 +21,12 @@ export function lastPunch(punches: ClockPunch[], operatorId: string): ClockPunch
 }
 
 /** Horas del día a partir de pares entrada/salida. No inventa fichajes. */
-export function hoursFromPunches(punches: ClockPunch[], operatorId: string, dayIso: string): number {
+export function hoursFromPunches(
+  punches: ClockPunch[],
+  operatorId: string,
+  dayIso: string,
+  nowIso?: string,
+): number {
   const day = dayIso.slice(0, 10);
   const mine = punches
     .filter((p) => p.operatorId === operatorId && p.at.slice(0, 10) === day)
@@ -36,6 +41,9 @@ export function hoursFromPunches(punches: ClockPunch[], operatorId: string, dayI
       ms += Math.max(0, t - open);
       open = null;
     }
+  }
+  if (open !== null && nowIso) {
+    ms += Math.max(0, new Date(nowIso).getTime() - open);
   }
   return Math.round((ms / 3_600_000) * 10) / 10;
 }
@@ -108,6 +116,42 @@ export function clockWithPin(
     ok: true,
     snap: applyPunch(snap, op, kind, "pin", at, "PIN de verificación (no es huella biométrica)"),
   };
+}
+
+/**
+ * Fichaje sin PIN: solo si el operario aún no está enrolado.
+ * No finge huella; queda marcado como método manual.
+ */
+export function clockManual(
+  snap: WmsSnapshot,
+  operatorId: string,
+  kind: ClockPunch["kind"],
+  at = new Date().toISOString(),
+): ClockResult {
+  const op = snap.operators.find((o) => o.id === operatorId);
+  if (!op) return { ok: false, error: "operator_missing" };
+  if (op.vacant) return { ok: false, error: "operator_vacant" };
+  if (op.fingerprintEnrolled) return { ok: false, error: "pin_mismatch" };
+  const last = lastPunch(snap.clockPunches, operatorId);
+  if (kind === "entrada" && last?.kind === "entrada") return { ok: false, error: "already_in" };
+  if (kind === "salida" && last?.kind !== "entrada") return { ok: false, error: "not_in" };
+  return {
+    ok: true,
+    snap: applyPunch(snap, op, kind, "manual", at, "Marca manual · sin huella ni PIN enrolado"),
+  };
+}
+
+export function clockInOrOut(
+  snap: WmsSnapshot,
+  operatorId: string,
+  pin: string | null,
+  at = new Date().toISOString(),
+): ClockResult {
+  const last = lastPunch(snap.clockPunches, operatorId);
+  const kind = last?.kind === "entrada" ? "salida" : "entrada";
+  const op = snap.operators.find((o) => o.id === operatorId);
+  if (op?.fingerprintEnrolled) return clockWithPin(snap, operatorId, pin ?? "", kind, at);
+  return clockManual(snap, operatorId, kind, at);
 }
 
 /**

@@ -18,6 +18,8 @@ export * from "./clock";
 export * from "./priorities";
 export * from "./catalog";
 export * from "./normalize";
+export * from "./jornada";
+export * from "./waves";
 
 import { buildWmsSeed } from "./seed";
 import { normalizeWmsSnapshot, snapshotLooksUsable } from "./normalize";

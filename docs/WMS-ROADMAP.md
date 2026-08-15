@@ -55,7 +55,14 @@
 - Operarios: cupo 25/25/25 en Sevilla con plazas «Alta pendiente», CRUD, PIN y fichaje
 - Huella: adaptador documentado (`docs/WMS-HUELLA.md`); el navegador no lee ZKTeco
 
+## Fase 9 — Jornada y olas del día (esta entrega)
+- Ventanas de turno (06–14 / 14–22 / 22–06) y horas desde fichajes reales
+- Planta (Jorge): ficha en picking; no pica si no ha marcado entrada
+- Pedido diario → itinerario de muelle → abrir ola con palets reales
+- Prioridades del día saltan a la ola de picking
+- Agente ZKTeco de ejemplo (`scripts/wms-zk-agent.example.py`); el SaaS no finge lecturas
+
 ## Siguiente
-- Agente local pyzk → `ingestAdapterPunch` cuando haya terminal en planta
+- Agente pyzk en la LAN cuando haya terminal físico
 - Telemetría real de flota (ISM / I_Site / InfoLink) cuando exista contrato
 - Tablas WMS en Postgres / RLS cuando haya stock real en el Hub

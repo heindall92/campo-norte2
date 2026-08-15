@@ -22,13 +22,13 @@ Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, mov
 | Torre de control | Ocupación, alertas, €/palet, €/línea pick, huecos de turno |
 | Stock | SKU / categorías / ABC / mínimos · **alta y edición** |
 | Pasillos / huecos | Digital twin + **búsqueda** de producto/SSCC |
-| Picar mercancía | Ticket → hueco → SSCC → cantidad · omitir / faltante |
+| Picar mercancía | Jornada (entrada/salida + horas) · ticket → hueco → SSCC · omitir / faltante |
 | Movimientos | Putaway de muelle y traslados RF; reposición reserva → picking con retráctil doble |
 | Inventario cíclico | Cola por caducidad / ABC A / conteo viejo |
 | Palets | SSCC, lote, caducidad, hueco · **alta / edición** |
 | Flota eléctrica | Torito, montacargas, retráctil; batería **solo reporte real** |
 | Recepción | ASN crear / editar / cerrar |
-| Expedición | Prioridades del día enlazadas a olas; tracking manual |
+| Expedición | Pedido diario · itinerario de muelle · abrir ola · tracking manual |
 | Operarios | Cupo 25/25/25 (plazas vacantes) · CRUD · PIN / fichaje |
 | Centros | Alta de hub: ciudad y layout que escriba el usuario |
 | Pistola RF | Cola derivada del snapshot: hueco → SSCC → confirmar |

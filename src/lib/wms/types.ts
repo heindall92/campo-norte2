@@ -211,7 +211,7 @@ export interface Operator {
   pinHash: string | null;
 }
 
-export type ClockMethod = "pin" | "adapter";
+export type ClockMethod = "pin" | "adapter" | "manual";
 
 export interface ClockPunch {
   id: string;
