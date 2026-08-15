@@ -1,7 +1,7 @@
 import { hoursFromPunches, lastPunch } from "./clock";
 import { pinsMatch } from "./fingerprint";
 import { WMS_DEMO_NOW } from "./alerts";
-import type { ClockPunch, Operator, ShiftCode, StockMovement, WmsSnapshot } from "./types";
+import type { ClockMethod, ClockPunch, Operator, ShiftCode, StockMovement, WmsSnapshot } from "./types";
 
 /** Ventanas de turno (hora local del centro). No se inventan horas extra. */
 export const SHIFT_WINDOW: Record<ShiftCode, { start: string; end: string; plannedHours: number }> = {
@@ -95,7 +95,7 @@ export interface ShiftCloseOperator {
   hoursWorked: number;
   clockedIn: boolean;
   lastKind: "entrada" | "salida" | null;
-  method: string | null;
+  method: ClockMethod | null;
 }
 
 export interface ShiftClose {
@@ -138,11 +138,11 @@ export function buildShiftClose(
     byOp.set(punch.operatorId, list);
   }
   const operators: ShiftCloseOperator[] = [...byOp.entries()]
-    .map(([operatorId, list]) => {
+    .flatMap(([operatorId, list]) => {
       const operator = snap.operators.find((o) => o.id === operatorId);
-      if (!operator) return null;
+      if (!operator) return [];
       const last = lastPunch(list, operatorId);
-      return {
+      const row: ShiftCloseOperator = {
         operator,
         punches: list.slice().sort((a, b) => a.at.localeCompare(b.at)),
         hoursWorked: hoursFromPunches(list, operatorId, dayIso, dayIso),
@@ -150,8 +150,8 @@ export function buildShiftClose(
         lastKind: last?.kind ?? null,
         method: last?.method ?? null,
       };
+      return [row];
     })
-    .filter((row): row is ShiftCloseOperator => Boolean(row))
     .sort((a, b) => a.operator.name.localeCompare(b.operator.name));
 
   const movements = snap.movements.filter(
