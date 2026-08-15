@@ -75,7 +75,9 @@ export function leadPriorityModeHint(mode: LeadPriorityMode, lang: Lang = "es"):
 
 /** Coste simbólico de una llamada comercial (no reescribe el score). */
 const CALL_COST_EUR = 25;
-const DEFAULT_TICKET = MPS_ANNEX.revenueCurrent / MPS_ANNEX.travelersCurrent;
+const VOLUME =
+  MPS_ANNEX.travelersCurrent > 0 ? MPS_ANNEX.travelersCurrent : Math.max(MPS_ANNEX.palletsLive, 1);
+const DEFAULT_TICKET = MPS_ANNEX.revenueCurrent / VOLUME;
 const DEFAULT_MARGIN = MPS_ANNEX.marginTargetPct / 100;
 const K_NEIGHBORS = 5;
 
