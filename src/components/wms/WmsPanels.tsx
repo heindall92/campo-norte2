@@ -11,6 +11,7 @@ import {
   WMS_DEMO_NOW,
   alertCounts,
   assignOutboundCarrier,
+  setOutboundTracking,
   CARRIER_KIND_LABEL,
   computeShiftCoverage,
   computeSitePnl,
@@ -712,8 +713,8 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
         </h2>
         <p className="mt-1 text-sm text-[var(--ink-muted)]">
           {lang === "es"
-            ? "Carrier, tracking y ventana de muelle sobre el corte de tienda."
-            : "Carrier, tracking and dock window on store cut-off."}
+            ? "Carrier y ventana de muelle (derivada del cut-off). El tracking lo escribes tú: no se fabrica."
+            : "Carrier and dock window (from cut-off). You type the tracking: it is not fabricated."}
         </p>
       </header>
       <div className="flex flex-wrap gap-2">
@@ -768,7 +769,17 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
                       ))}
                     </select>
                   </td>
-                  <td className="py-2.5 pr-3 font-mono text-[11px] text-[var(--ink-muted)]">{o.tracking ?? "—"}</td>
+                  <td className="py-2.5 pr-3">
+                    <input
+                      defaultValue={o.tracking ?? ""}
+                      placeholder={lang === "es" ? "Tracking real" : "Real tracking"}
+                      className="w-36 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-2 py-1 font-mono text-[11px]"
+                      onBlur={(e) => {
+                        const result = setOutboundTracking(snap, o.id, e.target.value);
+                        if (result.ok) persist(result.snap);
+                      }}
+                    />
+                  </td>
                   <td className="py-2.5 pr-3">
                     <Badge tone={o.priority === "normal" ? "neutral" : o.priority === "urgente" ? "warn" : "bad"}>
                       {o.priority}
@@ -797,7 +808,9 @@ export function WmsSitePnlCard({ lang, siteId }: { lang: Lang; siteId?: string }
   return (
     <Card
       title={lang === "es" ? "P&L del centro (3PL)" : "Site P&L (3PL)"}
-      subtitle={`${site?.name ?? CAMPO_NORTE_ORG.legalName} · ${pnl.month}`}
+      subtitle={`${site?.name ?? CAMPO_NORTE_ORG.legalName} · ${pnl.month} · ${
+        lang === "es" ? "tarifas WMS locales, no es tesorería del Hub" : "local WMS tariffs, not Hub treasury"
+      }`}
     >
       <div className="mb-3 grid gap-3 sm:grid-cols-3">
         <div>

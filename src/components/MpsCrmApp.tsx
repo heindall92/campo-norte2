@@ -181,6 +181,7 @@ import {
   RefreshCw,
   Save,
   ScanBarcode,
+  ScanLine,
   Search,
   Settings,
   Shield,
@@ -208,10 +209,10 @@ import {
   WmsOperatorsPanel,
   WmsOutboundPanel,
   WmsPalletsPanel,
-  WmsSitePnlCard,
   WmsStockPanel,
 } from "@/components/wms/WmsPanels";
 import { WmsSitesPanel } from "@/components/wms/WmsSites";
+import { WmsRfGunPanel } from "@/components/wms/WmsRfGun";
 import { WmsPickingPanel, WmsSlotsPanel } from "@/components/wms/AislePicking";
 import { WmsCycleCountPanel, WmsMovementsPanel } from "@/components/wms/WmsLiveOps";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -239,6 +240,7 @@ const NAV_IDS: { id: Section; icon: typeof LayoutDashboard; labelKey: string }[]
   { id: "stock", icon: Boxes, labelKey: "nav_stock" },
   { id: "huecos", icon: Grid3X3, labelKey: "nav_slots" },
   { id: "picking", icon: ScanBarcode, labelKey: "nav_picking" },
+  { id: "rf", icon: ScanLine, labelKey: "nav_rf" },
   { id: "movimientos", icon: ArrowLeftRight, labelKey: "nav_movimientos" },
   { id: "inventario", icon: ClipboardCheck, labelKey: "nav_inventario" },
   { id: "palets", icon: Package, labelKey: "nav_pallets" },
@@ -1712,7 +1714,6 @@ function TreasurySection({ lang }: { lang: Lang }) {
         }}
       />
       <PnLPanel invoices={hub.invoices} reservations={hub.reservations} lang={lang} />
-      <WmsSitePnlCard lang={lang} />
       <FiscalCalendarPanel invoices={hub.invoices} lang={lang} />
     </div>
   );
@@ -4028,6 +4029,7 @@ export function MpsCrmApp() {
       {section === "stock" && <WmsStockPanel lang={lang} />}
       {section === "huecos" && <WmsSlotsPanel lang={lang} />}
       {section === "picking" && <WmsPickingPanel lang={lang} />}
+      {section === "rf" && <WmsRfGunPanel lang={lang} />}
       {section === "movimientos" && <WmsMovementsPanel lang={lang} />}
       {section === "inventario" && <WmsCycleCountPanel lang={lang} />}
       {section === "palets" && <WmsPalletsPanel lang={lang} />}

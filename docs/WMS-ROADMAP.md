@@ -34,11 +34,17 @@
 - Huecos que no se cubren = contratar
 - Iconos siempre Lucide (`lucide-react`, https://lucide.dev)
 
-## Fase 6 — Tenant, onboarding y carriers (esta entrega)
+## Fase 6 — Tenant, onboarding y carriers
 - `org_id` en el snapshot (aislamiento de dominio; RLS Postgres queda para infra)
-- Alta de centro: layout de pasillos + muelle M, huecos libres
-- Presets Basel / München / Valencia
-- Expedición: carrier (SEUR, DHL Freight, Carreras, XPO), tracking y ventana de muelle
+- Alta de centro con ciudad y layout **escritos por el usuario** (sin presets inventados)
+- Expedición: carrier del catálogo; tracking **manual**; ventana de muelle derivada del cut-off
+
+## Fase 7 — Pistola RF (esta entrega)
+- Cola RF derivada del snapshot (picado abierto, palet en muelle, reposición, conteo)
+- Escaneo real: hueco → SSCC → destino/cantidad; no confirma si no coincide
+- Tesorería del Hub ya no mezcla el P&L WMS inventado
+- Plantilla de turnos: no se inventan operarios para “cerrar huecos”
 
 ## Siguiente
-- RLS Postgres real, integraciones ERP / RF de pistola, EDI carriers
+- Tablas WMS en Postgres / RLS cuando haya stock real en el Hub
+- EDI carriers cuando haya feed real de tracking

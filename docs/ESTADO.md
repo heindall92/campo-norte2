@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-10 · por Cursor · rebrand **Campo Norte** (anonimización legal)
+**Última actualización:** 2026-08-15 · Cloud Agent · WMS: datos honestos + pistola RF
 
 ---
 
@@ -161,8 +161,9 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 ## 6 · Siguiente tarea (UNA)
 
-> **Endurecer Auth Supabase:** desactivar alta pública y promover el primer
-> admin en `mps_profiles`. Aurora ya está en `main`.
+> **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales.
+
+Tablas WMS en Postgres cuando haya stock real en el Hub. EDI de carriers cuando haya feed de tracking.
 
 ### Plan B — repo público (fecha límite 2026-08-22)
 

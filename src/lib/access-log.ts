@@ -92,6 +92,7 @@ export function sectionToAccessEvent(section: AppSection): AccessEvent | null {
     section === "stock" ||
     section === "huecos" ||
     section === "picking" ||
+    section === "rf" ||
     section === "movimientos" ||
     section === "inventario" ||
     section === "palets" ||

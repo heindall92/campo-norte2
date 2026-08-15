@@ -4,13 +4,10 @@ export type AssignCarrierError = "order_missing" | "carrier_missing" | "inactive
 
 const DOCK_WINDOW_MS = 90 * 60 * 1000;
 
-export function trackingFor(carrierCode: string, orderCode: string): string {
-  const compact = orderCode.replace(/[^A-Z0-9]/gi, "").slice(-8);
-  return `${carrierCode}-${compact}`;
-}
-
+/** Ventana de muelle derivada del cut-off del pedido (no se inventa otra hora). */
 export function dockWindowFor(cutOffIso: string): { start: string; end: string } {
   const end = new Date(cutOffIso);
+  if (Number.isNaN(end.getTime())) return { start: cutOffIso, end: cutOffIso };
   const start = new Date(end.getTime() - DOCK_WINDOW_MS);
   return { start: start.toISOString(), end: end.toISOString() };
 }
@@ -37,11 +34,30 @@ export function assignOutboundCarrier(
           ? {
               ...o,
               carrierId: carrier.id,
-              tracking: trackingFor(carrier.code, o.code),
               dockWindowStart: o.dockWindowStart ?? window.start,
               dockWindowEnd: o.dockWindowEnd ?? window.end,
             }
           : o,
+      ),
+    },
+  };
+}
+
+/** El tracking lo escribe el usuario / el carrier; aquí no se fabrica. */
+export function setOutboundTracking(
+  snap: WmsSnapshot,
+  orderId: string,
+  tracking: string,
+): { ok: true; snap: WmsSnapshot } | { ok: false; error: "order_missing" } {
+  const order = snap.outbound.find((o) => o.id === orderId);
+  if (!order) return { ok: false, error: "order_missing" };
+  const value = tracking.trim();
+  return {
+    ok: true,
+    snap: {
+      ...snap,
+      outbound: snap.outbound.map((o) =>
+        o.id === orderId ? { ...o, tracking: value.length ? value : null } : o,
       ),
     },
   };

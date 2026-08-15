@@ -11,6 +11,7 @@ export * from "./shifts";
 export * from "./org";
 export * from "./onboard";
 export * from "./carriers";
+export * from "./rf";
 
 import { buildWmsSeed } from "./seed";
 import { WMS_STORAGE_KEY, type WmsSnapshot } from "./types";
@@ -27,7 +28,8 @@ export function loadWmsSnapshot(): WmsSnapshot {
         "position" in parsed.slots[0] &&
         Array.isArray(parsed.pickWaves) &&
         parsed.org?.id &&
-        Array.isArray(parsed.carriers)
+        Array.isArray(parsed.carriers) &&
+        typeof parsed.seededFromDemo === "boolean"
       ) {
         return parsed;
       }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assignOutboundCarrier, trackingFor } from "./carriers";
+import { assignOutboundCarrier } from "./carriers";
 import { CAMPO_NORTE_ORG, scopeSnapshotToOrg } from "./org";
 import { generateSiteSlots, nextSiteCode, onboardSite } from "./onboard";
 import { buildWmsSeed } from "./seed";
@@ -58,18 +58,15 @@ describe("wms org, onboard and carriers", () => {
     expect(result.error).toBe("wrong_org");
   });
 
-  it("assigns carrier, tracking and dock window", () => {
+  it("assigns a carrier without fabricating a tracking number", () => {
     const snap = buildWmsSeed();
-    const order = snap.outbound.find((o) => o.id === "out-02")!;
-    expect(order.carrierId).toBeTruthy();
     const result = assignOutboundCarrier(snap, "out-02", "car-dhl");
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const next = result.snap.outbound.find((o) => o.id === "out-02")!;
     expect(next.carrierId).toBe("car-dhl");
-    expect(next.tracking).toMatch(/^DHL-/);
+    expect(next.tracking).toBeNull();
     expect(next.dockWindowStart).toBeTruthy();
-    expect(trackingFor("SEUR", "OUT-SEV-8841")).toBe("SEUR-TSEV8841");
   });
 
   it("builds occupied demo slots like the seed layout helper", () => {

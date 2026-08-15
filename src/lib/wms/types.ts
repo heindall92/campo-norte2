@@ -234,6 +234,8 @@ export interface StockMovement {
 
 export interface WmsSnapshot {
   org: WmsOrg;
+  /** true = semilla local de almacén, no es el Data Hub de producción */
+  seededFromDemo: boolean;
   sites: WarehouseSite[];
   skus: Sku[];
   slots: Slot[];
@@ -282,4 +284,4 @@ export const FLEET_KIND_LABEL: Record<FleetKind, { es: string; en: string }> = {
   apilador: { es: "Apilador", en: "Stacker" },
 };
 
-export const WMS_STORAGE_KEY = "cn-wms-hub-v6";
+export const WMS_STORAGE_KEY = "cn-wms-hub-v7";

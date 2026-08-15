@@ -10,29 +10,15 @@ import {
   type WarehouseZone,
   type WmsSnapshot,
 } from "@/lib/wms";
-import { cn } from "@/lib/utils";
-import { Building2, Check, Globe, MapPin, Plus, Warehouse } from "lucide-react";
+import { Building2, Check, MapPin, Plus, Warehouse } from "lucide-react";
 import { useState } from "react";
-
-const PRESETS: {
-  id: string;
-  city: string;
-  region: string;
-  country: string;
-  zone: WarehouseZone;
-  aisles: string;
-}[] = [
-  { id: "basel", city: "Basel", region: "Basel-Stadt", country: "CH", zone: "seco", aisles: "H, I" },
-  { id: "munich", city: "München", region: "Bayern", country: "DE", zone: "seco", aisles: "K, L" },
-  { id: "valencia", city: "Valencia", region: "Comunitat Valenciana", country: "ES", zone: "fresco", aisles: "F, G" },
-];
 
 export function WmsSitesPanel({ lang }: { lang: Lang }) {
   const [snap, setSnap] = useState(() => loadWmsSnapshot());
-  const [city, setCity] = useState("Basel");
-  const [region, setRegion] = useState("Basel-Stadt");
-  const [country, setCountry] = useState("CH");
-  const [aisles, setAisles] = useState("H, I");
+  const [city, setCity] = useState("");
+  const [region, setRegion] = useState("");
+  const [country, setCountry] = useState("ES");
+  const [aisles, setAisles] = useState("");
   const [bays, setBays] = useState(4);
   const [levels, setLevels] = useState(4);
   const [zone, setZone] = useState<WarehouseZone>("seco");
@@ -42,16 +28,6 @@ export function WmsSitesPanel({ lang }: { lang: Lang }) {
   function persist(next: WmsSnapshot) {
     saveWmsSnapshot(next);
     setSnap(next);
-  }
-
-  function applyPreset(id: string) {
-    const p = PRESETS.find((x) => x.id === id);
-    if (!p) return;
-    setCity(p.city);
-    setRegion(p.region);
-    setCountry(p.country);
-    setAisles(p.aisles);
-    setZone(p.zone);
   }
 
   function submit() {
@@ -138,27 +114,12 @@ export function WmsSitesPanel({ lang }: { lang: Lang }) {
 
       <Card
         title={lang === "es" ? "Dar de alta un centro" : "Onboard a site"}
-        subtitle={lang === "es" ? "Presets EU / Andalucía" : "EU / Andalusia presets"}
+        subtitle={
+          lang === "es"
+            ? "Escribe la ciudad y el layout reales. No hay presets inventados."
+            : "Type the real city and layout. No invented presets."
+        }
       >
-        <div className="mb-3 flex flex-wrap gap-2">
-          {PRESETS.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => applyPreset(p.id)}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold",
-                city === p.city
-                  ? "border-transparent bg-[var(--accent)] text-white"
-                  : "border-[var(--glass-border)]",
-              )}
-            >
-              <Globe className="h-3.5 w-3.5" />
-              {p.city}
-            </button>
-          ))}
-        </div>
-
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
             {lang === "es" ? "Ciudad" : "City"}

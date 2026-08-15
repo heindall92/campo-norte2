@@ -28,10 +28,11 @@ Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, mov
 | Palets | SSCC, lote, caducidad, hueco |
 | Flota eléctrica | Incluye **retráctil doble stand-up** asignada a reposición |
 | Recepción | ASN / muelle / putaway |
-| Expedición | Olas a tienda, **carrier** (SEUR / DHL / Carreras / XPO), tracking, cut-off |
-| Operarios | Turnos **asignables**, cubrir huecos con excedente (sol/atardecer/luna Lucide), extras, €/h |
-| Centros | Alta de hub en el tenant (`org_id`), presets Basel / München / Valencia |
-| Costes | OPEX vs presupuesto, €/palet, P&L 3PL del hub (también en Tesorería) |
+| Expedición | Carrier del catálogo; **tracking manual**; cut-off |
+| Operarios | Turnos asignables; cubrir huecos **solo si hay excedente real** |
+| Centros | Alta de hub: ciudad y layout que escriba el usuario |
+| Pistola RF | Cola derivada del snapshot: hueco → SSCC → confirmar |
+| Costes | OPEX vs presupuesto y P&L tarifario WMS (**no** se mezcla con Tesorería del Hub) |
 
 Se conservan módulos útiles del CRM original (facturas, tesorería, aprobaciones, conocimiento, hub).
 
@@ -69,8 +70,9 @@ Cómo probar fase 2:
 8. Torre de control: lista de alertas (batería Still EXU-S, cut-off Alcalá, caducidad).
 9. **Operarios** → cobertura mañana/tarde/noche. **Cubrir huecos** mueve excedente (picker noche + carretillero tarde). Lo que queda es contratar.
 10. **Costes** o **Tesorería** → P&L 3PL del hub (€/palet y contribución).
-11. **Centros** → preset Basel → Alta en el tenant. Luego **Pasillos / huecos** y elige el hub nuevo.
-12. **Expedición** → cambia el carrier; se regenera tracking.
+11. **Centros** → escribe ciudad y pasillos reales (sin presets). Luego **Pasillos / huecos**.
+12. **Expedición** → elige carrier; el tracking se escribe a mano (vacío hasta entonces).
+13. **Pistola RF** → escanea el hueco y el SSCC de la cola; si no coinciden, no confirma.
 
 ---
 

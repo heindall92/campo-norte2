@@ -30,6 +30,7 @@ const WMS_CORE: AppSection[] = [
   "stock",
   "huecos",
   "picking",
+  "rf",
   "movimientos",
   "inventario",
   "palets",
@@ -87,7 +88,7 @@ export const ROLE_ALLOWED_SECTIONS: Record<UserRole, readonly AppSection[]> = {
     "conocimiento",
     "ajustes",
   ],
-  guide: ["dashboard", "huecos", "picking", "movimientos", "inventario", "palets", "flota", "recepcion", "expedicion", "conocimiento", "ajustes"],
+  guide: ["dashboard", "huecos", "picking", "rf", "movimientos", "inventario", "palets", "flota", "recepcion", "expedicion", "conocimiento", "ajustes"],
 };
 
 export function canAccessSection(role: UserRole, section: AppSection): boolean {

@@ -1,7 +1,7 @@
 import { slotRecordId } from "./location";
 import { generateSiteSlots } from "./onboard";
 import { CAMPO_NORTE_ORG } from "./org";
-import { dockWindowFor, trackingFor } from "./carriers";
+import { dockWindowFor } from "./carriers";
 import type {
   Carrier,
   CostLine,
@@ -374,70 +374,6 @@ const OPERATORS: Operator[] = [
     overtimeHoursWeek: 0,
     hiredAt: "2022-11-03",
   },
-  {
-    id: "op-12",
-    code: "OP-2412",
-    name: "Nuria Vázquez",
-    role: "picker",
-    shift: "manana",
-    siteId: SITE_SEV.id,
-    active: true,
-    certifications: ["picking", "scanner"],
-    costPerHour: 12.6,
-    picksPerHour: 88,
-    movesToday: 540,
-    hoursToday: 6.4,
-    overtimeHoursWeek: 0,
-    hiredAt: "2024-09-16",
-  },
-  {
-    id: "op-13",
-    code: "OP-2513",
-    name: "Diego Rivas",
-    role: "picker",
-    shift: "manana",
-    siteId: SITE_SEV.id,
-    active: true,
-    certifications: ["picking"],
-    costPerHour: 12.4,
-    picksPerHour: 74,
-    movesToday: 280,
-    hoursToday: 5.1,
-    overtimeHoursWeek: 1,
-    hiredAt: "2025-03-03",
-  },
-  {
-    id: "op-14",
-    code: "OP-2614",
-    name: "Pablo Ortiz",
-    role: "carretillero",
-    shift: "manana",
-    siteId: SITE_SEV.id,
-    active: true,
-    certifications: ["carretilla", "retractil"],
-    costPerHour: 14.0,
-    picksPerHour: 0,
-    movesToday: 36,
-    hoursToday: 6.2,
-    overtimeHoursWeek: 2,
-    hiredAt: "2023-07-11",
-  },
-  {
-    id: "op-15",
-    code: "OP-2715",
-    name: "Sergio Blanco",
-    role: "carretillero",
-    shift: "manana",
-    siteId: SITE_SEV.id,
-    active: true,
-    certifications: ["carretilla", "retractil_doble"],
-    costPerHour: 14.5,
-    picksPerHour: 0,
-    movesToday: 22,
-    hoursToday: 4.8,
-    overtimeHoursWeek: 0,
-    hiredAt: "2025-01-20",
-  },
 ];
 
 const FLEET: FleetUnit[] = [
@@ -684,12 +620,11 @@ function withCarrier(
   order: Omit<OutboundOrder, "carrierId" | "tracking" | "dockWindowStart" | "dockWindowEnd">,
   carrierId: string,
 ): OutboundOrder {
-  const carrier = CARRIERS.find((c) => c.id === carrierId)!;
   const window = dockWindowFor(order.cutOff);
   return {
     ...order,
     carrierId,
-    tracking: trackingFor(carrier.code, order.code),
+    tracking: null,
     dockWindowStart: window.start,
     dockWindowEnd: window.end,
   };
@@ -863,6 +798,7 @@ export function buildWmsSeed(): WmsSnapshot {
   const pickWaves = buildPickWaves(slots, pallets);
   return {
     org: CAMPO_NORTE_ORG,
+    seededFromDemo: true,
     sites: [SITE_SEV, SITE_HUE],
     skus: SKUS,
     slots,
