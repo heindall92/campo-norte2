@@ -10,6 +10,8 @@ import {
   ZONE_LABEL,
   WMS_DEMO_NOW,
   alertCounts,
+  assignOutboundCarrier,
+  CARRIER_KIND_LABEL,
   computeShiftCoverage,
   computeSitePnl,
   computeTowerKpis,
@@ -98,7 +100,7 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
         <div>
           <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
             <Building2 className="h-3.5 w-3.5" />
-            {CAMPO_NORTE_ORG.plan} · {snap.sites.length} {lang === "es" ? "centros" : "sites"}
+            {snap.org.plan} · {snap.sites.length} {lang === "es" ? "centros" : "sites"}
           </p>
           <h2 className="font-[family-name:var(--mps-display)] text-2xl text-[var(--ink)] md:text-3xl">
             {site?.name ?? "Campo Norte"}
@@ -694,7 +696,14 @@ export function WmsInboundPanel({ lang }: { lang: Lang }) {
 }
 
 export function WmsOutboundPanel({ lang }: { lang: Lang }) {
-  const snap = useWms();
+  const [snap, setSnap] = useState(() => loadWmsSnapshot());
+  const carriers = snap.carriers.filter((c) => c.active && c.orgId === snap.org.id);
+
+  function persist(next: WmsSnapshot) {
+    saveWmsSnapshot(next);
+    setSnap(next);
+  }
+
   return (
     <div className="space-y-4">
       <header>
@@ -703,18 +712,30 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
         </h2>
         <p className="mt-1 text-sm text-[var(--ink-muted)]">
           {lang === "es"
-            ? "Picking, embalaje, muelle y corte de tienda."
-            : "Picking, pack, dock and store cut-off."}
+            ? "Carrier, tracking y ventana de muelle sobre el corte de tienda."
+            : "Carrier, tracking and dock window on store cut-off."}
         </p>
       </header>
+      <div className="flex flex-wrap gap-2">
+        {carriers.map((c) => (
+          <Badge key={c.id} tone="neutral">
+            <span className="inline-flex items-center gap-1.5">
+              <Truck className="h-3 w-3" />
+              {c.name} · {CARRIER_KIND_LABEL[c.kind][lang]}
+            </span>
+          </Badge>
+        ))}
+      </div>
       <Card>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[680px] text-left text-sm">
+          <table className="w-full min-w-[860px] text-left text-sm">
             <thead className="text-xs uppercase tracking-wide text-[var(--ink-muted)]">
               <tr>
                 <th className="pb-2 pr-3">{lang === "es" ? "Pedido" : "Order"}</th>
                 <th className="pb-2 pr-3">{lang === "es" ? "Cliente" : "Customer"}</th>
                 <th className="pb-2 pr-3">Cut-off</th>
+                <th className="pb-2 pr-3">{lang === "es" ? "Carrier" : "Carrier"}</th>
+                <th className="pb-2 pr-3">Tracking</th>
                 <th className="pb-2 pr-3">{lang === "es" ? "Prioridad" : "Priority"}</th>
                 <th className="pb-2 pr-3">{lang === "es" ? "Estado" : "Status"}</th>
                 <th className="pb-2">Palets</th>
@@ -731,6 +752,23 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
                       minute: "2-digit",
                     })}
                   </td>
+                  <td className="py-2.5 pr-3">
+                    <select
+                      className="rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-2 py-1 text-xs"
+                      value={o.carrierId ?? ""}
+                      onChange={(e) => {
+                        const result = assignOutboundCarrier(snap, o.id, e.target.value);
+                        if (result.ok) persist(result.snap);
+                      }}
+                    >
+                      {carriers.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.code}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="py-2.5 pr-3 font-mono text-[11px] text-[var(--ink-muted)]">{o.tracking ?? "—"}</td>
                   <td className="py-2.5 pr-3">
                     <Badge tone={o.priority === "normal" ? "neutral" : o.priority === "urgente" ? "warn" : "bad"}>
                       {o.priority}

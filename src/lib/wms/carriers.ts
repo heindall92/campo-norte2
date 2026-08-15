@@ -1,0 +1,48 @@
+import type { WmsSnapshot } from "./types";
+
+export type AssignCarrierError = "order_missing" | "carrier_missing" | "inactive" | "wrong_org";
+
+const DOCK_WINDOW_MS = 90 * 60 * 1000;
+
+export function trackingFor(carrierCode: string, orderCode: string): string {
+  const compact = orderCode.replace(/[^A-Z0-9]/gi, "").slice(-8);
+  return `${carrierCode}-${compact}`;
+}
+
+export function dockWindowFor(cutOffIso: string): { start: string; end: string } {
+  const end = new Date(cutOffIso);
+  const start = new Date(end.getTime() - DOCK_WINDOW_MS);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+export function assignOutboundCarrier(
+  snap: WmsSnapshot,
+  orderId: string,
+  carrierId: string,
+): { ok: true; snap: WmsSnapshot } | { ok: false; error: AssignCarrierError } {
+  const order = snap.outbound.find((o) => o.id === orderId);
+  if (!order) return { ok: false, error: "order_missing" };
+  const carrier = snap.carriers.find((c) => c.id === carrierId);
+  if (!carrier) return { ok: false, error: "carrier_missing" };
+  if (!carrier.active) return { ok: false, error: "inactive" };
+  if (carrier.orgId !== snap.org.id) return { ok: false, error: "wrong_org" };
+
+  const window = dockWindowFor(order.cutOff);
+  return {
+    ok: true,
+    snap: {
+      ...snap,
+      outbound: snap.outbound.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              carrierId: carrier.id,
+              tracking: trackingFor(carrier.code, o.code),
+              dockWindowStart: o.dockWindowStart ?? window.start,
+              dockWindowEnd: o.dockWindowEnd ?? window.end,
+            }
+          : o,
+      ),
+    },
+  };
+}

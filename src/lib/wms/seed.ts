@@ -1,5 +1,9 @@
-import { formatSlotCode, isPickFaceLevel, slotRecordId } from "./location";
+import { slotRecordId } from "./location";
+import { generateSiteSlots } from "./onboard";
+import { CAMPO_NORTE_ORG } from "./org";
+import { dockWindowFor, trackingFor } from "./carriers";
 import type {
+  Carrier,
   CostLine,
   FleetUnit,
   InboundAsn,
@@ -16,6 +20,7 @@ import type {
 
 const SITE_SEV: WarehouseSite = {
   id: "site-sev",
+  orgId: CAMPO_NORTE_ORG.id,
   code: "CN-SEV-01",
   name: "Hub Campo Norte Sevilla",
   city: "Sevilla",
@@ -28,6 +33,7 @@ const SITE_SEV: WarehouseSite = {
 
 const SITE_HUE: WarehouseSite = {
   id: "site-hue",
+  orgId: CAMPO_NORTE_ORG.id,
   code: "CN-HUE-02",
   name: "Cámara fría Huelva",
   city: "Huelva",
@@ -137,60 +143,28 @@ const SKUS: Sku[] = [
   },
 ];
 
-type ZoneSpec = { zone: Slot["zone"]; aisle: string; racks: number; levels: number };
-
-function buildSiteSlots(siteId: string, zones: ZoneSpec[], salt = 0): Slot[] {
-  const slots: Slot[] = [];
-  let n = salt;
-  for (const z of zones) {
-    for (let rack = 1; rack <= z.racks; rack++) {
-      for (let level = 1; level <= z.levels; level++) {
-        const positions: Array<1 | 2> = z.zone === "muelle" ? [1] : [1, 2];
-        for (const position of positions) {
-          n += 1;
-          const code = formatSlotCode({ aisle: z.aisle, bay: rack, level, position });
-          const occupied = n % 5 !== 0 && z.zone !== "muelle";
-          const blocked = n % 37 === 0;
-          slots.push({
-            id: slotRecordId(siteId, code),
-            code,
-            siteId,
-            zone: z.zone,
-            aisle: z.aisle,
-            rack,
-            level,
-            position,
-            pickFace: isPickFaceLevel(level, z.zone),
-            status: blocked ? "bloqueado" : occupied ? "ocupado" : n % 11 === 0 ? "reservado" : "libre",
-            capacityPallets: 1,
-            palletId: null,
-            lastCountedAt: occupied ? "2026-08-12T06:30:00.000Z" : null,
-          });
-        }
-      }
-    }
-  }
-  return slots;
-}
-
 function buildSlots(): Slot[] {
   /** Rack selectivo: montantes azules · travesaños · 2 palets/bahía · 4 niveles */
-  const seville = buildSiteSlots(SITE_SEV.id, [
-    { zone: "seco", aisle: "A", racks: 12, levels: 4 },
-    { zone: "seco", aisle: "B", racks: 10, levels: 4 },
-    { zone: "fresco", aisle: "C", racks: 8, levels: 3 },
-    { zone: "congelado", aisle: "D", racks: 6, levels: 3 },
-    { zone: "picking", aisle: "P", racks: 6, levels: 2 },
-    { zone: "muelle", aisle: "M", racks: 4, levels: 1 },
-  ]);
-  const huelva = buildSiteSlots(
+  const seville = generateSiteSlots(
+    SITE_SEV.id,
+    [
+      { zone: "seco", aisle: "A", racks: 12, levels: 4 },
+      { zone: "seco", aisle: "B", racks: 10, levels: 4 },
+      { zone: "fresco", aisle: "C", racks: 8, levels: 3 },
+      { zone: "congelado", aisle: "D", racks: 6, levels: 3 },
+      { zone: "picking", aisle: "P", racks: 6, levels: 2 },
+      { zone: "muelle", aisle: "M", racks: 4, levels: 1 },
+    ],
+    { occupy: true },
+  );
+  const huelva = generateSiteSlots(
     SITE_HUE.id,
     [
       { zone: "fresco", aisle: "F", racks: 6, levels: 3 },
       { zone: "congelado", aisle: "G", racks: 4, levels: 3 },
       { zone: "muelle", aisle: "M", racks: 3, levels: 1 },
     ],
-    400,
+    { salt: 400, occupy: true },
   );
   return [...seville, ...huelva];
 }
@@ -667,67 +641,136 @@ const INBOUND: InboundAsn[] = [
   },
 ];
 
+const CARRIERS: Carrier[] = [
+  {
+    id: "car-seur",
+    orgId: CAMPO_NORTE_ORG.id,
+    code: "SEUR",
+    name: "SEUR",
+    kind: "nacional",
+    cutoffDefault: "18:00",
+    active: true,
+  },
+  {
+    id: "car-dhl",
+    orgId: CAMPO_NORTE_ORG.id,
+    code: "DHL",
+    name: "DHL Freight",
+    kind: "internacional",
+    cutoffDefault: "16:30",
+    active: true,
+  },
+  {
+    id: "car-carreras",
+    orgId: CAMPO_NORTE_ORG.id,
+    code: "CARR",
+    name: "Carreras Grupo Logístico",
+    kind: "frigorifico",
+    cutoffDefault: "17:00",
+    active: true,
+  },
+  {
+    id: "car-xpo",
+    orgId: CAMPO_NORTE_ORG.id,
+    code: "XPO",
+    name: "XPO Logistics",
+    kind: "nacional",
+    cutoffDefault: "19:00",
+    active: true,
+  },
+];
+
+function withCarrier(
+  order: Omit<OutboundOrder, "carrierId" | "tracking" | "dockWindowStart" | "dockWindowEnd">,
+  carrierId: string,
+): OutboundOrder {
+  const carrier = CARRIERS.find((c) => c.id === carrierId)!;
+  const window = dockWindowFor(order.cutOff);
+  return {
+    ...order,
+    carrierId,
+    tracking: trackingFor(carrier.code, order.code),
+    dockWindowStart: window.start,
+    dockWindowEnd: window.end,
+  };
+}
+
 const OUTBOUND: OutboundOrder[] = [
-  {
-    id: "out-01",
-    code: "OUT-SEV-8841",
-    customer: "Tienda CN · Dos Hermanas",
-    cutOff: "2026-08-15T12:00:00.000Z",
-    dock: "M-05",
-    status: "picking",
-    lines: 64,
-    pallets: 9,
-    priority: "urgente",
-    siteId: SITE_SEV.id,
-  },
-  {
-    id: "out-02",
-    code: "OUT-SEV-8842",
-    customer: "Tienda CN · Utrera",
-    cutOff: "2026-08-15T15:00:00.000Z",
-    dock: "M-06",
-    status: "pendiente",
-    lines: 41,
-    pallets: 6,
-    priority: "normal",
-    siteId: SITE_SEV.id,
-  },
-  {
-    id: "out-03",
-    code: "OUT-SEV-8840",
-    customer: "Tienda CN · Alcalá",
-    cutOff: "2026-08-15T09:30:00.000Z",
-    dock: "M-07",
-    status: "muelle",
-    lines: 38,
-    pallets: 5,
-    priority: "express",
-    siteId: SITE_SEV.id,
-  },
-  {
-    id: "out-04",
-    code: "OUT-SEV-8838",
-    customer: "Cash & Carry · Huelva",
-    cutOff: "2026-08-14T18:00:00.000Z",
-    dock: "M-08",
-    status: "expedido",
-    lines: 72,
-    pallets: 12,
-    priority: "normal",
-    siteId: SITE_SEV.id,
-  },
-  {
-    id: "out-05",
-    code: "OUT-HUE-2201",
-    customer: "Tienda CN · Lepe",
-    cutOff: "2026-08-15T13:30:00.000Z",
-    dock: "M-02",
-    status: "picking",
-    lines: 22,
-    pallets: 4,
-    priority: "urgente",
-    siteId: SITE_HUE.id,
-  },
+  withCarrier(
+    {
+      id: "out-01",
+      code: "OUT-SEV-8841",
+      customer: "Tienda CN · Dos Hermanas",
+      cutOff: "2026-08-15T12:00:00.000Z",
+      dock: "M-05",
+      status: "picking",
+      lines: 64,
+      pallets: 9,
+      priority: "urgente",
+      siteId: SITE_SEV.id,
+    },
+    "car-seur",
+  ),
+  withCarrier(
+    {
+      id: "out-02",
+      code: "OUT-SEV-8842",
+      customer: "Tienda CN · Utrera",
+      cutOff: "2026-08-15T15:00:00.000Z",
+      dock: "M-06",
+      status: "pendiente",
+      lines: 41,
+      pallets: 6,
+      priority: "normal",
+      siteId: SITE_SEV.id,
+    },
+    "car-carreras",
+  ),
+  withCarrier(
+    {
+      id: "out-03",
+      code: "OUT-SEV-8840",
+      customer: "Tienda CN · Alcalá",
+      cutOff: "2026-08-15T09:30:00.000Z",
+      dock: "M-07",
+      status: "muelle",
+      lines: 38,
+      pallets: 5,
+      priority: "express",
+      siteId: SITE_SEV.id,
+    },
+    "car-dhl",
+  ),
+  withCarrier(
+    {
+      id: "out-04",
+      code: "OUT-SEV-8838",
+      customer: "Cash & Carry · Huelva",
+      cutOff: "2026-08-14T18:00:00.000Z",
+      dock: "M-08",
+      status: "expedido",
+      lines: 72,
+      pallets: 12,
+      priority: "normal",
+      siteId: SITE_SEV.id,
+    },
+    "car-xpo",
+  ),
+  withCarrier(
+    {
+      id: "out-05",
+      code: "OUT-HUE-2201",
+      customer: "Tienda CN · Lepe",
+      cutOff: "2026-08-15T13:30:00.000Z",
+      dock: "M-02",
+      status: "picking",
+      lines: 22,
+      pallets: 4,
+      priority: "urgente",
+      siteId: SITE_HUE.id,
+    },
+    "car-carreras",
+  ),
 ];
 
 const COSTS: CostLine[] = [
@@ -819,6 +862,7 @@ export function buildWmsSeed(): WmsSnapshot {
   seedDockAndPickFaceGap(slots, pallets);
   const pickWaves = buildPickWaves(slots, pallets);
   return {
+    org: CAMPO_NORTE_ORG,
     sites: [SITE_SEV, SITE_HUE],
     skus: SKUS,
     slots,
@@ -827,6 +871,7 @@ export function buildWmsSeed(): WmsSnapshot {
     operators: OPERATORS,
     inbound: INBOUND,
     outbound: OUTBOUND,
+    carriers: CARRIERS,
     costs: COSTS,
     movements: MOVEMENTS,
     pickWaves,

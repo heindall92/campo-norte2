@@ -8,4 +8,4 @@ alwaysApply: true
 Usar siempre **Lucide** (`lucide-react`). Catálogo: https://lucide.dev
 
 - No Heroicons, Font Awesome, emojis como icono de UI, ni SVG ad hoc si existe equivalente Lucide.
-- WMS preferidos: `Warehouse`, `Forklift`, `Package`, `Boxes`, `ScanBarcode`, `Truck`, `Battery`, `ClipboardCheck`, `ArrowLeftRight`, `Banknote`, `Coins`, `Sun`, `Sunset`, `Moon`, `CircleAlert`, `Building2`, `CalendarClock`, `UserRoundPlus`.
+- WMS preferidos: `Warehouse`, `Forklift`, `Package`, `Boxes`, `ScanBarcode`, `Truck`, `Battery`, `ClipboardCheck`, `ArrowLeftRight`, `Banknote`, `Coins`, `Sun`, `Sunset`, `Moon`, `CircleAlert`, `Building2`, `CalendarClock`, `UserRoundPlus`, `Globe`, `MapPin`.

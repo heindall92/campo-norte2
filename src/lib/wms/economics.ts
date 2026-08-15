@@ -146,6 +146,16 @@ export const SHIFT_REQUIREMENT: Record<
   },
 };
 
+/** Dotación mínima para un centro recién dado de alta (hasta que RRHH asigne). */
+export const DEFAULT_SHIFT_REQUIREMENT: Record<
+  ShiftCode,
+  Partial<Record<OperatorRoleFloor, number>>
+> = {
+  manana: { supervisor: 1, picker: 1, carretillero: 1 },
+  tarde: { picker: 1 },
+  noche: {},
+};
+
 export interface ShiftGap {
   siteId: string;
   shift: ShiftCode;
@@ -164,7 +174,7 @@ export interface ShiftCoverage {
 
 export function computeShiftCoverage(snap: WmsSnapshot, siteId?: string): ShiftCoverage {
   const sid = siteId ?? snap.sites[0]?.id ?? "";
-  const req = SHIFT_REQUIREMENT[sid] ?? SHIFT_REQUIREMENT["site-sev"]!;
+  const req = SHIFT_REQUIREMENT[sid] ?? DEFAULT_SHIFT_REQUIREMENT;
   const ops = snap.operators.filter((o) => o.active && o.siteId === sid);
   const gaps: ShiftGap[] = [];
   const headsByShift: Record<ShiftCode, number> = { manana: 0, tarde: 0, noche: 0 };
@@ -196,11 +206,3 @@ export function computeShiftCoverage(snap: WmsSnapshot, siteId?: string): ShiftC
   };
 }
 
-export const CAMPO_NORTE_ORG = {
-  id: "org-camponorte",
-  legalName: "Campo Norte Logística, S.L.",
-  plan: "WMS OS · multi-hub",
-  billingCurrency: "EUR",
-  /** RLS / org_id en Postgres: siguiente capa infra, no simulada aquí. */
-  rlsReady: false,
-} as const;

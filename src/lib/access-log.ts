@@ -99,6 +99,7 @@ export function sectionToAccessEvent(section: AppSection): AccessEvent | null {
     section === "recepcion" ||
     section === "expedicion" ||
     section === "operarios" ||
+    section === "centros" ||
     section === "costes" ||
     section === "leads" ||
     section === "clientes" ||

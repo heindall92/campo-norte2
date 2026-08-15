@@ -24,6 +24,7 @@ export type AppSection =
   | "recepcion"
   | "expedicion"
   | "operarios"
+  | "centros"
   | "costes"
   | "leads"
   | "clientes"

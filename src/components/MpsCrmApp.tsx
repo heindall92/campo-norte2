@@ -211,6 +211,7 @@ import {
   WmsSitePnlCard,
   WmsStockPanel,
 } from "@/components/wms/WmsPanels";
+import { WmsSitesPanel } from "@/components/wms/WmsSites";
 import { WmsPickingPanel, WmsSlotsPanel } from "@/components/wms/AislePicking";
 import { WmsCycleCountPanel, WmsMovementsPanel } from "@/components/wms/WmsLiveOps";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -234,6 +235,7 @@ type Section = AppSection;
 
 const NAV_IDS: { id: Section; icon: typeof LayoutDashboard; labelKey: string }[] = [
   { id: "dashboard", icon: Warehouse, labelKey: "nav_dashboard" },
+  { id: "centros", icon: Building2, labelKey: "nav_sites" },
   { id: "stock", icon: Boxes, labelKey: "nav_stock" },
   { id: "huecos", icon: Grid3X3, labelKey: "nav_slots" },
   { id: "picking", icon: ScanBarcode, labelKey: "nav_picking" },
@@ -4022,6 +4024,7 @@ export function MpsCrmApp() {
     <>
       {section === "hub" && <HubPanel lang={lang} />}
       {section === "dashboard" && <WmsDashboardPanel lang={lang} />}
+      {section === "centros" && <WmsSitesPanel lang={lang} />}
       {section === "stock" && <WmsStockPanel lang={lang} />}
       {section === "huecos" && <WmsSlotsPanel lang={lang} />}
       {section === "picking" && <WmsPickingPanel lang={lang} />}

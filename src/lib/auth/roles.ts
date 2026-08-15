@@ -37,6 +37,7 @@ const WMS_CORE: AppSection[] = [
   "recepcion",
   "expedicion",
   "operarios",
+  "centros",
   "costes",
 ];
 
@@ -76,6 +77,7 @@ export const ROLE_ALLOWED_SECTIONS: Record<UserRole, readonly AppSection[]> = {
     "recepcion",
     "expedicion",
     "operarios",
+    "centros",
     "hub",
     "clientes",
     "facturas",

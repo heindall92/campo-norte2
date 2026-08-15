@@ -8,6 +8,9 @@ export * from "./cycle-count";
 export * from "./alerts";
 export * from "./economics";
 export * from "./shifts";
+export * from "./org";
+export * from "./onboard";
+export * from "./carriers";
 
 import { buildWmsSeed } from "./seed";
 import { WMS_STORAGE_KEY, type WmsSnapshot } from "./types";
@@ -22,7 +25,9 @@ export function loadWmsSnapshot(): WmsSnapshot {
         parsed?.slots?.length &&
         parsed.slots[0] &&
         "position" in parsed.slots[0] &&
-        Array.isArray(parsed.pickWaves)
+        Array.isArray(parsed.pickWaves) &&
+        parsed.org?.id &&
+        Array.isArray(parsed.carriers)
       ) {
         return parsed;
       }

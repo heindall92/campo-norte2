@@ -11,9 +11,9 @@ Este repositorio (`campo-norte2`) publica el ecosistema SaaS WMS. La base CRM/WM
 
 ---
 
-## Fases 2–5 (esta rama)
+## Fases 2–6 (esta rama)
 
-Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, movimientos en vivo, inventario cíclico, alertas, economía unitaria y **planificación de turnos con asignación**.
+Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, movimientos en vivo, inventario cíclico, alertas, economía unitaria, planificación de turnos, **onboarding de centros** y **carriers**.
 
 **Iconos:** siempre [Lucide](https://lucide.dev) (`lucide-react`).
 
@@ -28,8 +28,9 @@ Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, mov
 | Palets | SSCC, lote, caducidad, hueco |
 | Flota eléctrica | Incluye **retráctil doble stand-up** asignada a reposición |
 | Recepción | ASN / muelle / putaway |
-| Expedición | Olas a tienda / prioridad / cut-off |
+| Expedición | Olas a tienda, **carrier** (SEUR / DHL / Carreras / XPO), tracking, cut-off |
 | Operarios | Turnos **asignables**, cubrir huecos con excedente (sol/atardecer/luna Lucide), extras, €/h |
+| Centros | Alta de hub en el tenant (`org_id`), presets Basel / München / Valencia |
 | Costes | OPEX vs presupuesto, €/palet, P&L 3PL del hub (también en Tesorería) |
 
 Se conservan módulos útiles del CRM original (facturas, tesorería, aprobaciones, conocimiento, hub).
@@ -68,6 +69,8 @@ Cómo probar fase 2:
 8. Torre de control: lista de alertas (batería Still EXU-S, cut-off Alcalá, caducidad).
 9. **Operarios** → cobertura mañana/tarde/noche. **Cubrir huecos** mueve excedente (picker noche + carretillero tarde). Lo que queda es contratar.
 10. **Costes** o **Tesorería** → P&L 3PL del hub (€/palet y contribución).
+11. **Centros** → preset Basel → Alta en el tenant. Luego **Pasillos / huecos** y elige el hub nuevo.
+12. **Expedición** → cambia el carrier; se regenera tracking.
 
 ---
 

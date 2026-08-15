@@ -28,11 +28,17 @@
 - Cobertura de turnos vs dotación mínima (mañana / tarde / noche)
 - Org multi-hub Campo Norte (2 centros); RLS/`org_id` queda para infra
 
-## Fase 5 — Planificación de turnos (esta entrega)
+## Fase 5 — Planificación de turnos
 - Asignación manual de operario → turno
 - Cubrir huecos con excedente (noche primero; no deja al donante bajo mínimo)
 - Huecos que no se cubren = contratar
 - Iconos siempre Lucide (`lucide-react`, https://lucide.dev)
 
+## Fase 6 — Tenant, onboarding y carriers (esta entrega)
+- `org_id` en el snapshot (aislamiento de dominio; RLS Postgres queda para infra)
+- Alta de centro: layout de pasillos + muelle M, huecos libres
+- Presets Basel / München / Valencia
+- Expedición: carrier (SEUR, DHL Freight, Carreras, XPO), tracking y ventana de muelle
+
 ## Siguiente
-- `org_id` + RLS Postgres, onboarding de centros, integraciones ERP / carriers / RF
+- RLS Postgres real, integraciones ERP / RF de pistola, EDI carriers

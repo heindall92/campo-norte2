@@ -1,4 +1,4 @@
-import { computeShiftCoverage, SHIFT_REQUIREMENT } from "./economics";
+import { computeShiftCoverage, DEFAULT_SHIFT_REQUIREMENT, SHIFT_REQUIREMENT } from "./economics";
 import type { Operator, OperatorRoleFloor, ShiftCode, WmsSnapshot } from "./types";
 
 const ALL_SHIFTS: ShiftCode[] = ["manana", "tarde", "noche"];
@@ -51,7 +51,7 @@ function requirement(
   shift: ShiftCode,
   role: OperatorRoleFloor,
 ): number {
-  return SHIFT_REQUIREMENT[siteId]?.[shift]?.[role] ?? 0;
+  return (SHIFT_REQUIREMENT[siteId] ?? DEFAULT_SHIFT_REQUIREMENT)[shift]?.[role] ?? 0;
 }
 
 function countRole(ops: Operator[], shift: ShiftCode, role: OperatorRoleFloor): number {
@@ -67,7 +67,7 @@ export function proposeShiftFills(snap: WmsSnapshot, siteId: string): ShiftMove[
     .filter((o) => o.active && o.siteId === siteId)
     .map((o) => ({ ...o }));
   const moves: ShiftMove[] = [];
-  const req = SHIFT_REQUIREMENT[siteId] ?? SHIFT_REQUIREMENT["site-sev"]!;
+  const req = SHIFT_REQUIREMENT[siteId] ?? DEFAULT_SHIFT_REQUIREMENT;
 
   for (const toShift of SHIFT_FILL_ORDER) {
     const need = req[toShift] ?? {};

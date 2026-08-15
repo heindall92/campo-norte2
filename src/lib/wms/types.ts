@@ -1,4 +1,4 @@
-/** Dominio WMS — Campo Norte Logística (fase 5: planificación de turnos). */
+/** Dominio WMS — Campo Norte Logística (fase 6: org, onboarding y carriers). */
 
 export type WarehouseZone = "seco" | "fresco" | "congelado" | "picking" | "muelle" | "crossdock";
 
@@ -60,8 +60,33 @@ export interface PickWave {
   lines: PickLine[];
 }
 
+export type CarrierKind = "nacional" | "internacional" | "frigorifico" | "paqueteria";
+
+export interface WmsOrg {
+  id: string;
+  legalName: string;
+  plan: string;
+  billingCurrency: "EUR";
+  /**
+   * Aislamiento de tenant en el snapshot (org_id).
+   * RLS Postgres real queda para infra; aquí el filtro es de dominio.
+   */
+  rlsMode: "snapshot" | "postgres";
+}
+
+export interface Carrier {
+  id: string;
+  orgId: string;
+  code: string;
+  name: string;
+  kind: CarrierKind;
+  cutoffDefault: string;
+  active: boolean;
+}
+
 export interface WarehouseSite {
   id: string;
+  orgId: string;
   code: string;
   name: string;
   city: string;
@@ -177,6 +202,10 @@ export interface OutboundOrder {
   pallets: number;
   priority: "normal" | "urgente" | "express";
   siteId: string;
+  carrierId: string | null;
+  tracking: string | null;
+  dockWindowStart: string | null;
+  dockWindowEnd: string | null;
 }
 
 export interface CostLine {
@@ -204,6 +233,7 @@ export interface StockMovement {
 }
 
 export interface WmsSnapshot {
+  org: WmsOrg;
   sites: WarehouseSite[];
   skus: Sku[];
   slots: Slot[];
@@ -212,6 +242,7 @@ export interface WmsSnapshot {
   operators: Operator[];
   inbound: InboundAsn[];
   outbound: OutboundOrder[];
+  carriers: Carrier[];
   costs: CostLine[];
   movements: StockMovement[];
   pickWaves: PickWave[];
@@ -235,6 +266,13 @@ export const ZONE_LABEL: Record<WarehouseZone, { es: string; en: string }> = {
   crossdock: { es: "Cross-dock", en: "Cross-dock" },
 };
 
+export const CARRIER_KIND_LABEL: Record<CarrierKind, { es: string; en: string }> = {
+  nacional: { es: "Nacional", en: "Domestic" },
+  internacional: { es: "Internacional", en: "International" },
+  frigorifico: { es: "Frigorífico", en: "Reefer" },
+  paqueteria: { es: "Paquetería", en: "Parcel" },
+};
+
 export const FLEET_KIND_LABEL: Record<FleetKind, { es: string; en: string }> = {
   contrapesada: { es: "Contrapesada", en: "Counterbalance" },
   retractil: { es: "Retráctil", en: "Reach truck" },
@@ -244,4 +282,4 @@ export const FLEET_KIND_LABEL: Record<FleetKind, { es: string; en: string }> = {
   apilador: { es: "Apilador", en: "Stacker" },
 };
 
-export const WMS_STORAGE_KEY = "cn-wms-hub-v5";
+export const WMS_STORAGE_KEY = "cn-wms-hub-v6";

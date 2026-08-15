@@ -25,6 +25,7 @@ import type { Reservation } from "@/lib/ops-data";
 import { SupportModal } from "@/components/SupportModal";
 import { UnreadDot } from "@/components/UnreadDot";
 import {
+  Building2,
   Bell,
   BookOpen,
   ContactRound,
@@ -71,6 +72,7 @@ const MORE_SECTIONS: { id: AppSection; labelEs: string; labelEn: string; icon: L
   { id: "recepcion", labelEs: "Recepción", labelEn: "Receiving", icon: ClipboardList },
   { id: "expedicion", labelEs: "Expedición", labelEn: "Outbound", icon: Presentation },
   { id: "operarios", labelEs: "Operarios", labelEn: "Operators", icon: Users },
+  { id: "centros", labelEs: "Centros", labelEn: "Sites", icon: Building2 },
   { id: "costes", labelEs: "Costes", labelEn: "Costs", icon: Wallet },
   { id: "facturas", labelEs: "Facturas", labelEn: "Invoices", icon: FileText },
   { id: "tesoreria", labelEs: "Tesorería", labelEn: "Treasury", icon: Wallet },
@@ -104,6 +106,7 @@ const SECTION_TITLE_KEY: Partial<Record<AppSection, string>> = {
   recepcion: "nav_inbound",
   expedicion: "nav_outbound",
   operarios: "nav_operators",
+  centros: "nav_sites",
   costes: "nav_costs",
   hub: "nav_hub",
   facturas: "nav_invoices",
