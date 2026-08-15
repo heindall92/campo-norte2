@@ -27,7 +27,7 @@ Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, mov
 | Inventario cíclico | Cola por caducidad / ABC A / conteo viejo |
 | Palets | SSCC, lote, caducidad, hueco · **alta / edición** |
 | Flota eléctrica | Torito, montacargas, retráctil; batería **solo reporte real** |
-| Recepción | ASN crear / editar / cerrar |
+| Recepción | ASN crear / editar / **recepcionar palet en muelle** |
 | Expedición | Pedido diario · itinerario de muelle · abrir ola · tracking manual |
 | Operarios | Cupo 25/25/25 (plazas vacantes) · CRUD · PIN / fichaje |
 | Centros | Alta de hub: ciudad y layout que escriba el usuario |

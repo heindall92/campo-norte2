@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-15 · Cloud Agent · WMS fase 9: jornada de planta + olas desde pedidos
+**Última actualización:** 2026-08-15 · Cloud Agent · WMS fase 10: planta unificada (ASN, RF, móvil)
 
 ---
 
@@ -163,7 +163,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fase 8–9 hechas en esta rama: operación diaria + jornada de planta (horario/horas/PIN), olas abiertas desde pedidos de expedición con palets reales, itinerario de muelle, deep-link desde prioridades, agente pyzk de ejemplo sin lecturas inventadas.
+Fases 8–10 hechas en esta rama: operación diaria, jornada, olas desde pedidos, recepción real de ASN, RF con fichaje, inicio móvil WMS y asignación de picker.
 
 Siguiente: terminal ZKTeco físico y APIs de flota cuando existan. Tablas WMS en Postgres cuando haya stock real.
 

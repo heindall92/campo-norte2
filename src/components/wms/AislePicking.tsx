@@ -4,6 +4,7 @@ import type { Lang } from "@/lib/i18n";
 import {
   FLEET_KIND_LABEL,
   assertCanPick,
+  assignWaveOperator,
   confirmPick,
   markShortage,
   nextOpenLine,
@@ -374,6 +375,7 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
   const [scanSscc, setScanSscc] = useState("");
   const [qty, setQty] = useState(line?.qty ?? 0);
   const [pickPin, setPickPin] = useState("");
+  const [shortageQty, setShortageQty] = useState(0);
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const done = wave?.lines.filter((l) => l.status === "picada").length ?? 0;
@@ -452,6 +454,25 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
             </option>
           ))}
         </select>
+        {!isFloor && wave && (
+          <select
+            className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+            value={wave.operatorId ?? ""}
+            onChange={(e) => {
+              const result = assignWaveOperator(snap, wave.id, e.target.value || null);
+              if (result.ok) setSnap(result.snap);
+            }}
+          >
+            <option value="">{lang === "es" ? "Sin picker" : "No picker"}</option>
+            {snap.operators
+              .filter((o) => !o.vacant && o.active)
+              .map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+          </select>
+        )}
       </header>
 
       {matched && (
@@ -654,11 +675,20 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                     <SkipForward className="h-4 w-4" />
                     {lang === "es" ? "Omitir línea" : "Skip line"}
                   </button>
+                  <input
+                    type="number"
+                    min={0}
+                    max={Math.max(0, line.qty - 1)}
+                    value={shortageQty}
+                    onChange={(e) => setShortageQty(Number(e.target.value))}
+                    className="w-16 rounded-full border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+                    title={lang === "es" ? "Cantidad encontrada" : "Qty found"}
+                  />
                   <button
                     type="button"
                     onClick={() => {
                       if (!gateFloor()) return;
-                      const result = markShortage(snap, wave.id, line.id, 0);
+                      const result = markShortage(snap, wave.id, line.id, shortageQty);
                       if (!result.ok) {
                         setFeedback(PICK_ERROR[result.error][lang]);
                         return;

@@ -1,6 +1,6 @@
 import { Badge, Card } from "@/components/CrmChrome";
 import type { Lang } from "@/lib/i18n";
-import { createAsn, deleteAsn, updateAsn, type InboundAsn } from "@/lib/wms";
+import { createAsn, deleteAsn, receiveAsnPallet, updateAsn, type InboundAsn } from "@/lib/wms";
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useWmsLive } from "./useWmsLive";
@@ -27,6 +27,10 @@ export function WmsInboundPanel({ lang }: { lang: Lang }) {
   const [siteId, setSiteId] = useState(snap.sites[0]?.id ?? "");
   const [lines, setLines] = useState(4);
   const [palletsExpected, setPalletsExpected] = useState(8);
+  const [recvSku, setRecvSku] = useState(snap.skus[0]?.id ?? "");
+  const [recvQty, setRecvQty] = useState(48);
+  const [recvLot, setRecvLot] = useState("");
+  const [recvMsg, setRecvMsg] = useState<string | null>(null);
 
   return (
     <div className="space-y-4">
@@ -170,6 +174,64 @@ export function WmsInboundPanel({ lang }: { lang: Lang }) {
               <p className="mt-2 text-xs text-[var(--ink-muted)]">
                 ETA {new Date(asn.eta).toLocaleString(lang === "es" ? "es-ES" : "en-GB")}
               </p>
+              {asn.status !== "cerrado" && asn.palletsDone < asn.palletsExpected && (
+                <form
+                  className="mt-3 grid gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const result = receiveAsnPallet(snap, asn.id, {
+                      skuId: recvSku,
+                      qty: recvQty,
+                      lot: recvLot,
+                    });
+                    if (!result.ok) {
+                      setRecvMsg(
+                        lang === "es"
+                          ? "No hay hueco de muelle libre o el ASN no admite más palets"
+                          : "No free dock slot or ASN is complete",
+                      );
+                      return;
+                    }
+                    commit(result.snap);
+                    setRecvLot("");
+                    setRecvMsg(null);
+                  }}
+                >
+                  <select
+                    value={recvSku}
+                    onChange={(e) => setRecvSku(e.target.value)}
+                    className="rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-2 py-1 text-xs"
+                  >
+                    {snap.skus.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.sku} · {s.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      value={recvQty}
+                      onChange={(e) => setRecvQty(Number(e.target.value))}
+                      className="w-20 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-2 py-1 text-xs"
+                    />
+                    <input
+                      value={recvLot}
+                      onChange={(e) => setRecvLot(e.target.value)}
+                      placeholder={lang === "es" ? "Lote" : "Lot"}
+                      className="flex-1 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-2 py-1 text-xs"
+                    />
+                    <button
+                      type="submit"
+                      className="rounded-full bg-[var(--accent)] px-3 py-1 text-[11px] font-semibold text-white"
+                    >
+                      {lang === "es" ? "Recepcionar" : "Receive"}
+                    </button>
+                  </div>
+                </form>
+              )}
+              {recvMsg && <p className="mt-2 text-xs font-semibold text-[var(--danger)]">{recvMsg}</p>}
             </Card>
           );
         })}

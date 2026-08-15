@@ -401,7 +401,9 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
   const [cutOff, setCutOff] = useState("2026-08-15T18:00");
   const [siteId, setSiteId] = useState(snap.sites[0]?.id ?? "");
   const [pallets, setPallets] = useState(3);
+  const [pickerId, setPickerId] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
+  const pickers = snap.operators.filter((o) => !o.vacant && o.active);
 
   return (
     <div className="space-y-4">
@@ -474,6 +476,18 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
             onChange={(e) => setPallets(Number(e.target.value))}
             className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
           />
+          <select
+            value={pickerId}
+            onChange={(e) => setPickerId(e.target.value)}
+            className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+          >
+            <option value="">{lang === "es" ? "Picker al abrir ola" : "Picker when opening wave"}</option>
+            {pickers.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name} · {o.code}
+              </option>
+            ))}
+          </select>
           <button type="submit" className="rounded-full bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white">
             {lang === "es" ? "Crear pedido" : "Create order"}
           </button>
@@ -608,7 +622,7 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
                         type="button"
                         className="rounded-full border border-[var(--glass-border)] px-2 py-1 text-[11px] font-semibold"
                         onClick={() => {
-                          const result = openWaveFromOrder(snap, o.id);
+                          const result = openWaveFromOrder(snap, o.id, pickerId || null);
                           if (!result.ok) {
                             setMsg(
                               result.error === "no_free_pallets"

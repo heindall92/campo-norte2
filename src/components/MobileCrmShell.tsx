@@ -15,6 +15,7 @@ import { MobileConfirmHost } from "@/components/MobileConfirmHost";
 import { MobileNotificationsSheet } from "@/components/MobileNotificationsSheet";
 import { MobileEcosystemCarousel } from "@/components/MobileEcosystemCarousel";
 import { MobileHomeSummary } from "@/components/MobileHomeSummary";
+import { WmsMobileHome } from "@/components/wms/WmsMobileHome";
 import { MobileClientsScreen } from "@/components/MobileClientsScreen";
 import { MobileBookingsScreen } from "@/components/MobileBookingsScreen";
 import { MobileLeadsScreen } from "@/components/MobileLeadsScreen";
@@ -504,7 +505,12 @@ export function MobileCrmShell({
         </div>
       ) : showHome ? (
         <div className="px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-3">
-          <MobileHomeSummary lang={lang} onNavigate={openSection} />
+          {(user?.role === "guide" || user?.role === "ops" || user?.role === "admin") && (
+            <div className="mb-5">
+              <WmsMobileHome lang={lang} onNavigate={openSection} />
+            </div>
+          )}
+          {user?.role !== "guide" && <MobileHomeSummary lang={lang} onNavigate={openSection} />}
 
           <p className="mb-2 mt-5 text-sm font-bold text-[var(--ink)]">
             {es ? "Accesos rápidos" : "Quick access"}

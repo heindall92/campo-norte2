@@ -62,6 +62,13 @@
 - Prioridades del día saltan a la ola de picking
 - Agente ZKTeco de ejemplo (`scripts/wms-zk-agent.example.py`); el SaaS no finge lecturas
 
+## Fase 10 — Planta unificada (esta entrega)
+- Recepcionar palet de ASN en muelle (SKU y qty que escribe quien descarga)
+- Asignar picker a la ola; cola RF filtrada por operario
+- Pistola RF con jornada y bloqueo si no ha fichado
+- Inicio móvil WMS (planta/almacén/dirección): prioridades + fichaje
+- Faltante con cantidad encontrada
+
 ## Siguiente
 - Agente pyzk en la LAN cuando haya terminal físico
 - Telemetría real de flota (ISM / I_Site / InfoLink) cuando exista contrato

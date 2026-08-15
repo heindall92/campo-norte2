@@ -69,13 +69,14 @@ export function operatorForAppUser(
 }
 
 /** Cola derivada del snapshot: no se inventan palets, huecos ni cantidades. */
-export function buildRfQueue(snap: WmsSnapshot, siteId?: string): RfTask[] {
+export function buildRfQueue(snap: WmsSnapshot, siteId?: string, operatorId?: string | null): RfTask[] {
   const tasks: RfTask[] = [];
   const skuName = (id: string) => snap.skus.find((s) => s.id === id)?.name ?? id;
 
   for (const wave of snap.pickWaves) {
     if (siteId && wave.siteId !== siteId) continue;
     if (wave.status === "cerrada") continue;
+    if (operatorId && wave.operatorId && wave.operatorId !== operatorId) continue;
     const line = nextOpenLine(wave);
     if (!line) continue;
     const slot = snap.slots.find((s) => s.id === line.slotId);

@@ -160,7 +160,7 @@ export function createPallet(
     qty: input.qty,
     lot: input.lot.trim() || "SIN-LOTE",
     expiry: input.expiry,
-    status: slotId ? "en_ubicacion" : "muelle",
+    status: !slotId || snap.slots.find((s) => s.id === slotId)?.zone === "muelle" ? "muelle" : "en_ubicacion",
     slotId,
     siteId: input.siteId,
     receivedAt: new Date().toISOString(),
@@ -268,6 +268,40 @@ export function updateAsn(
 export function deleteAsn(snap: WmsSnapshot, id: string): CatalogResult {
   if (!snap.inbound.some((a) => a.id === id)) return { ok: false, error: "asn_missing" };
   return { ok: true, snap: { ...snap, inbound: snap.inbound.filter((a) => a.id !== id) } };
+}
+
+/**
+ * Recibe un palet de un ASN en un hueco de muelle libre.
+ * No inventa SKU ni cantidad: los escribe quien descarga.
+ */
+export function receiveAsnPallet(
+  snap: WmsSnapshot,
+  asnId: string,
+  input: { skuId: string; qty: number; lot: string },
+): CatalogResult {
+  const asn = snap.inbound.find((a) => a.id === asnId);
+  if (!asn) return { ok: false, error: "asn_missing" };
+  if (asn.status === "cerrado") return { ok: false, error: "invalid_input" };
+  if (asn.palletsDone >= asn.palletsExpected) return { ok: false, error: "invalid_input" };
+  const dock = snap.slots.find(
+    (s) => s.siteId === asn.siteId && s.zone === "muelle" && s.status === "libre" && !s.palletId,
+  );
+  if (!dock) return { ok: false, error: "slot_missing" };
+  const created = createPallet(snap, {
+    skuId: input.skuId,
+    qty: input.qty,
+    lot: input.lot,
+    expiry: null,
+    siteId: asn.siteId,
+    slotId: dock.id,
+    supplier: asn.supplier,
+  });
+  if (!created.ok) return created;
+  const done = asn.palletsDone + 1;
+  return updateAsn(created.snap, asnId, {
+    palletsDone: done,
+    status: done >= asn.palletsExpected ? "ubicando" : "descargando",
+  });
 }
 
 export function createOperator(

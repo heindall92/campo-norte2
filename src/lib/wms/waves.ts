@@ -6,7 +6,9 @@ export type WaveError =
   | "order_missing"
   | "order_done"
   | "no_free_pallets"
-  | "invalid_input";
+  | "invalid_input"
+  | "wave_missing"
+  | "operator_missing";
 
 export type WaveResult =
   | { ok: true; snap: WmsSnapshot; waveId: string }
@@ -152,6 +154,27 @@ export function createOutboundOrder(
     dockWindowEnd: window.end,
   };
   return { ok: true, orderId: id, snap: { ...snap, outbound: [order, ...snap.outbound] } };
+}
+
+export function assignWaveOperator(
+  snap: WmsSnapshot,
+  waveId: string,
+  operatorId: string | null,
+): WaveResult {
+  const wave = snap.pickWaves.find((w) => w.id === waveId);
+  if (!wave) return { ok: false, error: "wave_missing" };
+  if (operatorId) {
+    const op = snap.operators.find((o) => o.id === operatorId);
+    if (!op || op.vacant) return { ok: false, error: "operator_missing" };
+  }
+  return {
+    ok: true,
+    waveId,
+    snap: {
+      ...snap,
+      pickWaves: snap.pickWaves.map((w) => (w.id === waveId ? { ...w, operatorId } : w)),
+    },
+  };
 }
 
 export function outboundItinerary(snap: WmsSnapshot, siteId?: string) {

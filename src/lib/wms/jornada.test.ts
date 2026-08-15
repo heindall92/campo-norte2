@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   assertCanPick,
+  assignWaveOperator,
+  buildRfQueue,
   buildWmsSeed,
   clockManual,
   createOutboundOrder,
@@ -8,6 +10,7 @@ import {
   openWaveFromOrder,
   operatorJornada,
   outboundItinerary,
+  receiveAsnPallet,
   SHIFT_WINDOW,
 } from "@/lib/wms";
 
@@ -76,6 +79,33 @@ describe("fase 9 · jornada y olas", () => {
     const again = openWaveFromOrder(opened.snap, created.orderId, "op-08");
     expect(again.ok).toBe(true);
     if (again.ok) expect(again.waveId).toBe(opened.waveId);
+  });
+
+  it("asigna un picker a la ola y filtra la cola RF", () => {
+    const snap = buildWmsSeed();
+    const assigned = assignWaveOperator(snap, "wave-01", "op-08");
+    expect(assigned.ok).toBe(true);
+    if (!assigned.ok) return;
+    expect(assigned.snap.pickWaves.find((w) => w.id === "wave-01")?.operatorId).toBe("op-08");
+    const jorge = buildRfQueue(assigned.snap, "site-sev", "op-08");
+    const lucia = buildRfQueue(assigned.snap, "site-sev", "op-03");
+    expect(jorge.some((t) => t.waveId === "wave-01")).toBe(true);
+    expect(lucia.some((t) => t.waveId === "wave-01")).toBe(false);
+  });
+
+  it("recepciona un palet de ASN en muelle sin inventar el SKU", () => {
+    const snap = buildWmsSeed();
+    const asn = snap.inbound.find((a) => a.siteId === "site-sev" && a.status !== "cerrado")!;
+    const before = asn.palletsDone;
+    const rec = receiveAsnPallet(snap, asn.id, { skuId: "sku-aceite", qty: 48, lot: "L26R1" });
+    expect(rec.ok).toBe(true);
+    if (!rec.ok) return;
+    const next = rec.snap.inbound.find((a) => a.id === asn.id)!;
+    expect(next.palletsDone).toBe(before + 1);
+    const pal = rec.snap.pallets[0];
+    expect(pal?.status).toBe("muelle");
+    expect(pal?.skuId).toBe("sku-aceite");
+    expect(pal?.qty).toBe(48);
   });
 
   it("ordena el itinerario de muelle por ventana y prioridad", () => {

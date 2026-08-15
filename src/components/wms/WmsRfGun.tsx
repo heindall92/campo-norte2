@@ -3,20 +3,20 @@ import { useAuth } from "@/lib/auth";
 import type { Lang } from "@/lib/i18n";
 import {
   applyRfScan,
+  assertCanPick,
   buildRfQueue,
   confirmRfTask,
-  loadWmsSnapshot,
   operatorForAppUser,
-  saveWmsSnapshot,
   startRfSession,
   type RfScanError,
   type RfSession,
   type RfStep,
-  type WmsSnapshot,
 } from "@/lib/wms";
 import { cn } from "@/lib/utils";
 import { Check, MapPin, Package, ScanLine, UserRound, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { WmsJornadaCard } from "./WmsJornadaCard";
+import { useWmsLive } from "./useWmsLive";
 
 const SCAN_ERR: Record<RfScanError, { es: string; en: string }> = {
   unknown_scan: { es: "Código no reconocido", en: "Unrecognized code" },
@@ -36,11 +36,16 @@ const STEP_LABEL: Record<RfStep, { es: string; en: string }> = {
 
 export function WmsRfGunPanel({ lang }: { lang: Lang }) {
   const { user } = useAuth();
-  const [snap, setSnap] = useState(() => loadWmsSnapshot());
+  const { snap, commit: persist } = useWmsLive();
   const [siteId, setSiteId] = useState(snap.sites[0]?.id ?? "");
   const matched = operatorForAppUser(snap, user);
+  const isFloor = user?.role === "guide";
   const [operatorId, setOperatorId] = useState(matched?.id ?? "");
-  const queue = useMemo(() => buildRfQueue(snap, siteId), [snap, siteId]);
+  const [pickPin, setPickPin] = useState("");
+  const queue = useMemo(
+    () => buildRfQueue(snap, siteId, isFloor ? matched?.id ?? operatorId : operatorId || null),
+    [snap, siteId, isFloor, matched?.id, operatorId],
+  );
   const [taskId, setTaskId] = useState(queue[0]?.id ?? "");
   const task = queue.find((t) => t.id === taskId) ?? queue[0] ?? null;
   const [session, setSession] = useState<RfSession | null>(task ? startRfSession(task) : null);
@@ -55,11 +60,6 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
     setTaskId(first.id);
     setSession(startRfSession(first));
   }, [queue, session]);
-
-  function persist(next: WmsSnapshot) {
-    saveWmsSnapshot(next);
-    setSnap(next);
-  }
 
   function selectTask(id: string) {
     const next = queue.find((t) => t.id === id);
@@ -86,7 +86,23 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
 
   function onConfirm() {
     if (!session) return;
-    const result = confirmRfTask(snap, session, operatorId || null);
+    if (isFloor && matched) {
+      const gate = assertCanPick(snap, matched.id, pickPin || null, true);
+      if (!gate.ok) {
+        setOkMsg(null);
+        setFeedback(
+          gate.error === "not_clocked"
+            ? lang === "es"
+              ? "Ficha la entrada antes de confirmar"
+              : "Clock in before confirming"
+            : lang === "es"
+              ? "PIN incorrecto o pendiente"
+              : "PIN missing or wrong",
+        );
+        return;
+      }
+    }
+    const result = confirmRfTask(snap, session, operatorId || matched?.id || null);
     if (!result.ok) {
       setOkMsg(null);
       setFeedback(lang === "es" ? "No se pudo confirmar: revisa los escaneos" : "Could not confirm: check scans");
@@ -147,7 +163,7 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
         >
           <option value="">{lang === "es" ? "Sin operario asignado" : "No operator"}</option>
           {snap.operators
-            .filter((o) => o.active && o.siteId === siteId)
+            .filter((o) => o.active && !o.vacant && o.siteId === siteId)
             .map((o) => (
               <option key={o.id} value={o.id}>
                 {o.name} · {o.code}
@@ -155,6 +171,16 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
             ))}
         </select>
       </div>
+
+      {matched && <WmsJornadaCard lang={lang} snap={snap} operatorId={matched.id} onChange={persist} />}
+      {isFloor && matched?.fingerprintEnrolled && (
+        <input
+          value={pickPin}
+          onChange={(e) => setPickPin(e.target.value)}
+          placeholder={lang === "es" ? "PIN de picking" : "Picking PIN"}
+          className="max-w-xs rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+        />
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_1fr]">
         <div className="mx-auto w-full max-w-[22rem] rounded-[2rem] border border-white/10 bg-[#0f172a] p-4 text-white shadow-inner">
