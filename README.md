@@ -11,18 +11,20 @@ Este repositorio (`campo-norte2`) publica el ecosistema SaaS WMS. La base CRM/WM
 
 ---
 
-## Fase 2 (esta rama)
+## Fase 2 + 3 (esta rama)
 
-Modelo de ubicación `Pasillo-Bahía-Nivel-Posición` (ej. `A-03-02-1`), digital twin de pasillo y flujo de picado con escáner.
+Modelo de ubicación `Pasillo-Bahía-Nivel-Posición` (ej. `A-03-02-1`), digital twin de pasillo, picado con escáner, movimientos en vivo, inventario cíclico y alertas operativas.
 
 | Módulo | Qué controla |
 |---|---|
-| Torre de control | Ocupación, stock, flota, gente, costes · selector Sevilla / Huelva |
+| Torre de control | Ocupación, stock, flota, gente, costes y **alertas** (batería / caducidad / cut-off / pick face) |
 | Stock | SKU / categorías / ABC / mínimos |
 | Pasillos / huecos | Digital twin de rack selectivo (2 palets/bahía, nivel 1 = picking) |
 | Picar mercancía | Ticket → hueco → SSCC → cantidad → siguiente línea |
+| Movimientos | Putaway de muelle y traslados RF; reposición reserva → picking con retráctil doble |
+| Inventario cíclico | Cola por caducidad / ABC A / conteo viejo |
 | Palets | SSCC, lote, caducidad, hueco |
-| Flota eléctrica | Incluye **retráctil doble stand-up** asignada a olas de reposición |
+| Flota eléctrica | Incluye **retráctil doble stand-up** asignada a reposición |
 | Recepción | ASN / muelle / putaway |
 | Expedición | Olas a tienda / prioridad / cut-off |
 | Operarios | Turnos, productividad, extras, €/h |
@@ -59,6 +61,9 @@ Cómo probar fase 2:
 3. **Picar mercancía** → ola `WAVE-A-0815-01` → Autocompletar demo → Confirmar picado.
 4. Ola `WAVE-REP-A-0815` usa **Crown RR 5700 Stand-up** (retráctil doble) para reponer desde reserva.
 5. Cambia a **Huelva** en la torre y en pasillos (pasillo F fresco / G congelado).
+6. **Movimientos** → Autocompletar putaway → Confirmar. Luego **Bajar** una reposición de pick face.
+7. **Inventario cíclico** → Autocompletar demo → Confirmar conteo.
+8. Torre de control: lista de alertas (batería Still EXU-S, cut-off Alcalá, caducidad).
 
 ---
 

@@ -147,6 +147,7 @@ import {
 } from "@/lib/security-settings";
 import {
   ArrowLeft,
+  ArrowLeftRight,
   ArrowRight,
   Bike,
   BookOpen,
@@ -156,6 +157,7 @@ import {
   Car,
   Activity,
   CircleHelp,
+  ClipboardCheck,
   ClipboardList,
   Cloud,
   Database,
@@ -209,6 +211,7 @@ import {
   WmsStockPanel,
 } from "@/components/wms/WmsPanels";
 import { WmsPickingPanel, WmsSlotsPanel } from "@/components/wms/AislePicking";
+import { WmsCycleCountPanel, WmsMovementsPanel } from "@/components/wms/WmsLiveOps";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Area,
@@ -233,6 +236,8 @@ const NAV_IDS: { id: Section; icon: typeof LayoutDashboard; labelKey: string }[]
   { id: "stock", icon: Boxes, labelKey: "nav_stock" },
   { id: "huecos", icon: Grid3X3, labelKey: "nav_slots" },
   { id: "picking", icon: ScanBarcode, labelKey: "nav_picking" },
+  { id: "movimientos", icon: ArrowLeftRight, labelKey: "nav_movimientos" },
+  { id: "inventario", icon: ClipboardCheck, labelKey: "nav_inventario" },
   { id: "palets", icon: Package, labelKey: "nav_pallets" },
   { id: "flota", icon: Forklift, labelKey: "nav_fleet" },
   { id: "recepcion", icon: Truck, labelKey: "nav_inbound" },
@@ -4018,6 +4023,8 @@ export function MpsCrmApp() {
       {section === "stock" && <WmsStockPanel lang={lang} />}
       {section === "huecos" && <WmsSlotsPanel lang={lang} />}
       {section === "picking" && <WmsPickingPanel lang={lang} />}
+      {section === "movimientos" && <WmsMovementsPanel lang={lang} />}
+      {section === "inventario" && <WmsCycleCountPanel lang={lang} />}
       {section === "palets" && <WmsPalletsPanel lang={lang} />}
       {section === "flota" && <WmsFleetPanel lang={lang} />}
       {section === "recepcion" && <WmsInboundPanel lang={lang} />}

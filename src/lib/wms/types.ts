@@ -1,4 +1,4 @@
-/** Dominio WMS — Campo Norte Logística (fase 2: pasillo + picado). */
+/** Dominio WMS — Campo Norte Logística (fase 3: movimientos en vivo). */
 
 export type WarehouseZone = "seco" | "fresco" | "congelado" | "picking" | "muelle" | "crossdock";
 
@@ -244,4 +244,4 @@ export const FLEET_KIND_LABEL: Record<FleetKind, { es: string; en: string }> = {
   apilador: { es: "Apilador", en: "Stacker" },
 };
 
-export const WMS_STORAGE_KEY = "cn-wms-hub-v3";
+export const WMS_STORAGE_KEY = "cn-wms-hub-v4";

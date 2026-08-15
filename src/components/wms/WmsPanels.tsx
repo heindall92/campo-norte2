@@ -5,7 +5,10 @@ import {
   CATEGORY_LABEL,
   FLEET_KIND_LABEL,
   ZONE_LABEL,
+  WMS_DEMO_NOW,
+  alertCounts,
   computeTowerKpis,
+  computeWmsAlerts,
   fleetUtilization,
   loadWmsSnapshot,
   monthCosts,
@@ -68,6 +71,8 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
   const kpis = computeTowerKpis(snap, "2026-08", siteId);
   const occ = occupancyByZone(snap.slots.filter((s) => s.siteId === siteId));
   const site = snap.sites.find((s) => s.id === siteId) ?? snap.sites[0];
+  const alerts = computeWmsAlerts(snap, new Date(WMS_DEMO_NOW), siteId);
+  const counts = alertCounts(alerts);
 
   return (
     <div className="space-y-4">
@@ -81,8 +86,8 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-[var(--ink-muted)]">
             {lang === "es"
-              ? "Stock por hueco · palets · flota eléctrica · operarios · costes del centro — en un solo ritmo."
-              : "Slot stock · pallets · electric fleet · operators · site costs — one operating rhythm."}
+              ? "Stock, flota, gente y euros — con alertas de batería, caducidad y cut-off en el mismo ritmo."
+              : "Stock, fleet, people and euros — battery, expiry and cut-off alerts in the same rhythm."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -98,6 +103,9 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
             ))}
           </select>
           <Badge tone="brand">{site?.code}</Badge>
+          <Badge tone={counts.critical ? "bad" : counts.warn ? "warn" : "good"}>
+            {counts.total} {lang === "es" ? "alertas" : "alerts"}
+          </Badge>
         </div>
       </header>
 
@@ -222,6 +230,34 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
           </ul>
         </Card>
       </div>
+
+      <Card
+        title={lang === "es" ? "Alertas operativas" : "Operational alerts"}
+        subtitle={
+          lang === "es"
+            ? "Batería · caducidad · cut-off tienda · pick face vacío"
+            : "Battery · expiry · store cut-off · empty pick face"
+        }
+      >
+        <ul className="space-y-2">
+          {alerts.slice(0, 10).map((a) => (
+            <li
+              key={a.id}
+              className="flex items-start justify-between gap-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2.5 text-sm"
+            >
+              <span>
+                <span className="font-medium text-[var(--ink)]">{lang === "es" ? a.titleEs : a.titleEn}</span>
+                <span className="mt-0.5 block text-xs text-[var(--ink-muted)]">
+                  {lang === "es" ? a.detailEs : a.detailEn}
+                </span>
+              </span>
+              <Badge tone={a.severity === "critical" ? "bad" : a.severity === "warn" ? "warn" : "neutral"}>
+                {a.kind}
+              </Badge>
+            </li>
+          ))}
+        </ul>
+      </Card>
     </div>
   );
 }

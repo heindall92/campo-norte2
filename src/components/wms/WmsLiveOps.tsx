@@ -1,0 +1,448 @@
+import { Badge, Card } from "@/components/CrmChrome";
+import type { Lang } from "@/lib/i18n";
+import {
+  FLEET_KIND_LABEL,
+  applyReplenishment,
+  confirmCycleCount,
+  confirmPutaway,
+  confirmTransfer,
+  loadWmsSnapshot,
+  planCycleCounts,
+  proposeReplenishments,
+  saveWmsSnapshot,
+  type CycleCountError,
+  type LiveMoveError,
+  type WmsSnapshot,
+} from "@/lib/wms";
+import { cn } from "@/lib/utils";
+import { ArrowDownToLine, ArrowLeftRight, Check, Forklift, ScanBarcode } from "lucide-react";
+import { useMemo, useState } from "react";
+
+function useWmsLive(): [WmsSnapshot, (next: WmsSnapshot) => void] {
+  const [snap, setSnap] = useState(() => loadWmsSnapshot());
+  function update(next: WmsSnapshot) {
+    saveWmsSnapshot(next);
+    setSnap(next);
+  }
+  return [snap, update];
+}
+
+const MOVE_ERR: Record<LiveMoveError, { es: string; en: string }> = {
+  pallet_missing: { es: "SSCC no encontrado", en: "SSCC not found" },
+  wrong_sscc: { es: "SSCC incorrecto", en: "Wrong SSCC" },
+  wrong_from: { es: "El palet no está en ese hueco de origen", en: "Pallet is not in that from-slot" },
+  to_missing: { es: "Hueco destino no existe", en: "To-slot does not exist" },
+  slot_occupied: { es: "Destino ocupado", en: "Destination occupied" },
+  slot_blocked: { es: "Destino bloqueado", en: "Destination blocked" },
+  same_slot: { es: "Origen y destino son el mismo hueco", en: "Same slot" },
+  not_on_dock: { es: "El palet no está en muelle", en: "Pallet is not on dock" },
+};
+
+const COUNT_ERR: Record<CycleCountError, { es: string; en: string }> = {
+  task_missing: { es: "Tarea no vigente", en: "Task gone" },
+  wrong_slot: { es: "Hueco incorrecto", en: "Wrong slot" },
+  wrong_sscc: { es: "SSCC incorrecto", en: "Wrong SSCC" },
+  invalid_qty: { es: "Cantidad no válida", en: "Invalid qty" },
+};
+
+export function WmsMovementsPanel({ lang }: { lang: Lang }) {
+  const [snap, setSnap] = useWmsLive();
+  const [mode, setMode] = useState<"putaway" | "traslado">("putaway");
+  const [sscc, setSscc] = useState("");
+  const [fromCode, setFromCode] = useState("");
+  const [toCode, setToCode] = useState("");
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [okMsg, setOkMsg] = useState<string | null>(null);
+
+  const dockPal = snap.pallets.find((p) => p.status === "muelle");
+  const dockSlot = dockPal?.slotId ? snap.slots.find((s) => s.id === dockPal.slotId) : null;
+  const proposals = useMemo(() => proposeReplenishments(snap), [snap]);
+  const doubleReach = snap.fleet.find((f) => f.kind === "retractil_doble" && f.status === "operativa");
+
+  function runMove() {
+    const input = {
+      sscc,
+      fromSlotCode: fromCode,
+      toSlotCode: toCode,
+      operatorId: mode === "putaway" ? "op-04" : "op-02",
+      fleetId: doubleReach?.id ?? "fl-07",
+    };
+    const result = mode === "putaway" ? confirmPutaway(snap, input) : confirmTransfer(snap, input);
+    if (!result.ok) {
+      setOkMsg(null);
+      setFeedback(MOVE_ERR[result.error][lang]);
+      return;
+    }
+    setSnap(result.snap);
+    setFeedback(null);
+    setOkMsg(lang === "es" ? `Movimiento OK · ${fromCode} → ${toCode}` : `Move OK · ${fromCode} → ${toCode}`);
+    setSscc("");
+    setFromCode("");
+    setToCode("");
+  }
+
+  return (
+    <div className="space-y-4">
+      <header>
+        <h2 className="font-[family-name:var(--mps-display)] text-2xl text-[var(--ink)]">
+          {lang === "es" ? "Movimientos en vivo" : "Live movements"}
+        </h2>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--ink-muted)]">
+          {lang === "es"
+            ? "RF de planta: putaway de muelle y traslados hueco a hueco. La reposición reserva → picking usa retráctil doble stand-up."
+            : "Floor RF: dock putaway and slot-to-slot transfers. Reserve → pick face uses stand-up double reach."}
+        </p>
+      </header>
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setMode("putaway")}
+          className={cn(
+            "rounded-full px-4 py-2 text-sm font-semibold",
+            mode === "putaway" ? "bg-[var(--accent)] text-white" : "border border-[var(--glass-border)]",
+          )}
+        >
+          Putaway
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("traslado")}
+          className={cn(
+            "rounded-full px-4 py-2 text-sm font-semibold",
+            mode === "traslado" ? "bg-[var(--accent)] text-white" : "border border-[var(--glass-border)]",
+          )}
+        >
+          {lang === "es" ? "Traslado" : "Transfer"}
+        </button>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
+        <Card title={lang === "es" ? "Confirmar con escáner" : "Confirm with scanner"}>
+          <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+            SSCC
+            <input
+              value={sscc}
+              onChange={(e) => setSscc(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+            />
+          </label>
+          <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+            {lang === "es" ? "Hueco origen" : "From slot"}
+            <input
+              value={fromCode}
+              onChange={(e) => setFromCode(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+            />
+          </label>
+          <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+            {lang === "es" ? "Hueco destino" : "To slot"}
+            <input
+              value={toCode}
+              onChange={(e) => setToCode(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+            />
+          </label>
+          {feedback && (
+            <p className="mb-3 rounded-xl bg-[var(--warn-bg)] px-3 py-2 text-xs font-semibold text-[var(--warn-ink)]">
+              {feedback}
+            </p>
+          )}
+          {okMsg && (
+            <p className="mb-3 rounded-xl bg-[color-mix(in_oklab,var(--ok)_16%,transparent)] px-3 py-2 text-xs font-semibold text-[var(--ok)]">
+              {okMsg}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={runMove}
+              className="inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white"
+            >
+              <Check className="h-4 w-4" />
+              {lang === "es" ? "Confirmar movimiento" : "Confirm move"}
+            </button>
+            {mode === "putaway" && dockPal && dockSlot && (
+              <button
+                type="button"
+                onClick={() => {
+                  const dest = snap.slots.find(
+                    (s) => s.siteId === dockPal.siteId && s.aisle === "A" && s.status === "libre" && !s.pickFace,
+                  );
+                  setSscc(dockPal.sscc);
+                  setFromCode(dockSlot.code);
+                  setToCode(dest?.code ?? "");
+                }}
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--glass-border)] px-4 py-2.5 text-sm font-semibold"
+              >
+                <ScanBarcode className="h-4 w-4" />
+                {lang === "es" ? "Autocompletar putaway" : "Autofill putaway"}
+              </button>
+            )}
+          </div>
+        </Card>
+
+        <Card
+          title={lang === "es" ? "Reposición pick face" : "Pick-face replenishment"}
+          subtitle={doubleReach ? `${doubleReach.code} · ${FLEET_KIND_LABEL[doubleReach.kind][lang]}` : undefined}
+        >
+          {proposals.length === 0 ? (
+            <p className="text-sm text-[var(--ink-muted)]">
+              {lang === "es" ? "Cara de picking cubierta." : "Pick faces covered."}
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {proposals.slice(0, 6).map((p) => {
+                const from = snap.slots.find((s) => s.id === p.fromSlotId);
+                const to = snap.slots.find((s) => s.id === p.toSlotId);
+                const sku = snap.skus.find((s) => s.id === p.skuId);
+                return (
+                  <li
+                    key={p.id}
+                    className="flex items-center justify-between gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2 text-sm"
+                  >
+                    <span>
+                      <span className="font-medium">{sku?.name}</span>
+                      <span className="mt-0.5 block font-mono text-xs text-[var(--ink-muted)]">
+                        {from?.code} → {to?.code}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const result = applyReplenishment(
+                          snap,
+                          p,
+                          doubleReach?.id ?? "fl-07",
+                          "op-02",
+                        );
+                        if (!result.ok) {
+                          setFeedback(MOVE_ERR[result.error][lang]);
+                          return;
+                        }
+                        setSnap(result.snap);
+                        setOkMsg(
+                          lang === "es"
+                            ? `Reposición OK con retráctil doble`
+                            : `Replenishment OK with double reach`,
+                        );
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-white"
+                    >
+                      <Forklift className="h-3.5 w-3.5" />
+                      {lang === "es" ? "Bajar" : "Drop"}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+      </div>
+
+      <Card title={lang === "es" ? "Últimos movimientos" : "Latest movements"}>
+        <ul className="space-y-2 text-sm">
+          {snap.movements.slice(0, 8).map((m) => (
+            <li key={m.id} className="flex items-center justify-between gap-2 border-b border-[var(--glass-border)] py-2 last:border-0">
+              <span className="inline-flex items-center gap-2">
+                {m.type === "entrada" ? (
+                  <ArrowDownToLine className="h-4 w-4 text-[var(--accent)]" />
+                ) : (
+                  <ArrowLeftRight className="h-4 w-4 text-[var(--accent)]" />
+                )}
+                <span>
+                  <span className="font-semibold">{m.type}</span>
+                  <span className="text-[var(--ink-muted)]"> · {m.note}</span>
+                </span>
+              </span>
+              <span className="font-mono text-xs text-[var(--ink-muted)]">{m.at.slice(11, 16)}</span>
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </div>
+  );
+}
+
+export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
+  const [snap, setSnap] = useWmsLive();
+  const [siteId, setSiteId] = useState(snap.sites[0]?.id ?? "");
+  const tasks = useMemo(
+    () => planCycleCounts(snap, { siteId, limit: 10 }),
+    [snap, siteId],
+  );
+  const [taskId, setTaskId] = useState(tasks[0]?.id ?? "");
+  const task = tasks.find((t) => t.id === taskId) ?? tasks[0];
+  const slot = task ? snap.slots.find((s) => s.id === task.slotId) : null;
+  const pallet = task ? snap.pallets.find((p) => p.id === task.palletId) : null;
+  const sku = task ? snap.skus.find((s) => s.id === task.skuId) : null;
+  const [scanSlot, setScanSlot] = useState("");
+  const [scanSscc, setScanSscc] = useState("");
+  const [qty, setQty] = useState(task?.expectedQty ?? 0);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [okMsg, setOkMsg] = useState<string | null>(null);
+
+  const reasonLabel: Record<typeof tasks[number]["reason"], string> = {
+    caducidad: lang === "es" ? "Caducidad" : "Expiry",
+    abc_a: "ABC A",
+    antiguo: lang === "es" ? "Sin conteo reciente" : "Stale count",
+    frio: lang === "es" ? "Cámara" : "Cold",
+  };
+
+  function confirm() {
+    if (!task) return;
+    const result = confirmCycleCount(snap, task, { slotCode: scanSlot, sscc: scanSscc, qty });
+    if (!result.ok) {
+      setOkMsg(null);
+      setFeedback(COUNT_ERR[result.error][lang]);
+      return;
+    }
+    setSnap(result.snap);
+    setFeedback(null);
+    setOkMsg(
+      result.variance === 0
+        ? lang === "es"
+          ? "Conteo OK · sin desvío"
+          : "Count OK · no variance"
+        : lang === "es"
+          ? `Ajuste ${result.variance > 0 ? "+" : ""}${result.variance} ud.`
+          : `Adjust ${result.variance > 0 ? "+" : ""}${result.variance} u.`,
+    );
+    setScanSlot("");
+    setScanSscc("");
+  }
+
+  return (
+    <div className="space-y-4">
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="font-[family-name:var(--mps-display)] text-2xl text-[var(--ink)]">
+            {lang === "es" ? "Inventario cíclico" : "Cycle count"}
+          </h2>
+          <p className="mt-1 text-sm text-[var(--ink-muted)]">
+            {lang === "es"
+              ? "Prioridad: caducidad, ABC A y huecos sin conteo reciente. Escanea hueco y SSCC."
+              : "Priority: expiry, ABC A and stale slots. Scan slot and SSCC."}
+          </p>
+        </div>
+        <select
+          className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+          value={siteId}
+          onChange={(e) => setSiteId(e.target.value)}
+        >
+          {snap.sites.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.city}
+            </option>
+          ))}
+        </select>
+      </header>
+
+      <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
+        <Card title={lang === "es" ? "Cola de conteo" : "Count queue"}>
+          <ul className="space-y-2">
+            {tasks.map((t) => {
+              const s = snap.slots.find((x) => x.id === t.slotId);
+              const sk = snap.skus.find((x) => x.id === t.skuId);
+              return (
+                <li key={t.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTaskId(t.id);
+                      setQty(t.expectedQty);
+                      setFeedback(null);
+                    }}
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm",
+                      t.id === task?.id
+                        ? "border-[color-mix(in_oklab,var(--accent)_45%,transparent)] bg-[color-mix(in_oklab,var(--accent)_10%,transparent)]"
+                        : "border-[var(--glass-border)]",
+                    )}
+                  >
+                    <span>
+                      <span className="font-mono text-xs font-semibold">{s?.code}</span>
+                      <span className="mt-0.5 block text-[var(--ink-muted)]">{sk?.name}</span>
+                    </span>
+                    <Badge tone={t.reason === "caducidad" ? "bad" : "warn"}>{reasonLabel[t.reason]}</Badge>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+
+        {task && slot && pallet && sku ? (
+          <Card title={slot.code} subtitle={sku.name}>
+            <p className="mb-3 text-xs text-[var(--ink-muted)]">
+              SSCC {pallet.sscc} · {lang === "es" ? "esperado" : "expected"} {task.expectedQty}
+            </p>
+            <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+              {lang === "es" ? "1. Escanea hueco" : "1. Scan slot"}
+              <input
+                value={scanSlot}
+                onChange={(e) => setScanSlot(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+              />
+            </label>
+            <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+              {lang === "es" ? "2. Escanea SSCC" : "2. Scan SSCC"}
+              <input
+                value={scanSscc}
+                onChange={(e) => setScanSscc(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+              />
+            </label>
+            <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+              {lang === "es" ? "3. Cantidad contada" : "3. Counted qty"}
+              <input
+                type="number"
+                min={0}
+                value={qty}
+                onChange={(e) => setQty(Number(e.target.value))}
+                className="mt-1 w-full rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+              />
+            </label>
+            {feedback && (
+              <p className="mb-3 rounded-xl bg-[var(--warn-bg)] px-3 py-2 text-xs font-semibold text-[var(--warn-ink)]">
+                {feedback}
+              </p>
+            )}
+            {okMsg && (
+              <p className="mb-3 rounded-xl bg-[color-mix(in_oklab,var(--ok)_16%,transparent)] px-3 py-2 text-xs font-semibold text-[var(--ok)]">
+                {okMsg}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={confirm}
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white"
+              >
+                <Check className="h-4 w-4" />
+                {lang === "es" ? "Confirmar conteo" : "Confirm count"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setScanSlot(slot.code);
+                  setScanSscc(pallet.sscc);
+                  setQty(task.expectedQty);
+                }}
+                className="rounded-full border border-[var(--glass-border)] px-4 py-2.5 text-sm font-semibold"
+              >
+                {lang === "es" ? "Autocompletar demo" : "Autofill demo"}
+              </button>
+            </div>
+          </Card>
+        ) : (
+          <Card title={lang === "es" ? "Sin tareas" : "No tasks"}>
+            <p className="text-sm text-[var(--ink-muted)]">
+              {lang === "es" ? "Cola de inventario cíclico vacía." : "Cycle count queue is empty."}
+            </p>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}

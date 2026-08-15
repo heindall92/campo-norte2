@@ -61,6 +61,8 @@ const QUICK: {
   { id: "stock", labelEs: "Stock", labelEn: "Stock", icon: Gauge },
   { id: "huecos", labelEs: "Huecos", labelEn: "Slots", icon: Layers },
   { id: "picking", labelEs: "Picar", labelEn: "Pick", icon: Gauge },
+  { id: "movimientos", labelEs: "Movs", labelEn: "Moves", icon: RefreshCw },
+  { id: "inventario", labelEs: "Conteo", labelEn: "Count", icon: ClipboardList },
   { id: "palets", labelEs: "Palets", labelEn: "Pallets", icon: CalendarDays },
   { id: "flota", labelEs: "Flota", labelEn: "Fleet", icon: Database },
 ];
@@ -95,6 +97,8 @@ const SECTION_TITLE_KEY: Partial<Record<AppSection, string>> = {
   stock: "nav_stock",
   huecos: "nav_slots",
   picking: "nav_picking",
+  movimientos: "nav_movimientos",
+  inventario: "nav_inventario",
   palets: "nav_pallets",
   flota: "nav_fleet",
   recepcion: "nav_inbound",

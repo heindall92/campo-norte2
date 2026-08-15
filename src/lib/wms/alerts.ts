@@ -1,0 +1,134 @@
+import type { WmsSnapshot } from "./types";
+import { proposeReplenishments } from "./movements";
+
+export const WMS_DEMO_NOW = "2026-08-15T11:00:00.000Z";
+
+export type WmsAlertKind = "bateria" | "caducidad" | "cut_off" | "pick_face" | "bloqueo";
+export type WmsAlertSeverity = "info" | "warn" | "critical";
+
+export interface WmsAlert {
+  id: string;
+  kind: WmsAlertKind;
+  severity: WmsAlertSeverity;
+  titleEs: string;
+  titleEn: string;
+  detailEs: string;
+  detailEn: string;
+  siteId: string;
+  entityId?: string;
+}
+
+const EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
+const CUTOFF_WARN_MS = 2 * 60 * 60 * 1000;
+const BATTERY_MIN = 25;
+
+export function computeWmsAlerts(
+  snap: WmsSnapshot,
+  now = new Date(WMS_DEMO_NOW),
+  siteId?: string,
+): WmsAlert[] {
+  const nowMs = now.getTime();
+  const alerts: WmsAlert[] = [];
+  const inSite = (id: string) => !siteId || id === siteId;
+
+  for (const unit of snap.fleet) {
+    if (!inSite(unit.siteId)) continue;
+    if (unit.batteryPct >= BATTERY_MIN) continue;
+    alerts.push({
+      id: `bat-${unit.id}`,
+      kind: "bateria",
+      severity: unit.batteryPct < 15 ? "critical" : "warn",
+      titleEs: `Batería ${unit.code} al ${unit.batteryPct}%`,
+      titleEn: `Battery ${unit.code} at ${unit.batteryPct}%`,
+      detailEs: `${unit.brand} ${unit.model} · cambiar o cargar antes del siguiente turno`,
+      detailEn: `${unit.brand} ${unit.model} · swap or charge before next shift`,
+      siteId: unit.siteId,
+      entityId: unit.id,
+    });
+  }
+
+  let expiryShown = 0;
+  for (const pallet of snap.pallets) {
+    if (!inSite(pallet.siteId) || pallet.status === "expedido" || !pallet.expiry) continue;
+    const left = new Date(pallet.expiry).getTime() - nowMs;
+    if (left > EXPIRY_MS) continue;
+    if (expiryShown >= 8) continue;
+    expiryShown += 1;
+    const slot = pallet.slotId ? snap.slots.find((s) => s.id === pallet.slotId) : null;
+    const expired = left <= 0;
+    alerts.push({
+      id: `exp-${pallet.id}`,
+      kind: "caducidad",
+      severity: expired ? "critical" : "warn",
+      titleEs: expired ? `Caducado ${pallet.sscc}` : `Caduca ${pallet.expiry.slice(0, 10)} · ${pallet.sscc}`,
+      titleEn: expired ? `Expired ${pallet.sscc}` : `Expires ${pallet.expiry.slice(0, 10)} · ${pallet.sscc}`,
+      detailEs: slot ? `Hueco ${slot.code}` : "Sin hueco",
+      detailEn: slot ? `Slot ${slot.code}` : "No slot",
+      siteId: pallet.siteId,
+      entityId: pallet.id,
+    });
+  }
+
+  for (const order of snap.outbound) {
+    if (!inSite(order.siteId) || order.status === "expedido") continue;
+    const cut = new Date(order.cutOff).getTime();
+    const delta = cut - nowMs;
+    if (delta > CUTOFF_WARN_MS) continue;
+    const overdue = delta < 0;
+    alerts.push({
+      id: `cut-${order.id}`,
+      kind: "cut_off",
+      severity: overdue ? "critical" : "warn",
+      titleEs: overdue ? `Cut-off vencido · ${order.code}` : `Cut-off en ${Math.round(delta / 60000)} min · ${order.code}`,
+      titleEn: overdue ? `Cut-off missed · ${order.code}` : `Cut-off in ${Math.round(delta / 60000)} min · ${order.code}`,
+      detailEs: `${order.customer} · muelle ${order.dock}`,
+      detailEn: `${order.customer} · dock ${order.dock}`,
+      siteId: order.siteId,
+      entityId: order.id,
+    });
+  }
+
+  for (const slot of snap.slots) {
+    if (!inSite(slot.siteId) || slot.status !== "bloqueado") continue;
+    alerts.push({
+      id: `blk-${slot.id}`,
+      kind: "bloqueo",
+      severity: "info",
+      titleEs: `Hueco bloqueado ${slot.code}`,
+      titleEn: `Blocked slot ${slot.code}`,
+      detailEs: "No asignar putaway ni picking hasta liberar",
+      detailEn: "Do not assign putaway or picking until released",
+      siteId: slot.siteId,
+      entityId: slot.id,
+    });
+  }
+
+  for (const proposal of proposeReplenishments(snap)) {
+    if (!inSite(proposal.siteId)) continue;
+    const sku = snap.skus.find((s) => s.id === proposal.skuId);
+    const from = snap.slots.find((s) => s.id === proposal.fromSlotId);
+    const to = snap.slots.find((s) => s.id === proposal.toSlotId);
+    alerts.push({
+      id: `pf-${proposal.id}`,
+      kind: "pick_face",
+      severity: "warn",
+      titleEs: `Pick face vacío · ${sku?.name ?? proposal.skuId}`,
+      titleEn: `Empty pick face · ${sku?.name ?? proposal.skuId}`,
+      detailEs: `Bajar de reserva ${from?.code ?? "?"} → ${to?.code ?? "?"} con retráctil doble`,
+      detailEn: `Replenish ${from?.code ?? "?"} → ${to?.code ?? "?"} with double reach`,
+      siteId: proposal.siteId,
+      entityId: proposal.id,
+    });
+  }
+
+  const order: Record<WmsAlertSeverity, number> = { critical: 0, warn: 1, info: 2 };
+  return alerts.sort((a, b) => order[a.severity] - order[b.severity]);
+}
+
+export function alertCounts(alerts: WmsAlert[]) {
+  return {
+    total: alerts.length,
+    critical: alerts.filter((a) => a.severity === "critical").length,
+    warn: alerts.filter((a) => a.severity === "warn").length,
+  };
+}

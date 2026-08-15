@@ -17,6 +17,8 @@ export type AppSection =
   | "stock"
   | "huecos"
   | "picking"
+  | "movimientos"
+  | "inventario"
   | "palets"
   | "flota"
   | "recepcion"

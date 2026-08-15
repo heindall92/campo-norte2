@@ -7,7 +7,7 @@
 - Roles: Dirección / Almacén / Office / Planta (`guide` = operario de planta)
 - Semilla demo hub Sevilla + cámara Huelva
 
-## Fase 2 — Pasillo & picking (esta entrega)
+## Fase 2 — Pasillo & picking
 - Ubicación `Pasillo-Bahía-Nivel-Posición` (ej. `A-03-02-1`)
 - Nivel 1 = cara de picking (`pickFace`); superiores = reserva
 - Vista pasillo rack selectivo (montantes azules, 2 palets/bahía, film + SSCC)
@@ -16,11 +16,11 @@
 - Semilla operativa Sevilla + Huelva
 - Tests de dominio: ubicación, picado, KPIs
 
-## Fase 3 — Movimientos en vivo (siguiente)
-- Movimientos en vivo (RF / putaway / traslado con confirmación en planta)
-- Inventario cíclico por pasillo / ABC / caducidad
-- Alertas de batería, caducidad y cut-off de tienda en tiempo real
-- Reposición automática reserva → cara de picking cuando el pick face baja de mínimo
+## Fase 3 — Movimientos en vivo (esta entrega)
+- Movimientos RF: putaway muelle → hueco y traslado hueco → hueco
+- Reposición automática reserva → cara de picking con retráctil doble stand-up
+- Inventario cíclico priorizado por caducidad / ABC A / conteo viejo
+- Alertas en torre: batería < 25 %, caducidad 7 días, cut-off de tienda, pick face vacío
 
 ## Fase 4 — Economía, RRHH y SaaS
 - Coste por palet movido / por línea pick

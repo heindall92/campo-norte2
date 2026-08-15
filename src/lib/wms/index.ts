@@ -3,6 +3,9 @@ export * from "./seed";
 export * from "./stats";
 export * from "./location";
 export * from "./picking";
+export * from "./movements";
+export * from "./cycle-count";
+export * from "./alerts";
 
 import { buildWmsSeed } from "./seed";
 import { WMS_STORAGE_KEY, type WmsSnapshot } from "./types";

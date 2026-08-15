@@ -752,6 +752,7 @@ const MOVEMENTS: StockMovement[] = [
 export function buildWmsSeed(): WmsSnapshot {
   const slots = buildSlots();
   const pallets = buildPallets(slots);
+  seedDockAndPickFaceGap(slots, pallets);
   const pickWaves = buildPickWaves(slots, pallets);
   return {
     sites: [SITE_SEV, SITE_HUE],
@@ -766,6 +767,53 @@ export function buildWmsSeed(): WmsSnapshot {
     movements: MOVEMENTS,
     pickWaves,
   };
+}
+
+/** Palet en muelle para putaway + un pick face vacío con reserva encima (retráctil doble). */
+function seedDockAndPickFaceGap(slots: Slot[], pallets: Pallet[]): void {
+  const dock = slots.find((s) => s.siteId === SITE_SEV.id && s.zone === "muelle" && s.status === "libre");
+  if (dock) {
+    const id = "pal-dock-01";
+    pallets.push({
+      id,
+      sscc: "003841009900000001",
+      skuId: "sku-arroz",
+      qty: 80,
+      lot: "L26D1",
+      expiry: null,
+      status: "muelle",
+      slotId: dock.id,
+      siteId: SITE_SEV.id,
+      receivedAt: "2026-08-15T08:40:00.000Z",
+      supplier: "Aceites del Sur",
+    });
+    dock.palletId = id;
+    dock.status = "ocupado";
+  }
+
+  const reserves = slots.filter(
+    (s) => s.siteId === SITE_SEV.id && s.aisle === "A" && s.level === 2 && Boolean(s.palletId),
+  );
+  const reserve = reserves[4] ?? reserves.at(-1);
+  if (!reserve?.palletId) return;
+  const face = slots.find(
+    (s) =>
+      s.siteId === SITE_SEV.id &&
+      s.aisle === "A" &&
+      s.rack === reserve.rack &&
+      s.pickFace &&
+      s.position === reserve.position,
+  );
+  if (!face || face.palletId === reserve.palletId) return;
+  if (face.palletId) {
+    const old = pallets.find((p) => p.id === face.palletId);
+    if (old) {
+      old.status = "expedido";
+      old.slotId = null;
+    }
+  }
+  face.palletId = null;
+  face.status = "libre";
 }
 
 function buildPickWaves(slots: Slot[], pallets: Pallet[]): PickWave[] {
