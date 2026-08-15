@@ -17,6 +17,7 @@ import {
   computeWmsAlerts,
   fleetUtilization,
   loadWmsSnapshot,
+  saveWmsSnapshot,
   monthCosts,
   occupancyByZone,
   stockByCategory,
@@ -38,16 +39,14 @@ import {
   Coins,
   Forklift,
   Grid3X3,
-  Moon,
   Package,
   ScanBarcode,
-  Sun,
-  Sunset,
   Truck,
   Users,
   Warehouse,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { WmsShiftBoard } from "./WmsShifts";
 import {
   Bar,
   BarChart,
@@ -567,12 +566,15 @@ export function WmsFleetPanel({ lang }: { lang: Lang }) {
 }
 
 export function WmsOperatorsPanel({ lang }: { lang: Lang }) {
-  const snap = useWms();
+  const [snap, setSnap] = useState(() => loadWmsSnapshot());
   const [siteId, setSiteId] = useState(snap.sites[0]?.id ?? "");
   const ops = snap.operators.filter((o) => o.siteId === siteId);
   const labor = ops.reduce((s, o) => s + o.hoursToday * o.costPerHour, 0);
-  const coverage = computeShiftCoverage(snap, siteId);
-  const shiftIcon = { manana: Sun, tarde: Sunset, noche: Moon };
+
+  function persist(next: WmsSnapshot) {
+    saveWmsSnapshot(next);
+    setSnap(next);
+  }
 
   return (
     <div className="space-y-4">
@@ -583,8 +585,8 @@ export function WmsOperatorsPanel({ lang }: { lang: Lang }) {
           </h2>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
             {lang === "es"
-              ? "Turnos, cobertura mínima, certificaciones y coste real del día."
-              : "Shifts, minimum coverage, certifications and real day cost."}
+              ? "Asigna turnos, cubre huecos con excedente y mira certificaciones y coste del día."
+              : "Assign shifts, fill gaps with surplus staff, and see certifications and day cost."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -605,41 +607,7 @@ export function WmsOperatorsPanel({ lang }: { lang: Lang }) {
         </div>
       </header>
 
-      <div className="grid gap-3 md:grid-cols-3">
-        {(["manana", "tarde", "noche"] as const).map((shift) => {
-          const Icon = shiftIcon[shift];
-          const rows = coverage.gaps.filter((g) => g.shift === shift);
-          const missing = rows.filter((g) => g.gap < 0).length;
-          return (
-            <Card
-              key={shift}
-              title={SHIFT_LABEL[shift][lang]}
-              subtitle={`${coverage.headsByShift[shift]} ${lang === "es" ? "personas" : "people"}`}
-            >
-              <p className="mb-3 inline-flex items-center gap-2 text-sm text-[var(--ink-muted)]">
-                <Icon className="h-4 w-4 text-[var(--accent)]" />
-                {missing
-                  ? lang === "es"
-                    ? `${missing} huecos de rol`
-                    : `${missing} role gaps`
-                  : lang === "es"
-                    ? "Dotación cubierta"
-                    : "Staffing covered"}
-              </p>
-              <ul className="space-y-1.5 text-xs">
-                {rows.map((g) => (
-                  <li key={`${g.shift}-${g.role}`} className="flex items-center justify-between">
-                    <span>{ROLE_FLOOR_LABEL[g.role][lang]}</span>
-                    <Badge tone={g.gap < 0 ? "bad" : g.gap === 0 ? "good" : "neutral"}>
-                      {g.actual}/{g.required}
-                    </Badge>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          );
-        })}
-      </div>
+      <WmsShiftBoard lang={lang} snap={snap} siteId={siteId} onChange={persist} />
 
       <Card>
         <div className="overflow-x-auto">
@@ -663,9 +631,9 @@ export function WmsOperatorsPanel({ lang }: { lang: Lang }) {
                     <p className="font-mono text-xs text-[var(--ink-muted)]">{o.code}</p>
                   </td>
                   <td className="py-2.5 pr-3">
-                    <Badge tone="neutral">{o.role}</Badge>
+                    <Badge tone="neutral">{ROLE_FLOOR_LABEL[o.role][lang]}</Badge>
                   </td>
-                  <td className="py-2.5 pr-3">{o.shift}</td>
+                  <td className="py-2.5 pr-3">{SHIFT_LABEL[o.shift][lang]}</td>
                   <td className="py-2.5 pr-3 font-semibold">{o.movesToday}</td>
                   <td className="py-2.5 pr-3">{o.hoursToday.toFixed(1)}</td>
                   <td className="py-2.5 pr-3">{o.costPerHour.toFixed(2)}</td>

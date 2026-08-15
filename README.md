@@ -11,9 +11,11 @@ Este repositorio (`campo-norte2`) publica el ecosistema SaaS WMS. La base CRM/WM
 
 ---
 
-## Fases 2–4 (esta rama)
+## Fases 2–5 (esta rama)
 
-Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, movimientos en vivo, inventario cíclico, alertas, **economía unitaria** y **cobertura de turnos**.
+Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, movimientos en vivo, inventario cíclico, alertas, economía unitaria y **planificación de turnos con asignación**.
+
+**Iconos:** siempre [Lucide](https://lucide.dev) (`lucide-react`).
 
 | Módulo | Qué controla |
 |---|---|
@@ -27,7 +29,7 @@ Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, mov
 | Flota eléctrica | Incluye **retráctil doble stand-up** asignada a reposición |
 | Recepción | ASN / muelle / putaway |
 | Expedición | Olas a tienda / prioridad / cut-off |
-| Operarios | Turnos, **cobertura mínima** (sol/atardecer/luna Lucide), extras, €/h |
+| Operarios | Turnos **asignables**, cubrir huecos con excedente (sol/atardecer/luna Lucide), extras, €/h |
 | Costes | OPEX vs presupuesto, €/palet, P&L 3PL del hub (también en Tesorería) |
 
 Se conservan módulos útiles del CRM original (facturas, tesorería, aprobaciones, conocimiento, hub).
@@ -64,7 +66,7 @@ Cómo probar fase 2:
 6. **Movimientos** → Autocompletar putaway → Confirmar. Luego **Bajar** una reposición de pick face.
 7. **Inventario cíclico** → Autocompletar demo → Confirmar conteo.
 8. Torre de control: lista de alertas (batería Still EXU-S, cut-off Alcalá, caducidad).
-9. **Operarios** → cobertura mañana/tarde/noche (Sevilla noche: falta picker).
+9. **Operarios** → cobertura mañana/tarde/noche. **Cubrir huecos** mueve excedente (picker noche + carretillero tarde). Lo que queda es contratar.
 10. **Costes** o **Tesorería** → P&L 3PL del hub (€/palet y contribución).
 
 ---

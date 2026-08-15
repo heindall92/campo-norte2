@@ -22,12 +22,17 @@
 - Inventario cíclico priorizado por caducidad / ABC A / conteo viejo
 - Alertas en torre: batería < 25 %, caducidad 7 días, cut-off de tienda, pick face vacío
 
-## Fase 4 — Economía & turnos (esta entrega)
+## Fase 4 — Economía & turnos
 - Coste por palet movido y por línea de picking (mano de obra + flota del día)
 - P&L 3PL del centro (almacenaje + handling + pick − OPEX) conectado a Tesorería
 - Cobertura de turnos vs dotación mínima (mañana / tarde / noche)
 - Org multi-hub Campo Norte (2 centros); RLS/`org_id` queda para infra
 
+## Fase 5 — Planificación de turnos (esta entrega)
+- Asignación manual de operario → turno
+- Cubrir huecos con excedente (noche primero; no deja al donante bajo mínimo)
+- Huecos que no se cubren = contratar
+- Iconos siempre Lucide (`lucide-react`, https://lucide.dev)
+
 ## Siguiente
-- Planificación de turnos con asignación (no solo huecos)
 - `org_id` + RLS Postgres, onboarding de centros, integraciones ERP / carriers / RF

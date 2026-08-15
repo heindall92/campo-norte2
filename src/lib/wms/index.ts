@@ -7,6 +7,7 @@ export * from "./movements";
 export * from "./cycle-count";
 export * from "./alerts";
 export * from "./economics";
+export * from "./shifts";
 
 import { buildWmsSeed } from "./seed";
 import { WMS_STORAGE_KEY, type WmsSnapshot } from "./types";
