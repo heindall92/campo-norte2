@@ -21,6 +21,7 @@ export * from "./normalize";
 export * from "./jornada";
 export * from "./waves";
 export * from "./outbound";
+export * from "./floor";
 
 import { buildWmsSeed } from "./seed";
 import { normalizeWmsSnapshot, snapshotLooksUsable } from "./normalize";

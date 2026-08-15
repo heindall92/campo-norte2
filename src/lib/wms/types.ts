@@ -259,6 +259,43 @@ export interface OutboundOrder {
   dockWindowEnd: string | null;
 }
 
+/** Palet, caja suelta o carro. Lo que el operario termina de montar en pasillo. */
+export type LoadUnitKind = "palet" | "caja" | "carro";
+
+export type LoadUnitStatus = "abierta" | "completa" | "flejada" | "etiquetada" | "en_muelle";
+
+/**
+ * Unidad de carga que el operario fleja, etiqueta y deja en el pasillo de muelle.
+ * La etiqueta no se fabrica: la escribe quien la pega.
+ */
+export interface LoadUnit {
+  id: string;
+  kind: LoadUnitKind;
+  orderId: string;
+  orderCode: string;
+  siteId: string;
+  operatorId: string | null;
+  /** Pasillo de muelle del pedido (el que ve en pantalla). */
+  dockAisle: string;
+  lineIds: string[];
+  qty: number;
+  labelCode: string | null;
+  strapped: boolean;
+  labeled: boolean;
+  dockSlotId: string | null;
+  status: LoadUnitStatus;
+  createdAt: string;
+}
+
+/** El patrón o un técnico asigna un súper (pedido) al código del operario. */
+export interface SuperAssignment {
+  id: string;
+  orderId: string;
+  operatorId: string;
+  assignedBy: string | null;
+  at: string;
+}
+
 export interface CostLine {
   id: string;
   month: string; // YYYY-MM
@@ -302,6 +339,8 @@ export interface WmsSnapshot {
   costs: CostLine[];
   movements: StockMovement[];
   pickWaves: PickWave[];
+  loadUnits: LoadUnit[];
+  superAssignments: SuperAssignment[];
 }
 
 export const CATEGORY_LABEL: Record<CategoryCode, { es: string; en: string }> = {

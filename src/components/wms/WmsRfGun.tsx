@@ -6,6 +6,8 @@ import {
   assertCanPick,
   buildRfQueue,
   confirmRfTask,
+  nextFloorTicket,
+  operatorByCode,
   operatorForAppUser,
   startRfSession,
   type RfScanError,
@@ -41,6 +43,7 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
   const matched = operatorForAppUser(snap, user);
   const isFloor = user?.role === "guide";
   const [operatorId, setOperatorId] = useState(matched?.id ?? "");
+  const [opCode, setOpCode] = useState("");
   const [pickPin, setPickPin] = useState("");
   const queue = useMemo(
     () => buildRfQueue(snap, siteId, isFloor ? matched?.id ?? operatorId : operatorId || null),
@@ -139,8 +142,8 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
         </h2>
         <p className="mt-1 max-w-2xl text-sm text-[var(--ink-muted)]">
           {lang === "es"
-            ? "Un escáner: hueco → SSCC → destino o cantidad. Solo confirma si coincide con el palet y el hueco reales de la cola."
-            : "One scanner: slot → SSCC → dest or qty. Confirms only if it matches the real pallet and slot in the queue."}
+            ? "Te identificas con tu código de operario. El ticket manda súper, pasillo, hueco y cantidad. El aparato no te asigna él solo."
+            : "You identify with your operator code. The ticket sends store, aisle, slot and qty. The device does not assign you by itself."}
         </p>
       </header>
 
@@ -160,20 +163,27 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
             </option>
           ))}
         </select>
-        <select
-          className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
-          value={operatorId}
-          onChange={(e) => setOperatorId(e.target.value)}
+        <form
+          className="flex flex-wrap gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const op = operatorByCode(snap, opCode);
+            setOperatorId(op?.id ?? "");
+            setSession(null);
+            setTaskId("");
+            setFeedback(op ? null : lang === "es" ? "Código de operario no encontrado" : "Operator code not found");
+          }}
         >
-          <option value="">{lang === "es" ? "Sin operario asignado" : "No operator"}</option>
-          {snap.operators
-            .filter((o) => o.active && !o.vacant && o.siteId === siteId)
-            .map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name} · {o.code}
-              </option>
-            ))}
-        </select>
+          <input
+            value={opCode}
+            onChange={(e) => setOpCode(e.target.value)}
+            placeholder={lang === "es" ? "Código operario OP-1903" : "Operator code OP-1903"}
+            className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+          />
+          <button type="submit" className="rounded-full border border-[var(--glass-border)] px-3 py-2 text-sm font-semibold">
+            {lang === "es" ? "Entrar con código" : "Sign in with code"}
+          </button>
+        </form>
       </div>
 
       {matched && <WmsJornadaCard lang={lang} snap={snap} operatorId={matched.id} onChange={persist} />}
@@ -194,6 +204,20 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
           </p>
           {task && session ? (
             <>
+              {task.kind === "pick" && operatorId
+                ? (() => {
+                    const ticket = nextFloorTicket(snap, operatorId);
+                    return ticket ? (
+                      <p className="mb-2 text-sm font-semibold text-amber-100">
+                        {ticket.storeName}
+                        <span className="mt-0.5 block font-mono text-xs font-normal text-white/60">
+                          {lang === "es" ? "Tomar" : "Take"} {ticket.qty} · {lang === "es" ? "muelle" : "dock"}{" "}
+                          {ticket.dockAisle}
+                        </span>
+                      </p>
+                    ) : null;
+                  })()
+                : null}
               <p className="font-mono text-lg font-semibold">{task.fromCode}</p>
               <p className="mt-1 text-sm text-white/70">{lang === "es" ? task.labelEs : task.labelEn}</p>
               <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-white/60">

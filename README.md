@@ -11,7 +11,7 @@ Este repositorio (`campo-norte2`) publica el ecosistema SaaS WMS. La base CRM/WM
 
 ---
 
-## Fases 2–14 (esta rama)
+## Fases 2–15 (esta rama)
 
 Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, movimientos en vivo, inventario cíclico, alertas, economía unitaria, planificación de turnos, onboarding, carriers, pistola RF y **operación diaria** (CRUD, prioridades, fichaje).
 
@@ -75,6 +75,7 @@ Cómo probar fase 2:
 13. **Expedición** → elige carrier; el tracking se escribe a mano. Tras picar: **Embalar línea** (SSCC opcional), **Imprimir** manifiesto, **Cargar** palets enteros y **Expedir**.
 14. **Pistola RF** → escanea el hueco y el SSCC de la cola; si no coinciden, no confirma.
 15. **Torre** → cierre de jornada: solo horas de fichaje. **Movimientos / Palets** → traslado Sevilla ↔ Huelva a un hueco libre.
+16. **Expedición / Operarios** → el patrón o un técnico asigna el súper con el código `OP-1903`. **Pistola** → entrar con ese código; el ticket dice súper, pasillo, hueco y cantidad. El rastro del pasillo solo avanza al marcar. Palet / caja / carro → flejar → pegar etiqueta → dejar en el muelle que indica la pantalla.
 
 ---
 

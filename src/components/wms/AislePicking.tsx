@@ -8,6 +8,7 @@ import {
   confirmPick,
   markShortage,
   navigateWmsSection,
+  nextFloorTicket,
   nextOpenLine,
   operatorForAppUser,
   orderFulfillment,
@@ -585,18 +586,37 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
         <div className="space-y-3">
           {slot && line && sku && pallet ? (
             <>
-              <Card title={lang === "es" ? "Siguiente hueco" : "Next slot"}>
-                <div className="mb-3 flex flex-wrap gap-2">
-                  <Badge tone="brand">
-                    <MapPin className="mr-1 inline h-3 w-3" />
-                    {slot.code}
-                  </Badge>
-                  <Badge tone="neutral">{sku.name}</Badge>
-                  <Badge tone="warn">× {line.qty}</Badge>
-                </div>
-                <p className="text-xs text-[var(--ink-muted)]">
-                  SSCC {pallet.sscc} · {lang === "es" ? "lote" : "lot"} {pallet.lot}
-                </p>
+              <Card title={lang === "es" ? "Ticket del súper" : "Store ticket"}>
+                {(() => {
+                  const ticket = wave.operatorId ? nextFloorTicket(snap, wave.operatorId) : null;
+                  const order = snap.outbound.find((o) => o.code === line.orderCode);
+                  return (
+                    <>
+                      <p className="mb-2 text-sm font-semibold text-[var(--ink)]">
+                        {order?.customer ?? line.orderCode}
+                      </p>
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        <Badge tone="brand">
+                          <MapPin className="mr-1 inline h-3 w-3" />
+                          {lang === "es" ? "Pasillo" : "Aisle"} {slot.aisle} · {slot.code}
+                        </Badge>
+                        <Badge tone="neutral">{sku.name}</Badge>
+                        <Badge tone="warn">
+                          {lang === "es" ? "Tomar" : "Take"} {line.qty}
+                        </Badge>
+                        {order?.dock && (
+                          <Badge tone="neutral">
+                            {lang === "es" ? "Muelle" : "Dock"} {order.dock}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-[var(--ink-muted)]">
+                        {ticket?.orderCode ?? line.orderCode} · SSCC {pallet.sscc} ·{" "}
+                        {lang === "es" ? "lote" : "lot"} {pallet.lot}
+                      </p>
+                    </>
+                  );
+                })()}
               </Card>
 
               <WmsAisleView

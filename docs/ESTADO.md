@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-15 · Cloud Agent · WMS fase 14: embalaje por línea, manifiesto print, cierre de jornada y traslado inter-centro
+**Última actualización:** 2026-08-15 · Cloud Agent · WMS fase 15: asignación de súper por código y rastro de pasillo
 
 ---
 
@@ -163,9 +163,9 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–14 hechas: operación diaria, jornada, olas, recepción ASN, RF, móvil, putaway por zona, conteo firmado, expedición de lo picado, embalaje (atajo + por línea con SSCC escrito), manifiesto imprimible, cierre de jornada con fichajes reales, traslado inter-centro y separación de olas mezcladas.
+Fases 8–15 hechas. La 15 cubre lo que el operario sí conoce: el patrón/técnico asigna el súper al código de operario; el ticket manda pasillo, hueco y cantidad; el sistema rastrea el pasillo según van marcando artículos; al completar palet/caja/carro se fleja, se pega la etiqueta escrita y se deja en el pasillo de muelle de la pantalla.
 
-Siguiente: terminal ZKTeco físico y APIs de flota cuando existan. Tablas WMS en Postgres cuando haya stock real.
+No se inventan carta de porte, oficina de recepción ni GPS. Siguiente: terminal ZKTeco y APIs de flota cuando existan.
 
 ### Plan B — repo público (fecha límite 2026-08-22)
 

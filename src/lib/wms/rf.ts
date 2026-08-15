@@ -83,6 +83,8 @@ export function buildRfQueue(snap: WmsSnapshot, siteId?: string, operatorId?: st
     const slot = snap.slots.find((s) => s.id === line.slotId);
     const pallet = line.palletId ? snap.pallets.find((p) => p.id === line.palletId) : null;
     if (!slot || !pallet) continue;
+    const order = snap.outbound.find((o) => o.code === line.orderCode);
+    const store = order?.customer ?? line.orderCode;
     tasks.push({
       id: `pick-${wave.id}-${line.id}`,
       kind: "pick",
@@ -94,8 +96,8 @@ export function buildRfQueue(snap: WmsSnapshot, siteId?: string, operatorId?: st
       qty: line.qty,
       waveId: wave.id,
       lineId: line.id,
-      labelEs: `Picar ${skuName(line.skuId)} · ${slot.code}`,
-      labelEn: `Pick ${skuName(line.skuId)} · ${slot.code}`,
+      labelEs: `Súper ${store} · pasillo ${slot.aisle} · ${slot.code} · tomar ${line.qty}`,
+      labelEn: `Store ${store} · aisle ${slot.aisle} · ${slot.code} · take ${line.qty}`,
     });
   }
 

@@ -918,6 +918,8 @@ export function buildWmsSeed(): WmsSnapshot {
     costs: COSTS,
     movements: MOVEMENTS,
     pickWaves,
+    loadUnits: [],
+    superAssignments: [],
   };
 }
 

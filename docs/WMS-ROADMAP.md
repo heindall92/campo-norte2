@@ -95,6 +95,13 @@
 - Traslado inter-centro de un palet existente a un hueco libre del otro hub
 - Separar ola mezclada (p. ej. `WAVE-A-0815-01`) en una ola por pedido
 
+## Fase 15 — Asignación de súper y rastro de pasillo (esta entrega)
+- El patrón o un técnico asigna el súper (pedido) al **código de operario**, no al número del aparato
+- El ticket de planta manda: súper · pasillo · hueco · cantidad a tomar
+- El rastro del operario avanza solo cuando marca el artículo; no hay GPS
+- Unidad de carga: palet / caja / carro → fleje → etiqueta escrita → dejar en el pasillo de muelle del pedido
+- No se modelan carta de porte ni la oficina de recepción: no están descritas
+
 ## Siguiente
 - Agente pyzk en la LAN cuando haya terminal físico
 - Telemetría real de flota (ISM / I_Site / InfoLink) cuando exista contrato

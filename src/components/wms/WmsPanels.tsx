@@ -60,6 +60,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useState } from "react";
+import { WmsAssignSuperCard, WmsAisleTraceCard, WmsFloorHint, WmsLoadUnitCard } from "./WmsFloorBoard";
 import { WmsJornadaCard, WmsShiftCloseCard } from "./WmsJornadaCard";
 import { useWmsLive } from "./useWmsLive";
 import {
@@ -142,6 +143,7 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
       </header>
 
       {matched && <WmsJornadaCard lang={lang} snap={snap} operatorId={matched.id} onChange={commit} />}
+      <WmsAisleTraceCard lang={lang} siteId={siteId} />
       <WmsShiftCloseCard lang={lang} snap={snap} siteId={siteId} />
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -533,6 +535,9 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
         </form>
         {msg && <p className="mt-2 text-xs font-semibold text-[var(--danger)]">{msg}</p>}
       </Card>
+      <WmsAssignSuperCard lang={lang} />
+      <WmsLoadUnitCard lang={lang} />
+      <WmsFloorHint lang={lang} />
       {mixedWaves.length > 0 && (
         <Card
           title={lang === "es" ? "Olas mezcladas" : "Mixed waves"}
