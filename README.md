@@ -11,13 +11,13 @@ Este repositorio (`campo-norte2`) publica el ecosistema SaaS WMS. La base CRM/WM
 
 ---
 
-## Fase 2 + 3 (esta rama)
+## Fases 2–4 (esta rama)
 
-Modelo de ubicación `Pasillo-Bahía-Nivel-Posición` (ej. `A-03-02-1`), digital twin de pasillo, picado con escáner, movimientos en vivo, inventario cíclico y alertas operativas.
+Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, movimientos en vivo, inventario cíclico, alertas, **economía unitaria** y **cobertura de turnos**.
 
 | Módulo | Qué controla |
 |---|---|
-| Torre de control | Ocupación, stock, flota, gente, costes y **alertas** (batería / caducidad / cut-off / pick face) |
+| Torre de control | Ocupación, alertas, €/palet, €/línea pick, huecos de turno |
 | Stock | SKU / categorías / ABC / mínimos |
 | Pasillos / huecos | Digital twin de rack selectivo (2 palets/bahía, nivel 1 = picking) |
 | Picar mercancía | Ticket → hueco → SSCC → cantidad → siguiente línea |
@@ -27,8 +27,8 @@ Modelo de ubicación `Pasillo-Bahía-Nivel-Posición` (ej. `A-03-02-1`), digital
 | Flota eléctrica | Incluye **retráctil doble stand-up** asignada a reposición |
 | Recepción | ASN / muelle / putaway |
 | Expedición | Olas a tienda / prioridad / cut-off |
-| Operarios | Turnos, productividad, extras, €/h |
-| Costes | Mano de obra, energía, flota, merma vs presupuesto |
+| Operarios | Turnos, **cobertura mínima** (sol/atardecer/luna Lucide), extras, €/h |
+| Costes | OPEX vs presupuesto, €/palet, P&L 3PL del hub (también en Tesorería) |
 
 Se conservan módulos útiles del CRM original (facturas, tesorería, aprobaciones, conocimiento, hub).
 
@@ -64,6 +64,8 @@ Cómo probar fase 2:
 6. **Movimientos** → Autocompletar putaway → Confirmar. Luego **Bajar** una reposición de pick face.
 7. **Inventario cíclico** → Autocompletar demo → Confirmar conteo.
 8. Torre de control: lista de alertas (batería Still EXU-S, cut-off Alcalá, caducidad).
+9. **Operarios** → cobertura mañana/tarde/noche (Sevilla noche: falta picker).
+10. **Costes** o **Tesorería** → P&L 3PL del hub (€/palet y contribución).
 
 ---
 

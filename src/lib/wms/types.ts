@@ -1,4 +1,4 @@
-/** Dominio WMS — Campo Norte Logística (fase 3: movimientos en vivo). */
+/** Dominio WMS — Campo Norte Logística (fase 4: economía y turnos). */
 
 export type WarehouseZone = "seco" | "fresco" | "congelado" | "picking" | "muelle" | "crossdock";
 

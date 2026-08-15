@@ -208,6 +208,7 @@ import {
   WmsOperatorsPanel,
   WmsOutboundPanel,
   WmsPalletsPanel,
+  WmsSitePnlCard,
   WmsStockPanel,
 } from "@/components/wms/WmsPanels";
 import { WmsPickingPanel, WmsSlotsPanel } from "@/components/wms/AislePicking";
@@ -1709,6 +1710,7 @@ function TreasurySection({ lang }: { lang: Lang }) {
         }}
       />
       <PnLPanel invoices={hub.invoices} reservations={hub.reservations} lang={lang} />
+      <WmsSitePnlCard lang={lang} />
       <FiscalCalendarPanel invoices={hub.invoices} lang={lang} />
     </div>
   );

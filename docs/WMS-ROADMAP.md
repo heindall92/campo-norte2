@@ -16,14 +16,18 @@
 - Semilla operativa Sevilla + Huelva
 - Tests de dominio: ubicación, picado, KPIs
 
-## Fase 3 — Movimientos en vivo (esta entrega)
+## Fase 3 — Movimientos en vivo
 - Movimientos RF: putaway muelle → hueco y traslado hueco → hueco
 - Reposición automática reserva → cara de picking con retráctil doble stand-up
 - Inventario cíclico priorizado por caducidad / ABC A / conteo viejo
 - Alertas en torre: batería < 25 %, caducidad 7 días, cut-off de tienda, pick face vacío
 
-## Fase 4 — Economía, RRHH y SaaS
-- Coste por palet movido / por línea pick
-- Planificación de turnos y cobertura
-- P&L del centro conectado a tesorería existente
-- `org_id` + RLS, onboarding de centros, integraciones ERP / carriers / RF
+## Fase 4 — Economía & turnos (esta entrega)
+- Coste por palet movido y por línea de picking (mano de obra + flota del día)
+- P&L 3PL del centro (almacenaje + handling + pick − OPEX) conectado a Tesorería
+- Cobertura de turnos vs dotación mínima (mañana / tarde / noche)
+- Org multi-hub Campo Norte (2 centros); RLS/`org_id` queda para infra
+
+## Siguiente
+- Planificación de turnos con asignación (no solo huecos)
+- `org_id` + RLS Postgres, onboarding de centros, integraciones ERP / carriers / RF

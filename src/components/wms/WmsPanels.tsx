@@ -3,11 +3,17 @@ import { StatCard } from "@/components/ui/StatCard";
 import type { Lang } from "@/lib/i18n";
 import {
   CATEGORY_LABEL,
+  CAMPO_NORTE_ORG,
   FLEET_KIND_LABEL,
+  ROLE_FLOOR_LABEL,
+  SHIFT_LABEL,
   ZONE_LABEL,
   WMS_DEMO_NOW,
   alertCounts,
+  computeShiftCoverage,
+  computeSitePnl,
   computeTowerKpis,
+  computeUnitEconomics,
   computeWmsAlerts,
   fleetUtilization,
   loadWmsSnapshot,
@@ -22,11 +28,21 @@ import {
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
+  ArrowLeftRight,
+  Banknote,
   Battery,
   Boxes,
+  Building2,
+  CircleAlert,
+  ClipboardCheck,
+  Coins,
   Forklift,
   Grid3X3,
+  Moon,
   Package,
+  ScanBarcode,
+  Sun,
+  Sunset,
   Truck,
   Users,
   Warehouse,
@@ -73,13 +89,17 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
   const site = snap.sites.find((s) => s.id === siteId) ?? snap.sites[0];
   const alerts = computeWmsAlerts(snap, new Date(WMS_DEMO_NOW), siteId);
   const counts = alertCounts(alerts);
+  const unit = computeUnitEconomics(snap, siteId);
+  const coverage = computeShiftCoverage(snap, siteId);
+  const openGaps = coverage.gaps.filter((g) => g.gap < 0).length;
 
   return (
     <div className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-            {lang === "es" ? "Torre de control" : "Control tower"}
+          <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+            <Building2 className="h-3.5 w-3.5" />
+            {CAMPO_NORTE_ORG.plan} · {snap.sites.length} {lang === "es" ? "centros" : "sites"}
           </p>
           <h2 className="font-[family-name:var(--mps-display)] text-2xl text-[var(--ink)] md:text-3xl">
             {site?.name ?? "Campo Norte"}
@@ -158,8 +178,42 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
             { label: lang === "es" ? "Coste mes" : "Month cost", value: euro(kpis.costMonthEur, lang), deltaPct: ((kpis.costMonthEur / kpis.costBudgetEur) - 1) * 100, lowerIsBetter: true },
             { label: lang === "es" ? "Mano de obra hoy" : "Labor today", value: euro(kpis.laborCostTodayEur, lang) },
           ]}
-          footnote={`${lang === "es" ? "Presupuesto" : "Budget"} ${euro(kpis.costBudgetEur, lang)}`}
+          footnote={`${lang === "es" ? "€/palet movido" : "€/pallet move"} ${unit.costPerPalletMoveEur.toFixed(2)} · ${lang === "es" ? "huecos de turno" : "shift gaps"} ${openGaps}`}
         />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card title={lang === "es" ? "€ / palet movido" : "€ / pallet move"}>
+          <p className="flex items-center gap-2 text-2xl font-semibold text-[var(--ink)]">
+            <Coins className="h-5 w-5 text-[var(--accent)]" />
+            {unit.costPerPalletMoveEur.toFixed(2)} €
+          </p>
+          <p className="mt-1 text-xs text-[var(--ink-muted)]">
+            {unit.palletMoves} {lang === "es" ? "movimientos RF hoy" : "RF moves today"}
+          </p>
+        </Card>
+        <Card title={lang === "es" ? "€ / línea pick" : "€ / pick line"}>
+          <p className="flex items-center gap-2 text-2xl font-semibold text-[var(--ink)]">
+            <ScanBarcode className="h-5 w-5 text-[var(--accent)]" />
+            {unit.costPerPickLineEur.toFixed(2)} €
+          </p>
+          <p className="mt-1 text-xs text-[var(--ink-muted)]">
+            {unit.pickLinesDone}/{unit.pickLinesDone + unit.pickLinesOpen} {lang === "es" ? "líneas picadas" : "lines picked"}
+          </p>
+        </Card>
+        <Card title={lang === "es" ? "Cobertura de turnos" : "Shift coverage"}>
+          <p className="flex items-center gap-2 text-2xl font-semibold text-[var(--ink)]">
+            {openGaps ? (
+              <CircleAlert className="h-5 w-5 text-[var(--danger)]" />
+            ) : (
+              <Users className="h-5 w-5 text-[var(--accent)]" />
+            )}
+            {openGaps}
+          </p>
+          <p className="mt-1 text-xs text-[var(--ink-muted)]">
+            {lang === "es" ? "huecos vs dotación mínima" : "gaps vs minimum staffing"}
+          </p>
+        </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
@@ -514,7 +568,11 @@ export function WmsFleetPanel({ lang }: { lang: Lang }) {
 
 export function WmsOperatorsPanel({ lang }: { lang: Lang }) {
   const snap = useWms();
-  const labor = snap.operators.reduce((s, o) => s + o.hoursToday * o.costPerHour, 0);
+  const [siteId, setSiteId] = useState(snap.sites[0]?.id ?? "");
+  const ops = snap.operators.filter((o) => o.siteId === siteId);
+  const labor = ops.reduce((s, o) => s + o.hoursToday * o.costPerHour, 0);
+  const coverage = computeShiftCoverage(snap, siteId);
+  const shiftIcon = { manana: Sun, tarde: Sunset, noche: Moon };
 
   return (
     <div className="space-y-4">
@@ -525,14 +583,63 @@ export function WmsOperatorsPanel({ lang }: { lang: Lang }) {
           </h2>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
             {lang === "es"
-              ? "Turnos, certificaciones, productividad y coste real del día."
-              : "Shifts, certifications, productivity and real day cost."}
+              ? "Turnos, cobertura mínima, certificaciones y coste real del día."
+              : "Shifts, minimum coverage, certifications and real day cost."}
           </p>
         </div>
-        <Badge tone="brand">
-          {lang === "es" ? "Coste hoy" : "Cost today"} · {euro(labor, lang)}
-        </Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+            value={siteId}
+            onChange={(e) => setSiteId(e.target.value)}
+          >
+            {snap.sites.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.city}
+              </option>
+            ))}
+          </select>
+          <Badge tone="brand">
+            {lang === "es" ? "Coste hoy" : "Cost today"} · {euro(labor, lang)}
+          </Badge>
+        </div>
       </header>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        {(["manana", "tarde", "noche"] as const).map((shift) => {
+          const Icon = shiftIcon[shift];
+          const rows = coverage.gaps.filter((g) => g.shift === shift);
+          const missing = rows.filter((g) => g.gap < 0).length;
+          return (
+            <Card
+              key={shift}
+              title={SHIFT_LABEL[shift][lang]}
+              subtitle={`${coverage.headsByShift[shift]} ${lang === "es" ? "personas" : "people"}`}
+            >
+              <p className="mb-3 inline-flex items-center gap-2 text-sm text-[var(--ink-muted)]">
+                <Icon className="h-4 w-4 text-[var(--accent)]" />
+                {missing
+                  ? lang === "es"
+                    ? `${missing} huecos de rol`
+                    : `${missing} role gaps`
+                  : lang === "es"
+                    ? "Dotación cubierta"
+                    : "Staffing covered"}
+              </p>
+              <ul className="space-y-1.5 text-xs">
+                {rows.map((g) => (
+                  <li key={`${g.shift}-${g.role}`} className="flex items-center justify-between">
+                    <span>{ROLE_FLOOR_LABEL[g.role][lang]}</span>
+                    <Badge tone={g.gap < 0 ? "bad" : g.gap === 0 ? "good" : "neutral"}>
+                      {g.actual}/{g.required}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          );
+        })}
+      </div>
 
       <Card>
         <div className="overflow-x-auto">
@@ -549,7 +656,7 @@ export function WmsOperatorsPanel({ lang }: { lang: Lang }) {
               </tr>
             </thead>
             <tbody>
-              {snap.operators.map((o) => (
+              {ops.map((o) => (
                 <tr key={o.id} className="border-t border-[var(--glass-border)]">
                   <td className="py-2.5 pr-3">
                     <p className="font-medium">{o.name}</p>
@@ -675,10 +782,77 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
   );
 }
 
+export function WmsSitePnlCard({ lang, siteId }: { lang: Lang; siteId?: string }) {
+  const snap = useWms();
+  const sid = siteId ?? snap.sites[0]?.id;
+  const pnl = computeSitePnl(snap, "2026-08", sid);
+  const site = snap.sites.find((s) => s.id === sid);
+
+  return (
+    <Card
+      title={lang === "es" ? "P&L del centro (3PL)" : "Site P&L (3PL)"}
+      subtitle={`${site?.name ?? CAMPO_NORTE_ORG.legalName} · ${pnl.month}`}
+    >
+      <div className="mb-3 grid gap-3 sm:grid-cols-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+            {lang === "es" ? "Ingresos almacén" : "Warehouse revenue"}
+          </p>
+          <p className="mt-1 inline-flex items-center gap-1.5 text-xl font-semibold text-[var(--ink)]">
+            <Banknote className="h-4 w-4 text-[var(--accent)]" />
+            {euro(pnl.revenueEur, lang)}
+          </p>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">OPEX</p>
+          <p className="mt-1 text-xl font-semibold text-[var(--ink)]">{euro(pnl.opexEur, lang)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+            {lang === "es" ? "Contribución" : "Contribution"}
+          </p>
+          <p
+            className={cn(
+              "mt-1 text-xl font-semibold",
+              pnl.contributionEur < 0 ? "text-[var(--danger)]" : "text-[var(--ok)]",
+            )}
+          >
+            {euro(pnl.contributionEur, lang)}
+          </p>
+        </div>
+      </div>
+      <ul className="space-y-1.5 text-sm text-[var(--ink-muted)]">
+        <li className="flex justify-between">
+          <span>{lang === "es" ? "Almacenaje (hueco/día)" : "Storage (slot/day)"}</span>
+          <span className="font-medium text-[var(--ink)]">{euro(pnl.storageEur, lang)}</span>
+        </li>
+        <li className="flex justify-between">
+          <span>{lang === "es" ? "Handling in/out" : "Handling in/out"}</span>
+          <span className="font-medium text-[var(--ink)]">{euro(pnl.handlingEur, lang)}</span>
+        </li>
+        <li className="flex justify-between">
+          <span>{lang === "es" ? "Líneas de picking" : "Pick lines"}</span>
+          <span className="font-medium text-[var(--ink)]">{euro(pnl.pickEur, lang)}</span>
+        </li>
+        <li className="flex justify-between border-t border-[var(--glass-border)] pt-1.5">
+          <span>{lang === "es" ? "Margen contribución" : "Contribution margin"}</span>
+          <span className="font-semibold text-[var(--ink)]">{pnl.marginPct.toFixed(1)}%</span>
+        </li>
+      </ul>
+      <p className="mt-3 text-xs text-[var(--ink-muted)]">
+        {lang === "es"
+          ? "OPEX del WMS (mano de obra, energía, flota, espacio, merma, IT). Tesorería sigue derivando cobros de facturas; esto es el P&L operativo del hub."
+          : "WMS opex (labor, energy, fleet, space, shrink, IT). Treasury still derives cash from invoices; this is the hub operating P&L."}
+      </p>
+    </Card>
+  );
+}
+
 export function WmsCostsPanel({ lang }: { lang: Lang }) {
   const snap = useWms();
   const month = "2026-08";
-  const lines = monthCosts(snap.costs, month, snap.sites[0]?.id);
+  const [siteId, setSiteId] = useState(snap.sites[0]?.id ?? "");
+  const lines = monthCosts(snap.costs, month, siteId);
   const total = lines.reduce((s, c) => s + c.amountEur, 0);
   const budget = lines.reduce((s, c) => s + c.budgetEur, 0);
   const chart = lines.map((c) => ({
@@ -686,29 +860,64 @@ export function WmsCostsPanel({ lang }: { lang: Lang }) {
     real: c.amountEur,
     budget: c.budgetEur,
   }));
+  const unit = computeUnitEconomics(snap, siteId);
 
   return (
     <div className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-[family-name:var(--mps-display)] text-2xl text-[var(--ink)]">
-            {lang === "es" ? "Costes del centro" : "Site costs"}
+            {lang === "es" ? "Costes & economía del centro" : "Site costs & economics"}
           </h2>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
             {lang === "es"
-              ? "Mano de obra, energía, flota, espacio, merma e IT — vs presupuesto."
-              : "Labor, energy, fleet, space, shrinkage and IT — vs budget."}
+              ? "€/palet movido, €/línea pick, OPEX vs presupuesto y P&L 3PL del hub."
+              : "€/pallet move, €/pick line, opex vs budget and hub 3PL P&L."}
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-xs uppercase tracking-wide text-[var(--ink-muted)]">{month}</p>
-          <p className="text-xl font-semibold text-[var(--ink)]">{euro(total, lang)}</p>
-          <p className={cn("text-xs font-semibold", total > budget ? "text-[var(--danger)]" : "text-[var(--ok)]")}>
-            {lang === "es" ? "Presupuesto" : "Budget"} {euro(budget, lang)} ·{" "}
-            {(((total / budget) - 1) * 100).toFixed(1)}%
-          </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+            value={siteId}
+            onChange={(e) => setSiteId(e.target.value)}
+          >
+            {snap.sites.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.city} · {s.code}
+              </option>
+            ))}
+          </select>
+          <div className="text-right">
+            <p className="text-xs uppercase tracking-wide text-[var(--ink-muted)]">{month}</p>
+            <p className="text-xl font-semibold text-[var(--ink)]">{euro(total, lang)}</p>
+            <p className={cn("text-xs font-semibold", total > budget ? "text-[var(--danger)]" : "text-[var(--ok)]")}>
+              {lang === "es" ? "Presupuesto" : "Budget"} {euro(budget, lang)}
+            </p>
+          </div>
         </div>
       </header>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Card title={lang === "es" ? "Coste unitario hoy" : "Unit cost today"}>
+          <div className="flex flex-wrap gap-4">
+            <p className="inline-flex items-center gap-2 text-sm">
+              <ArrowLeftRight className="h-4 w-4 text-[var(--accent)]" />
+              <span>
+                <span className="block text-xs text-[var(--ink-muted)]">{lang === "es" ? "Palet movido" : "Pallet move"}</span>
+                <span className="font-semibold">{unit.costPerPalletMoveEur.toFixed(2)} €</span>
+              </span>
+            </p>
+            <p className="inline-flex items-center gap-2 text-sm">
+              <ClipboardCheck className="h-4 w-4 text-[var(--accent)]" />
+              <span>
+                <span className="block text-xs text-[var(--ink-muted)]">{lang === "es" ? "Línea pick" : "Pick line"}</span>
+                <span className="font-semibold">{unit.costPerPickLineEur.toFixed(2)} €</span>
+              </span>
+            </p>
+          </div>
+        </Card>
+        <WmsSitePnlCard lang={lang} siteId={siteId} />
+      </div>
 
       <Card title={lang === "es" ? "Real vs presupuesto" : "Actual vs budget"}>
         <div className="h-72 w-full">
