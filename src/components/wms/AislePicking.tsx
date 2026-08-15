@@ -3,26 +3,28 @@ import type { Lang } from "@/lib/i18n";
 import {
   FLEET_KIND_LABEL,
   confirmPick,
-  loadWmsSnapshot,
+  markShortage,
   nextOpenLine,
-  saveWmsSnapshot,
+  skipPickLine,
   type ConfirmPickError,
   type PickWave,
   type Slot,
-  type WmsSnapshot,
 } from "@/lib/wms";
 import { cn } from "@/lib/utils";
-import { Check, ScanBarcode, ChevronRight, Forklift, MapPin, Package, UserRound } from "lucide-react";
+import {
+  Check,
+  ScanBarcode,
+  ChevronRight,
+  Forklift,
+  MapPin,
+  Package,
+  Search,
+  SkipForward,
+  TriangleAlert,
+  UserRound,
+} from "lucide-react";
 import { useMemo, useState } from "react";
-
-function useWmsLive(): [WmsSnapshot, (next: WmsSnapshot) => void] {
-  const [snap, setSnap] = useState(() => loadWmsSnapshot());
-  function update(next: WmsSnapshot) {
-    saveWmsSnapshot(next);
-    setSnap(next);
-  }
-  return [snap, update];
-}
+import { useWmsLive } from "./useWmsLive";
 
 const PICK_ERROR: Record<ConfirmPickError, { es: string; en: string }> = {
   wave_missing: { es: "Ola no encontrada", en: "Wave not found" },
@@ -50,7 +52,7 @@ export function WmsAisleView({
   onSelectSlot?: (slot: Slot) => void;
   showReachTruck?: boolean;
 }) {
-  const [snap] = useWmsLive();
+  const { snap } = useWmsLive();
   const sid = siteId ?? snap.sites[0]?.id;
   const slots = snap.slots.filter((s) => s.aisle === aisle && s.siteId === sid);
   const racks = [...new Set(slots.map((s) => s.rack))].sort((a, b) => a - b);
@@ -178,14 +180,29 @@ export function WmsAisleView({
 }
 
 export function WmsSlotsPanel({ lang }: { lang: Lang }) {
-  const [snap] = useWmsLive();
+  const { snap } = useWmsLive();
   const [siteId, setSiteId] = useState(snap.sites[0]?.id ?? "");
   const siteSlots = snap.slots.filter((s) => s.siteId === siteId);
   const aisles = [...new Set(siteSlots.map((s) => s.aisle))].filter((a) => a !== "M");
   const [aisle, setAisle] = useState(aisles[0] ?? "A");
   const [selected, setSelected] = useState<Slot | null>(null);
+  const [query, setQuery] = useState("");
   const pallet = selected?.palletId ? snap.pallets.find((p) => p.id === selected.palletId) : null;
   const sku = pallet ? snap.skus.find((s) => s.id === pallet.skuId) : null;
+  const skuMap = useMemo(() => new Map(snap.skus.map((s) => [s.id, s])), [snap.skus]);
+  const hits = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return snap.slots
+      .filter((s) => s.siteId === siteId && s.aisle !== "M")
+      .filter((s) => {
+        const pal = s.palletId ? snap.pallets.find((p) => p.id === s.palletId) : null;
+        const sk = pal ? skuMap.get(pal.skuId) : null;
+        const hay = `${s.code} ${pal?.sscc ?? ""} ${pal?.lot ?? ""} ${sk?.sku ?? ""} ${sk?.name ?? ""}`.toLowerCase();
+        return hay.includes(q);
+      })
+      .slice(0, 8);
+  }, [query, siteId, snap.pallets, snap.slots, skuMap]);
 
   return (
     <div className="space-y-4">
@@ -220,6 +237,15 @@ export function WmsSlotsPanel({ lang }: { lang: Lang }) {
               </option>
             ))}
           </select>
+          <label className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={lang === "es" ? "Buscar producto, SKU, SSCC…" : "Search product, SKU, SSCC…"}
+              className="w-56 rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] py-2 pl-9 pr-3 text-sm"
+            />
+          </label>
           <select
             className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
             value={aisle}
@@ -236,6 +262,30 @@ export function WmsSlotsPanel({ lang }: { lang: Lang }) {
           </select>
         </div>
       </header>
+
+      {hits.length > 0 && (
+        <ul className="flex flex-wrap gap-2">
+          {hits.map((s) => {
+            const pal = s.palletId ? snap.pallets.find((p) => p.id === s.palletId) : null;
+            const sk = pal ? skuMap.get(pal.skuId) : null;
+            return (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  className="rounded-full border border-[var(--glass-border)] bg-[var(--glass)] px-3 py-1.5 text-xs"
+                  onClick={() => {
+                    setAisle(s.aisle);
+                    setSelected(s);
+                  }}
+                >
+                  <span className="font-mono font-semibold">{s.code}</span>
+                  {sk ? ` · ${sk.name}` : ""}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
       <WmsAisleView
         lang={lang}
@@ -289,7 +339,7 @@ export function WmsSlotsPanel({ lang }: { lang: Lang }) {
 
 /** Flujo operario: ticket → hueco → escáner → confirmar. */
 export function WmsPickingPanel({ lang }: { lang: Lang }) {
-  const [snap, setSnap] = useWmsLive();
+  const { snap, commit: setSnap } = useWmsLive();
   const [waveId, setWaveId] = useState(snap.pickWaves[0]?.id ?? "");
   const wave = snap.pickWaves.find((w) => w.id === waveId) ?? snap.pickWaves[0];
   const line = wave ? nextOpenLine(wave) : null;
@@ -423,7 +473,15 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                     <span className="mt-0.5 block truncate text-[var(--ink-muted)]">{sk?.name}</span>
                   </span>
                   <Badge
-                    tone={l.status === "picada" ? "good" : l.status === "en_curso" ? "warn" : "neutral"}
+                    tone={
+                      l.status === "picada"
+                        ? "good"
+                        : l.status === "en_curso"
+                          ? "warn"
+                          : l.status === "faltante"
+                            ? "bad"
+                            : "neutral"
+                    }
                   >
                     {l.qtyPicked}/{l.qty}
                   </Badge>
@@ -519,6 +577,48 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                   >
                     <ChevronRight className="h-4 w-4" />
                     {lang === "es" ? "Autocompletar demo" : "Autofill demo"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const result = skipPickLine(snap, wave.id, line.id);
+                      if (!result.ok) {
+                        setFeedback(PICK_ERROR[result.error][lang]);
+                        return;
+                      }
+                      setSnap(result.snap);
+                      setScanSlot("");
+                      setScanSscc("");
+                      setFeedback(null);
+                      const nextWave = result.snap.pickWaves.find((w) => w.id === wave.id);
+                      const nxt = nextWave ? nextOpenLine(nextWave) : null;
+                      setQty(nxt?.qty ?? 0);
+                    }}
+                    className="inline-flex items-center gap-2 rounded-full border border-[var(--glass-border)] px-4 py-2.5 text-sm font-semibold text-[var(--ink)]"
+                  >
+                    <SkipForward className="h-4 w-4" />
+                    {lang === "es" ? "Omitir línea" : "Skip line"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const result = markShortage(snap, wave.id, line.id, 0);
+                      if (!result.ok) {
+                        setFeedback(PICK_ERROR[result.error][lang]);
+                        return;
+                      }
+                      setSnap(result.snap);
+                      setScanSlot("");
+                      setScanSscc("");
+                      setFeedback(null);
+                      const nextWave = result.snap.pickWaves.find((w) => w.id === wave.id);
+                      const nxt = nextWave ? nextOpenLine(nextWave) : null;
+                      setQty(nxt?.qty ?? 0);
+                    }}
+                    className="inline-flex items-center gap-2 rounded-full border border-[var(--glass-border)] px-4 py-2.5 text-sm font-semibold text-[var(--warn-ink)]"
+                  >
+                    <TriangleAlert className="h-4 w-4" />
+                    {lang === "es" ? "Faltante" : "Shortage"}
                   </button>
                 </div>
               </Card>

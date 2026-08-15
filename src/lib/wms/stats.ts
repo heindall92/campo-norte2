@@ -1,14 +1,14 @@
 import type {
-  CategoryCode,
   CostLine,
   FleetUnit,
   Operator,
   Pallet,
+  ProductCategory,
   Sku,
   Slot,
   WmsSnapshot,
 } from "./types";
-import { CATEGORY_LABEL } from "./types";
+import { categoryLabel, SYSTEM_CATEGORIES } from "./types";
 
 export interface OccupancyByZone {
   zone: string;
@@ -20,7 +20,7 @@ export interface OccupancyByZone {
 }
 
 export interface StockByCategory {
-  category: CategoryCode;
+  category: string;
   label: string;
   pallets: number;
   units: number;
@@ -75,9 +75,10 @@ export function stockByCategory(
   pallets: Pallet[],
   skus: Sku[],
   lang: "es" | "en" = "es",
+  categories: ProductCategory[] = SYSTEM_CATEGORIES,
 ): StockByCategory[] {
   const skuMap = new Map(skus.map((s) => [s.id, s]));
-  const byCat = new Map<CategoryCode, StockByCategory>();
+  const byCat = new Map<string, StockByCategory>();
   const unitsBySku = new Map<string, number>();
 
   for (const p of pallets) {
@@ -87,7 +88,7 @@ export function stockByCategory(
     unitsBySku.set(p.skuId, (unitsBySku.get(p.skuId) ?? 0) + p.qty);
     const row = byCat.get(sku.category) ?? {
       category: sku.category,
-      label: CATEGORY_LABEL[sku.category][lang],
+      label: categoryLabel(sku.category, lang, categories),
       pallets: 0,
       units: 0,
       skus: 0,
@@ -154,7 +155,7 @@ export function computeTowerKpis(
     palletsLive: livePallets.length,
     fleetOnline: fleet.filter((f) => f.status === "operativa").length,
     fleetCharging: fleet.filter((f) => f.status === "cargando").length,
-    operatorsActive: operators.filter((o) => o.active).length,
+    operatorsActive: operators.filter((o) => o.active && !o.vacant).length,
     inboundOpen: snap.inbound.filter((i) => i.status !== "cerrado" && i.siteId === sid).length,
     outboundOpen: snap.outbound.filter((o) => o.status !== "expedido" && o.siteId === sid).length,
     costMonthEur: costs.reduce((s, c) => s + c.amountEur, 0),
@@ -162,6 +163,6 @@ export function computeTowerKpis(
     laborCostTodayEur: laborCostToday(operators),
     lowStockSkus,
     expiringSoon,
-    batteryAlerts: fleet.filter((f) => f.batteryPct < 25).length,
+    batteryAlerts: fleet.filter((f) => f.batteryPct != null && f.batteryPct < 25).length,
   };
 }

@@ -12,30 +12,41 @@ export * from "./org";
 export * from "./onboard";
 export * from "./carriers";
 export * from "./rf";
+export * from "./roster";
+export * from "./fingerprint";
+export * from "./clock";
+export * from "./priorities";
+export * from "./catalog";
+export * from "./normalize";
 
 import { buildWmsSeed } from "./seed";
-import { WMS_STORAGE_KEY, type WmsSnapshot } from "./types";
+import { normalizeWmsSnapshot, snapshotLooksUsable } from "./normalize";
+import { WMS_STORAGE_KEY, WMS_STORAGE_KEY_LEGACY, type WmsSnapshot } from "./types";
+
+function readStoredSnapshot(): WmsSnapshot | null {
+  const keys = [WMS_STORAGE_KEY, ...WMS_STORAGE_KEY_LEGACY];
+  for (const key of keys) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw) as WmsSnapshot;
+      if (snapshotLooksUsable(parsed)) return normalizeWmsSnapshot(parsed);
+    } catch {
+      /* try next key */
+    }
+  }
+  return null;
+}
 
 export function loadWmsSnapshot(): WmsSnapshot {
-  try {
-    const raw = localStorage.getItem(WMS_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as WmsSnapshot;
-      if (
-        parsed?.sites?.length &&
-        parsed?.slots?.length &&
-        parsed.slots[0] &&
-        "position" in parsed.slots[0] &&
-        Array.isArray(parsed.pickWaves) &&
-        parsed.org?.id &&
-        Array.isArray(parsed.carriers) &&
-        typeof parsed.seededFromDemo === "boolean"
-      ) {
-        return parsed;
-      }
+  const stored = readStoredSnapshot();
+  if (stored) {
+    try {
+      localStorage.setItem(WMS_STORAGE_KEY, JSON.stringify(stored));
+    } catch {
+      /* ignore */
     }
-  } catch {
-    /* fall through */
+    return stored;
   }
   const seed = buildWmsSeed();
   try {

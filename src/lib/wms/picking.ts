@@ -68,7 +68,9 @@ export function confirmPick(
     }
     return l;
   });
-  const allDone = nextLines.every((l) => l.status === "picada" || l.status === "omitida");
+  const allDone = nextLines.every(
+    (l) => l.status === "picada" || l.status === "omitida" || l.status === "faltante",
+  );
   const nextWave: PickWave = {
     ...wave,
     status: allDone ? "cerrada" : "en_curso",
@@ -114,4 +116,95 @@ export function confirmPick(
       operators: nextOperators,
     },
   };
+}
+
+function closeLine(
+  snap: WmsSnapshot,
+  waveId: string,
+  lineId: string,
+  status: "omitida" | "faltante",
+  qtyPicked: number,
+  note: string,
+  at: string,
+): ConfirmPickResult {
+  const wave = snap.pickWaves.find((w) => w.id === waveId);
+  if (!wave) return { ok: false, error: "wave_missing" };
+  const line = wave.lines.find((l) => l.id === lineId);
+  if (!line) return { ok: false, error: "line_missing" };
+  if (line.status !== "pendiente" && line.status !== "en_curso") {
+    return { ok: false, error: "line_not_open" };
+  }
+
+  const nextLines = wave.lines.map((l) => {
+    if (l.id === line.id) return { ...l, status, qtyPicked };
+    if (l.status === "pendiente" && l.sequence === line.sequence + 1) {
+      return { ...l, status: "en_curso" as const };
+    }
+    return l;
+  });
+  const allDone = nextLines.every(
+    (l) => l.status === "picada" || l.status === "omitida" || l.status === "faltante",
+  );
+  const nextWave: PickWave = {
+    ...wave,
+    status: allDone ? "cerrada" : "en_curso",
+    lines: nextLines,
+  };
+
+  return {
+    ok: true,
+    snap: {
+      ...snap,
+      pickWaves: snap.pickWaves.map((w) => (w.id === nextWave.id ? nextWave : w)),
+      movements: [
+        {
+          id: `mv-${status}-${line.id}`,
+          at,
+          type: "ajuste",
+          skuId: line.skuId,
+          palletId: line.palletId,
+          fromSlotId: line.slotId,
+          toSlotId: null,
+          qty: qtyPicked,
+          operatorId: wave.operatorId,
+          fleetId: wave.fleetId,
+          note,
+        },
+        ...snap.movements,
+      ],
+    },
+  };
+}
+
+export function skipPickLine(
+  snap: WmsSnapshot,
+  waveId: string,
+  lineId: string,
+  reason = "omitida en pasillo",
+  at = "2026-08-15T10:00:00.000Z",
+): ConfirmPickResult {
+  return closeLine(snap, waveId, lineId, "omitida", 0, reason, at);
+}
+
+export function markShortage(
+  snap: WmsSnapshot,
+  waveId: string,
+  lineId: string,
+  qtyFound: number,
+  at = "2026-08-15T10:00:00.000Z",
+): ConfirmPickResult {
+  const wave = snap.pickWaves.find((w) => w.id === waveId);
+  const line = wave?.lines.find((l) => l.id === lineId);
+  if (line && (!Number.isFinite(qtyFound) || qtyFound < 0 || qtyFound >= line.qty)) {
+    return { ok: false, error: "invalid_qty" };
+  }
+  return closeLine(
+    snap,
+    waveId,
+    lineId,
+    "faltante",
+    qtyFound,
+    `faltante · encontrado ${qtyFound}`,
+    at,
+  );
 }

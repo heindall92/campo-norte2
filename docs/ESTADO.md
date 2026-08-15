@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-15 · Cloud Agent · WMS: datos honestos + pistola RF
+**Última actualización:** 2026-08-15 · Cloud Agent · WMS fase 8: operación diaria (CRUD + prioridades + fichaje honesto)
 
 ---
 
@@ -161,9 +161,11 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 ## 6 · Siguiente tarea (UNA)
 
-> **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales.
+> **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Tablas WMS en Postgres cuando haya stock real en el Hub. EDI de carriers cuando haya feed de tracking.
+Fase 8 hecha en esta rama: enlaces del flujo del día, prioridades de pedidos/olas en escritorio, CRUD de catálogo/categorías/palets/ASN/operarios, búsqueda en pasillo, omitir/faltante en picking, cupo 25/25/25 con plazas vacantes, PIN + adaptador ZKTeco documentado.
+
+Siguiente: agente pyzk en planta y APIs de flota cuando existan. Tablas WMS en Postgres cuando haya stock real.
 
 ### Plan B — repo público (fecha límite 2026-08-22)
 

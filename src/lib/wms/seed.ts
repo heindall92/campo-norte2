@@ -2,21 +2,40 @@ import { slotRecordId } from "./location";
 import { generateSiteSlots } from "./onboard";
 import { CAMPO_NORTE_ORG } from "./org";
 import { dockWindowFor } from "./carriers";
-import type {
-  Carrier,
-  CostLine,
-  FleetUnit,
-  InboundAsn,
-  Operator,
-  OutboundOrder,
-  Pallet,
-  PickWave,
-  Sku,
-  Slot,
-  StockMovement,
-  WarehouseSite,
-  WmsSnapshot,
+import { ensureShiftRoster } from "./roster";
+import {
+  SYSTEM_CATEGORIES,
+  type Carrier,
+  type CostLine,
+  type FleetUnit,
+  type InboundAsn,
+  type Operator,
+  type OutboundOrder,
+  type Pallet,
+  type PickWave,
+  type Sku,
+  type Slot,
+  type StockMovement,
+  type WallCharger,
+  type WarehouseSite,
+  type WmsSnapshot,
 } from "./types";
+
+function hire(op: Omit<Operator, "vacant" | "fingerprintEnrolled" | "pinHash">): Operator {
+  return { ...op, vacant: false, fingerprintEnrolled: false, pinHash: null };
+}
+
+function withBattery(
+  unit: Omit<FleetUnit, "batterySource" | "batteryReportedAt" | "chargerId">,
+  chargerId: string | null = null,
+): FleetUnit {
+  return {
+    ...unit,
+    batterySource: "seed",
+    batteryReportedAt: "2026-08-15T07:00:00.000Z",
+    chargerId,
+  };
+}
 
 const SITE_SEV: WarehouseSite = {
   id: "site-sev",
@@ -198,7 +217,7 @@ function buildPallets(slots: Slot[]): Pallet[] {
 }
 
 const OPERATORS: Operator[] = [
-  {
+  hire({
     id: "op-01",
     code: "OP-1201",
     name: "Carmen Ruiz",
@@ -213,8 +232,8 @@ const OPERATORS: Operator[] = [
     hoursToday: 6.5,
     overtimeHoursWeek: 2,
     hiredAt: "2019-03-12",
-  },
-  {
+  }),
+  hire({
     id: "op-02",
     code: "OP-1344",
     name: "Antonio Méndez",
@@ -229,8 +248,8 @@ const OPERATORS: Operator[] = [
     hoursToday: 7,
     overtimeHoursWeek: 4,
     hiredAt: "2021-06-01",
-  },
-  {
+  }),
+  hire({
     id: "op-03",
     code: "OP-1410",
     name: "Lucía Navarro",
@@ -245,8 +264,8 @@ const OPERATORS: Operator[] = [
     hoursToday: 6.8,
     overtimeHoursWeek: 0,
     hiredAt: "2023-01-18",
-  },
-  {
+  }),
+  hire({
     id: "op-04",
     code: "OP-1522",
     name: "Pedro Salas",
@@ -261,8 +280,8 @@ const OPERATORS: Operator[] = [
     hoursToday: 5.5,
     overtimeHoursWeek: 1,
     hiredAt: "2022-09-05",
-  },
-  {
+  }),
+  hire({
     id: "op-05",
     code: "OP-1608",
     name: "Elena Cortés",
@@ -277,8 +296,8 @@ const OPERATORS: Operator[] = [
     hoursToday: 5,
     overtimeHoursWeek: 3,
     hiredAt: "2020-11-22",
-  },
-  {
+  }),
+  hire({
     id: "op-06",
     code: "OP-1711",
     name: "Hassan El Amrani",
@@ -293,8 +312,8 @@ const OPERATORS: Operator[] = [
     hoursToday: 4.2,
     overtimeHoursWeek: 6,
     hiredAt: "2018-04-30",
-  },
-  {
+  }),
+  hire({
     id: "op-07",
     code: "OP-1820",
     name: "María Isabel León",
@@ -309,8 +328,8 @@ const OPERATORS: Operator[] = [
     hoursToday: 6,
     overtimeHoursWeek: 0,
     hiredAt: "2017-08-14",
-  },
-  {
+  }),
+  hire({
     id: "op-08",
     code: "OP-1903",
     name: "Jorge Peña",
@@ -325,8 +344,8 @@ const OPERATORS: Operator[] = [
     hoursToday: 5.8,
     overtimeHoursWeek: 2,
     hiredAt: "2024-02-01",
-  },
-  {
+  }),
+  hire({
     id: "op-09",
     code: "OP-2104",
     name: "Fátima Gallego",
@@ -341,8 +360,8 @@ const OPERATORS: Operator[] = [
     hoursToday: 6.2,
     overtimeHoursWeek: 1,
     hiredAt: "2023-05-09",
-  },
-  {
+  }),
+  hire({
     id: "op-10",
     code: "OP-2218",
     name: "Raúl Campos",
@@ -357,8 +376,8 @@ const OPERATORS: Operator[] = [
     hoursToday: 5.4,
     overtimeHoursWeek: 3,
     hiredAt: "2020-02-17",
-  },
-  {
+  }),
+  hire({
     id: "op-11",
     code: "OP-2301",
     name: "Inés Mora",
@@ -373,10 +392,10 @@ const OPERATORS: Operator[] = [
     hoursToday: 6,
     overtimeHoursWeek: 0,
     hiredAt: "2022-11-03",
-  },
+  }),
 ];
 
-const FLEET: FleetUnit[] = [
+const FLEET_BASE: Omit<FleetUnit, "batterySource" | "batteryReportedAt" | "chargerId">[] = [
   {
     id: "fl-01",
     code: "FL-E-01",
@@ -511,6 +530,90 @@ const FLEET: FleetUnit[] = [
     siteId: SITE_HUE.id,
     nextServiceAt: "2026-12-20",
     costPerHour: 4.2,
+  },
+  {
+    id: "fl-10",
+    code: "FL-E-10",
+    brand: "Toyota",
+    model: "LWE 200",
+    kind: "toro",
+    status: "operativa",
+    batteryPct: 64,
+    hoursToday: 4.4,
+    hoursTotal: 890,
+    operatorId: "op-03",
+    siteId: SITE_SEV.id,
+    nextServiceAt: "2026-11-20",
+    costPerHour: 3.8,
+  },
+  {
+    id: "fl-11",
+    code: "FL-E-11",
+    brand: "Hyster",
+    model: "H2.5XT",
+    kind: "montacargas",
+    status: "operativa",
+    batteryPct: 55,
+    hoursToday: 3.8,
+    hoursTotal: 2400,
+    operatorId: "op-02",
+    siteId: SITE_SEV.id,
+    nextServiceAt: "2026-10-30",
+    costPerHour: 10.2,
+  },
+  {
+    id: "fl-12",
+    code: "FL-E-12",
+    brand: "Still",
+    model: "EXH-S 20",
+    kind: "toro",
+    status: "operativa",
+    batteryPct: 71,
+    hoursToday: 2.1,
+    hoursTotal: 410,
+    operatorId: null,
+    siteId: SITE_HUE.id,
+    nextServiceAt: "2027-01-08",
+    costPerHour: 3.6,
+  },
+];
+
+const FLEET: FleetUnit[] = FLEET_BASE.map((unit) =>
+  withBattery(unit, unit.id === "fl-03" ? "chg-01" : unit.id === "fl-10" ? "chg-02" : null),
+);
+
+const CHARGERS: WallCharger[] = [
+  {
+    id: "chg-01",
+    code: "CHG-A-01",
+    siteId: SITE_SEV.id,
+    zone: "seco",
+    assignedFleetId: "fl-03",
+    telemetry: "none",
+  },
+  {
+    id: "chg-02",
+    code: "CHG-A-02",
+    siteId: SITE_SEV.id,
+    zone: "picking",
+    assignedFleetId: "fl-10",
+    telemetry: "none",
+  },
+  {
+    id: "chg-03",
+    code: "CHG-M-01",
+    siteId: SITE_SEV.id,
+    zone: "muelle",
+    assignedFleetId: null,
+    telemetry: "none",
+  },
+  {
+    id: "chg-h1",
+    code: "CHG-H-01",
+    siteId: SITE_HUE.id,
+    zone: "fresco",
+    assignedFleetId: null,
+    telemetry: "none",
   },
 ];
 
@@ -800,11 +903,14 @@ export function buildWmsSeed(): WmsSnapshot {
     org: CAMPO_NORTE_ORG,
     seededFromDemo: true,
     sites: [SITE_SEV, SITE_HUE],
+    categories: SYSTEM_CATEGORIES,
     skus: SKUS,
     slots,
     pallets,
     fleet: FLEET,
-    operators: OPERATORS,
+    chargers: CHARGERS,
+    operators: ensureShiftRoster(OPERATORS),
+    clockPunches: [],
     inbound: INBOUND,
     outbound: OUTBOUND,
     carriers: CARRIERS,

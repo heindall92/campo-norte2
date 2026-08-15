@@ -2,11 +2,7 @@ import { Badge, Card } from "@/components/CrmChrome";
 import { StatCard } from "@/components/ui/StatCard";
 import type { Lang } from "@/lib/i18n";
 import {
-  CATEGORY_LABEL,
   CAMPO_NORTE_ORG,
-  FLEET_KIND_LABEL,
-  ROLE_FLOOR_LABEL,
-  SHIFT_LABEL,
   ZONE_LABEL,
   WMS_DEMO_NOW,
   alertCounts,
@@ -19,15 +15,13 @@ import {
   computeUnitEconomics,
   computeWmsAlerts,
   fleetUtilization,
-  loadWmsSnapshot,
-  saveWmsSnapshot,
+  navigateWmsSection,
+  rankDayPriorities,
   monthCosts,
   occupancyByZone,
-  stockByCategory,
   type FleetStatus,
   type PalletStatus,
   type SlotStatus,
-  type WmsSnapshot,
 } from "@/lib/wms";
 import { cn } from "@/lib/utils";
 import {
@@ -48,8 +42,8 @@ import {
   Users,
   Warehouse,
 } from "lucide-react";
-import { useMemo, useState } from "react";
-import { WmsShiftBoard } from "./WmsShifts";
+import { useState } from "react";
+import { useWmsLive } from "./useWmsLive";
 import {
   Bar,
   BarChart,
@@ -79,12 +73,8 @@ function statusTone(
   return "brand";
 }
 
-function useWms(): WmsSnapshot {
-  return useMemo(() => loadWmsSnapshot(), []);
-}
-
 export function WmsDashboardPanel({ lang }: { lang: Lang }) {
-  const snap = useWms();
+  const { snap } = useWmsLive();
   const [siteId, setSiteId] = useState(snap.sites[0]?.id ?? "");
   const kpis = computeTowerKpis(snap, "2026-08", siteId);
   const occ = occupancyByZone(snap.slots.filter((s) => s.siteId === siteId));
@@ -252,40 +242,98 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
 
         <Card
           title={lang === "es" ? "Flujo del día" : "Day flow"}
-          subtitle={lang === "es" ? "Recepción · expedición · alertas" : "Inbound · outbound · alerts"}
+          subtitle={lang === "es" ? "Pulsa una fila para ir a su sección" : "Tap a row to open its section"}
         >
           <ul className="space-y-3 text-sm">
-            <li className="flex items-center justify-between gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2.5">
-              <span className="inline-flex items-center gap-2 text-[var(--ink)]">
-                <Truck className="h-4 w-4 text-[var(--accent)]" />
-                {lang === "es" ? "ASN abiertos" : "Open ASN"}
-              </span>
-              <Badge tone="brand">{kpis.inboundOpen}</Badge>
-            </li>
-            <li className="flex items-center justify-between gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2.5">
-              <span className="inline-flex items-center gap-2 text-[var(--ink)]">
-                <Package className="h-4 w-4 text-[var(--accent)]" />
-                {lang === "es" ? "Salidas abiertas" : "Open outbound"}
-              </span>
-              <Badge tone="warn">{kpis.outboundOpen}</Badge>
-            </li>
-            <li className="flex items-center justify-between gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2.5">
-              <span className="inline-flex items-center gap-2 text-[var(--ink)]">
-                <AlertTriangle className="h-4 w-4 text-[var(--warn-ink)]" />
-                {lang === "es" ? "Caducidad próxima" : "Near expiry"}
-              </span>
-              <Badge tone={kpis.expiringSoon ? "bad" : "good"}>{kpis.expiringSoon}</Badge>
-            </li>
-            <li className="flex items-center justify-between gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2.5">
-              <span className="inline-flex items-center gap-2 text-[var(--ink)]">
-                <Battery className="h-4 w-4 text-[var(--accent)]" />
-                {lang === "es" ? "Utilización flota" : "Fleet utilization"}
-              </span>
-              <Badge tone="good">{fleetUtilization(snap.fleet)}%</Badge>
-            </li>
+            {(
+              [
+                {
+                  id: "recepcion",
+                  icon: Truck,
+                  label: lang === "es" ? "ASN abiertos" : "Open ASN",
+                  value: kpis.inboundOpen,
+                  tone: "brand" as const,
+                },
+                {
+                  id: "expedicion",
+                  icon: Package,
+                  label: lang === "es" ? "Salidas abiertas" : "Open outbound",
+                  value: kpis.outboundOpen,
+                  tone: "warn" as const,
+                },
+                {
+                  id: "palets",
+                  icon: AlertTriangle,
+                  label: lang === "es" ? "Caducidad próxima" : "Near expiry",
+                  value: kpis.expiringSoon,
+                  tone: kpis.expiringSoon ? ("bad" as const) : ("good" as const),
+                },
+                {
+                  id: "flota",
+                  icon: Battery,
+                  label: lang === "es" ? "Utilización flota" : "Fleet utilization",
+                  value: `${fleetUtilization(snap.fleet.filter((f) => f.siteId === siteId))}%`,
+                  tone: "good" as const,
+                },
+              ] as const
+            ).map((row) => (
+              <li key={row.id}>
+                <button
+                  type="button"
+                  onClick={() => navigateWmsSection(row.id)}
+                  className="flex w-full items-center justify-between gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2.5 text-left transition hover:border-[color-mix(in_oklab,var(--accent)_40%,transparent)]"
+                >
+                  <span className="inline-flex items-center gap-2 text-[var(--ink)]">
+                    <row.icon className="h-4 w-4 text-[var(--accent)]" />
+                    {row.label}
+                  </span>
+                  <Badge tone={row.tone}>{row.value}</Badge>
+                </button>
+              </li>
+            ))}
           </ul>
         </Card>
       </div>
+
+      <Card
+        title={lang === "es" ? "Prioridades del día" : "Today's priorities"}
+        subtitle={
+          lang === "es"
+            ? "Pedidos y olas ordenados por heurística: express · urgente · cut-off · palets"
+            : "Orders and waves ranked by heuristic: express · urgent · cut-off · pallets"
+        }
+      >
+        <ul className="space-y-2">
+          {rankDayPriorities(snap, siteId).map((row) => (
+            <li key={row.order.id}>
+              <button
+                type="button"
+                onClick={() => navigateWmsSection("expedicion")}
+                className="flex w-full items-start justify-between gap-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2.5 text-left text-sm"
+              >
+                <span>
+                  <span className="font-mono text-xs font-semibold">{row.order.code}</span>
+                  <span className="mt-0.5 block text-[var(--ink)]">{row.order.customer}</span>
+                  <span className="mt-0.5 block text-xs text-[var(--ink-muted)]">
+                    {lang === "es" ? row.reasonEs : row.reasonEn}
+                    {row.waveCodes.length ? ` · ${row.waveCodes.join(", ")}` : ""}
+                  </span>
+                </span>
+                <span className="flex flex-col items-end gap-1">
+                  <Badge tone={row.done ? "good" : row.order.priority === "express" ? "bad" : row.order.priority === "urgente" ? "warn" : "neutral"}>
+                    {row.done ? (lang === "es" ? "hecho" : "done") : row.order.priority}
+                  </Badge>
+                  {row.pickTotal > 0 && (
+                    <span className="text-[11px] text-[var(--ink-muted)]">
+                      {row.pickDone}/{row.pickTotal}
+                    </span>
+                  )}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Card>
 
       <Card
         title={lang === "es" ? "Alertas operativas" : "Operational alerts"}
@@ -318,392 +366,17 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
   );
 }
 
-export function WmsStockPanel({ lang }: { lang: Lang }) {
-  const snap = useWms();
-  const byCat = stockByCategory(snap.pallets, snap.skus, lang);
-  const skuMap = useMemo(() => new Map(snap.skus.map((s) => [s.id, s])), [snap.skus]);
-  const unitsBySku = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const p of snap.pallets) {
-      if (p.status === "expedido") continue;
-      m.set(p.skuId, (m.get(p.skuId) ?? 0) + p.qty);
-    }
-    return m;
-  }, [snap.pallets]);
+export { WmsStockPanel } from "./WmsCatalog";
+export { WmsPalletsPanel } from "./WmsPalletsAdmin";
+export { WmsFleetPanel } from "./WmsFleetAdmin";
+export { WmsOperatorsPanel } from "./WmsOperatorsAdmin";
+export { WmsInboundPanel } from "./WmsInboundAdmin";
 
-  return (
-    <div className="space-y-4">
-      <header>
-        <h2 className="font-[family-name:var(--mps-display)] text-2xl text-[var(--ink)]">
-          {lang === "es" ? "Stock por categoría" : "Stock by category"}
-        </h2>
-        <p className="mt-1 text-sm text-[var(--ink-muted)]">
-          {lang === "es"
-            ? "Control ABC · mínimos · unidades vivas en el hub."
-            : "ABC control · mins · live units in the hub."}
-        </p>
-      </header>
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {byCat.map((c) => (
-          <Card key={c.category} title={c.label}>
-            <div className="flex items-end justify-between gap-2">
-              <div>
-                <p className="text-3xl font-semibold text-[var(--ink)]">{c.pallets}</p>
-                <p className="text-xs text-[var(--ink-muted)]">{lang === "es" ? "palets" : "pallets"}</p>
-              </div>
-              <div className="text-right text-sm">
-                <p className="font-semibold text-[var(--ink)]">{c.units.toLocaleString(lang === "es" ? "es-ES" : "en-GB")}</p>
-                <p className="text-xs text-[var(--ink-muted)]">{lang === "es" ? "unidades" : "units"}</p>
-              </div>
-            </div>
-            {c.belowMin > 0 && (
-              <p className="mt-3 text-xs font-semibold text-[var(--danger)]">
-                {c.belowMin} SKU {lang === "es" ? "bajo mínimo" : "below min"}
-              </p>
-            )}
-          </Card>
-        ))}
-      </div>
-
-      <Card title={lang === "es" ? "Catálogo SKU" : "SKU catalog"}>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="text-xs uppercase tracking-wide text-[var(--ink-muted)]">
-              <tr>
-                <th className="pb-2 pr-3">SKU</th>
-                <th className="pb-2 pr-3">{lang === "es" ? "Producto" : "Product"}</th>
-                <th className="pb-2 pr-3">{lang === "es" ? "Categoría" : "Category"}</th>
-                <th className="pb-2 pr-3">ABC</th>
-                <th className="pb-2 pr-3">{lang === "es" ? "Stock" : "Stock"}</th>
-                <th className="pb-2">Min / Max</th>
-              </tr>
-            </thead>
-            <tbody>
-              {snap.skus.map((sku) => {
-                const units = unitsBySku.get(sku.id) ?? 0;
-                const low = units < sku.minStock;
-                return (
-                  <tr key={sku.id} className="border-t border-[var(--glass-border)]">
-                    <td className="py-2.5 pr-3 font-mono text-xs">{sku.sku}</td>
-                    <td className="py-2.5 pr-3">{sku.name}</td>
-                    <td className="py-2.5 pr-3">{CATEGORY_LABEL[sku.category][lang]}</td>
-                    <td className="py-2.5 pr-3">
-                      <Badge tone={sku.abc === "A" ? "brand" : sku.abc === "B" ? "warn" : "neutral"}>{sku.abc}</Badge>
-                    </td>
-                    <td className={cn("py-2.5 pr-3 font-semibold", low && "text-[var(--danger)]")}>{units}</td>
-                    <td className="py-2.5 text-[var(--ink-muted)]">
-                      {sku.minStock} / {sku.maxStock}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <p className="mt-2 hidden text-xs text-[var(--ink-muted)]">{skuMap.size}</p>
-      </Card>
-    </div>
-  );
-}
-
-export function WmsPalletsPanel({ lang }: { lang: Lang }) {
-  const snap = useWms();
-  const skuMap = useMemo(() => new Map(snap.skus.map((s) => [s.id, s])), [snap.skus]);
-  const slotMap = useMemo(() => new Map(snap.slots.map((s) => [s.id, s])), [snap.slots]);
-  const [q, setQ] = useState("");
-  const rows = snap.pallets
-    .filter((p) => {
-      if (!q.trim()) return true;
-      const sku = skuMap.get(p.skuId);
-      const hay = `${p.sscc} ${p.lot} ${sku?.name ?? ""} ${sku?.sku ?? ""}`.toLowerCase();
-      return hay.includes(q.trim().toLowerCase());
-    })
-    .slice(0, 80);
-
-  return (
-    <div className="space-y-4">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="font-[family-name:var(--mps-display)] text-2xl text-[var(--ink)]">
-            {lang === "es" ? "Palets · SSCC" : "Pallets · SSCC"}
-          </h2>
-          <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            {lang === "es"
-              ? "Trazabilidad por palet, lote, caducidad y hueco."
-              : "Traceability by pallet, lot, expiry and slot."}
-          </p>
-        </div>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder={lang === "es" ? "Buscar SSCC, lote, SKU…" : "Search SSCC, lot, SKU…"}
-          className="w-full max-w-xs rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
-        />
-      </header>
-
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="text-xs uppercase tracking-wide text-[var(--ink-muted)]">
-              <tr>
-                <th className="pb-2 pr-3">SSCC</th>
-                <th className="pb-2 pr-3">SKU</th>
-                <th className="pb-2 pr-3">{lang === "es" ? "Cant." : "Qty"}</th>
-                <th className="pb-2 pr-3">{lang === "es" ? "Hueco" : "Slot"}</th>
-                <th className="pb-2 pr-3">{lang === "es" ? "Estado" : "Status"}</th>
-                <th className="pb-2 pr-3">{lang === "es" ? "Caducidad" : "Expiry"}</th>
-                <th className="pb-2">{lang === "es" ? "Proveedor" : "Supplier"}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((p) => {
-                const sku = skuMap.get(p.skuId);
-                const slot = p.slotId ? slotMap.get(p.slotId) : null;
-                return (
-                  <tr key={p.id} className="border-t border-[var(--glass-border)]">
-                    <td className="py-2.5 pr-3 font-mono text-xs">{p.sscc}</td>
-                    <td className="py-2.5 pr-3">
-                      <p className="font-medium">{sku?.name ?? p.skuId}</p>
-                      <p className="text-xs text-[var(--ink-muted)]">{sku?.sku}</p>
-                    </td>
-                    <td className="py-2.5 pr-3">{p.qty}</td>
-                    <td className="py-2.5 pr-3 font-mono text-xs">{slot?.code ?? "—"}</td>
-                    <td className="py-2.5 pr-3">
-                      <Badge tone={statusTone(p.status)}>{p.status}</Badge>
-                    </td>
-                    <td className="py-2.5 pr-3 text-[var(--ink-muted)]">{p.expiry ?? "—"}</td>
-                    <td className="py-2.5">{p.supplier}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-export function WmsFleetPanel({ lang }: { lang: Lang }) {
-  const snap = useWms();
-  const opMap = useMemo(() => new Map(snap.operators.map((o) => [o.id, o])), [snap.operators]);
-
-  return (
-    <div className="space-y-4">
-      <header>
-        <h2 className="font-[family-name:var(--mps-display)] text-2xl text-[var(--ink)]">
-          {lang === "es" ? "Flota eléctrica" : "Electric fleet"}
-        </h2>
-        <p className="mt-1 text-sm text-[var(--ink-muted)]">
-          {lang === "es"
-            ? "Carretillas, retráctiles (incl. stand-up doble) y recogepedidos: batería, horas, coste/hora y ola asignada."
-            : "Forklifts, reach trucks (incl. stand-up double) and pickers: battery, hours, cost/hour and assigned wave."}
-        </p>
-      </header>
-
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {snap.fleet.map((f) => {
-          const op = f.operatorId ? opMap.get(f.operatorId) : null;
-          const waves = snap.pickWaves.filter((w) => w.fleetId === f.id);
-          const site = snap.sites.find((s) => s.id === f.siteId);
-          return (
-            <Card key={f.id} title={`${f.code} · ${f.brand}`} subtitle={f.model}>
-              <div className="mb-3 flex flex-wrap gap-2">
-                <Badge tone={statusTone(f.status)}>{f.status}</Badge>
-                <Badge tone={f.kind === "retractil_doble" ? "warn" : "neutral"}>
-                  {FLEET_KIND_LABEL[f.kind][lang]}
-                </Badge>
-                {site && <Badge tone="neutral">{site.city}</Badge>}
-              </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 text-[var(--ink-muted)]">
-                    <Battery className="h-3.5 w-3.5" />
-                    {lang === "es" ? "Batería" : "Battery"}
-                  </span>
-                  <span className={cn("font-semibold", f.batteryPct < 25 && "text-[var(--danger)]")}>
-                    {f.batteryPct}%
-                  </span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-sunken)]">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${f.batteryPct}%`,
-                      background: f.batteryPct < 25 ? "var(--danger)" : "var(--accent)",
-                    }}
-                  />
-                </div>
-                <div className="flex justify-between text-[var(--ink-muted)]">
-                  <span>{lang === "es" ? "Horas hoy" : "Hours today"}</span>
-                  <span className="font-medium text-[var(--ink)]">{f.hoursToday.toFixed(1)} h</span>
-                </div>
-                <div className="flex justify-between text-[var(--ink-muted)]">
-                  <span>{lang === "es" ? "Coste/h" : "Cost/h"}</span>
-                  <span className="font-medium text-[var(--ink)]">{f.costPerHour.toFixed(2)} €</span>
-                </div>
-                <div className="flex justify-between text-[var(--ink-muted)]">
-                  <span>{lang === "es" ? "Operario" : "Operator"}</span>
-                  <span className="font-medium text-[var(--ink)]">{op?.name ?? "—"}</span>
-                </div>
-                {waves.length > 0 && (
-                  <div className="flex justify-between text-[var(--ink-muted)]">
-                    <span>{lang === "es" ? "Ola asignada" : "Assigned wave"}</span>
-                    <span className="font-medium text-[var(--ink)]">
-                      {waves.map((w) => w.code).join(", ")}
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between text-[var(--ink-muted)]">
-                  <span>{lang === "es" ? "Próx. servicio" : "Next service"}</span>
-                  <span className="font-medium text-[var(--ink)]">{f.nextServiceAt}</span>
-                </div>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-export function WmsOperatorsPanel({ lang }: { lang: Lang }) {
-  const [snap, setSnap] = useState(() => loadWmsSnapshot());
-  const [siteId, setSiteId] = useState(snap.sites[0]?.id ?? "");
-  const ops = snap.operators.filter((o) => o.siteId === siteId);
-  const labor = ops.reduce((s, o) => s + o.hoursToday * o.costPerHour, 0);
-
-  function persist(next: WmsSnapshot) {
-    saveWmsSnapshot(next);
-    setSnap(next);
-  }
-
-  return (
-    <div className="space-y-4">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="font-[family-name:var(--mps-display)] text-2xl text-[var(--ink)]">
-            {lang === "es" ? "Operarios & RRHH operativo" : "Operators & floor HR"}
-          </h2>
-          <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            {lang === "es"
-              ? "Asigna turnos, cubre huecos con excedente y mira certificaciones y coste del día."
-              : "Assign shifts, fill gaps with surplus staff, and see certifications and day cost."}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
-            value={siteId}
-            onChange={(e) => setSiteId(e.target.value)}
-          >
-            {snap.sites.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.city}
-              </option>
-            ))}
-          </select>
-          <Badge tone="brand">
-            {lang === "es" ? "Coste hoy" : "Cost today"} · {euro(labor, lang)}
-          </Badge>
-        </div>
-      </header>
-
-      <WmsShiftBoard lang={lang} snap={snap} siteId={siteId} onChange={persist} />
-
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="text-xs uppercase tracking-wide text-[var(--ink-muted)]">
-              <tr>
-                <th className="pb-2 pr-3">{lang === "es" ? "Operario" : "Operator"}</th>
-                <th className="pb-2 pr-3">{lang === "es" ? "Rol" : "Role"}</th>
-                <th className="pb-2 pr-3">{lang === "es" ? "Turno" : "Shift"}</th>
-                <th className="pb-2 pr-3">{lang === "es" ? "Movimientos" : "Moves"}</th>
-                <th className="pb-2 pr-3">{lang === "es" ? "Horas" : "Hours"}</th>
-                <th className="pb-2 pr-3">€/h</th>
-                <th className="pb-2">{lang === "es" ? "Extras sem." : "OT week"}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ops.map((o) => (
-                <tr key={o.id} className="border-t border-[var(--glass-border)]">
-                  <td className="py-2.5 pr-3">
-                    <p className="font-medium">{o.name}</p>
-                    <p className="font-mono text-xs text-[var(--ink-muted)]">{o.code}</p>
-                  </td>
-                  <td className="py-2.5 pr-3">
-                    <Badge tone="neutral">{ROLE_FLOOR_LABEL[o.role][lang]}</Badge>
-                  </td>
-                  <td className="py-2.5 pr-3">{SHIFT_LABEL[o.shift][lang]}</td>
-                  <td className="py-2.5 pr-3 font-semibold">{o.movesToday}</td>
-                  <td className="py-2.5 pr-3">{o.hoursToday.toFixed(1)}</td>
-                  <td className="py-2.5 pr-3">{o.costPerHour.toFixed(2)}</td>
-                  <td className="py-2.5">
-                    <Badge tone={o.overtimeHoursWeek > 4 ? "warn" : "good"}>{o.overtimeHoursWeek} h</Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-export function WmsInboundPanel({ lang }: { lang: Lang }) {
-  const snap = useWms();
-  return (
-    <div className="space-y-4">
-      <header>
-        <h2 className="font-[family-name:var(--mps-display)] text-2xl text-[var(--ink)]">
-          {lang === "es" ? "Recepción · ASN" : "Receiving · ASN"}
-        </h2>
-        <p className="mt-1 text-sm text-[var(--ink-muted)]">
-          {lang === "es"
-            ? "Muelle, descarga, putaway y cierre de entrada."
-            : "Dock, unload, putaway and inbound close."}
-        </p>
-      </header>
-      <div className="grid gap-3 md:grid-cols-2">
-        {snap.inbound.map((asn) => {
-          const pct = asn.palletsExpected
-            ? Math.round((asn.palletsDone / asn.palletsExpected) * 100)
-            : 0;
-          return (
-            <Card key={asn.id} title={asn.code} subtitle={asn.supplier}>
-              <div className="mb-3 flex flex-wrap gap-2">
-                <Badge tone={statusTone(asn.status)}>{asn.status}</Badge>
-                <Badge tone="neutral">{asn.dock}</Badge>
-              </div>
-              <div className="mb-2 flex justify-between text-sm text-[var(--ink-muted)]">
-                <span>
-                  {asn.palletsDone}/{asn.palletsExpected} {lang === "es" ? "palets" : "pallets"}
-                </span>
-                <span>{asn.lines} lines</span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-sunken)]">
-                <div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${pct}%` }} />
-              </div>
-              <p className="mt-2 text-xs text-[var(--ink-muted)]">ETA {new Date(asn.eta).toLocaleString(lang === "es" ? "es-ES" : "en-GB")}</p>
-            </Card>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 export function WmsOutboundPanel({ lang }: { lang: Lang }) {
-  const [snap, setSnap] = useState(() => loadWmsSnapshot());
+  const { snap, commit } = useWmsLive();
   const carriers = snap.carriers.filter((c) => c.active && c.orgId === snap.org.id);
-
-  function persist(next: WmsSnapshot) {
-    saveWmsSnapshot(next);
-    setSnap(next);
-  }
+  const ranked = rankDayPriorities(snap);
 
   return (
     <div className="space-y-4">
@@ -713,8 +386,8 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
         </h2>
         <p className="mt-1 text-sm text-[var(--ink-muted)]">
           {lang === "es"
-            ? "Carrier y ventana de muelle (derivada del cut-off). El tracking lo escribes tú: no se fabrica."
-            : "Carrier and dock window (from cut-off). You type the tracking: it is not fabricated."}
+            ? "Misma heurística que Prioridades del día: express · urgente · cut-off · palets. El tracking lo escribes tú."
+            : "Same heuristic as Today's priorities: express · urgent · cut-off · pallets. You type the tracking."}
         </p>
       </header>
       <div className="flex flex-wrap gap-2">
@@ -739,14 +412,22 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
                 <th className="pb-2 pr-3">Tracking</th>
                 <th className="pb-2 pr-3">{lang === "es" ? "Prioridad" : "Priority"}</th>
                 <th className="pb-2 pr-3">{lang === "es" ? "Estado" : "Status"}</th>
-                <th className="pb-2">Palets</th>
+                <th className="pb-2 pr-3">Palets</th>
+                <th className="pb-2">{lang === "es" ? "Ola" : "Wave"}</th>
               </tr>
             </thead>
             <tbody>
-              {snap.outbound.map((o) => (
+              {ranked.map((row) => {
+                const o = row.order;
+                return (
                 <tr key={o.id} className="border-t border-[var(--glass-border)]">
                   <td className="py-2.5 pr-3 font-mono text-xs">{o.code}</td>
-                  <td className="py-2.5 pr-3">{o.customer}</td>
+                  <td className="py-2.5 pr-3">
+                    {o.customer}
+                    <span className="mt-0.5 block text-[11px] text-[var(--ink-muted)]">
+                      {lang === "es" ? row.reasonEs : row.reasonEn}
+                    </span>
+                  </td>
                   <td className="py-2.5 pr-3 text-[var(--ink-muted)]">
                     {new Date(o.cutOff).toLocaleTimeString(lang === "es" ? "es-ES" : "en-GB", {
                       hour: "2-digit",
@@ -759,7 +440,7 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
                       value={o.carrierId ?? ""}
                       onChange={(e) => {
                         const result = assignOutboundCarrier(snap, o.id, e.target.value);
-                        if (result.ok) persist(result.snap);
+                        if (result.ok) commit(result.snap);
                       }}
                     >
                       {carriers.map((c) => (
@@ -776,21 +457,27 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
                       className="w-36 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-2 py-1 font-mono text-[11px]"
                       onBlur={(e) => {
                         const result = setOutboundTracking(snap, o.id, e.target.value);
-                        if (result.ok) persist(result.snap);
+                        if (result.ok) commit(result.snap);
                       }}
                     />
                   </td>
                   <td className="py-2.5 pr-3">
-                    <Badge tone={o.priority === "normal" ? "neutral" : o.priority === "urgente" ? "warn" : "bad"}>
-                      {o.priority}
+                    <Badge tone={row.done ? "good" : o.priority === "normal" ? "neutral" : o.priority === "urgente" ? "warn" : "bad"}>
+                      {row.done ? (lang === "es" ? "hecho" : "done") : o.priority}
                     </Badge>
                   </td>
                   <td className="py-2.5 pr-3">
                     <Badge tone={statusTone(o.status)}>{o.status}</Badge>
                   </td>
-                  <td className="py-2.5 font-semibold">{o.pallets}</td>
+                  <td className="py-2.5 pr-3 font-semibold">{o.pallets}</td>
+                  <td className="py-2.5 text-xs text-[var(--ink-muted)]">
+                    {row.waveCodes.length
+                      ? `${row.waveCodes.join(", ")} · ${row.pickDone}/${row.pickTotal}`
+                      : "—"}
+                  </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>
@@ -800,7 +487,7 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
 }
 
 export function WmsSitePnlCard({ lang, siteId }: { lang: Lang; siteId?: string }) {
-  const snap = useWms();
+  const { snap } = useWmsLive();
   const sid = siteId ?? snap.sites[0]?.id;
   const pnl = computeSitePnl(snap, "2026-08", sid);
   const site = snap.sites.find((s) => s.id === sid);
@@ -868,7 +555,7 @@ export function WmsSitePnlCard({ lang, siteId }: { lang: Lang; siteId?: string }
 }
 
 export function WmsCostsPanel({ lang }: { lang: Lang }) {
-  const snap = useWms();
+  const { snap } = useWmsLive();
   const month = "2026-08";
   const [siteId, setSiteId] = useState(snap.sites[0]?.id ?? "");
   const lines = monthCosts(snap.costs, month, siteId);

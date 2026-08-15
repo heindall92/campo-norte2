@@ -39,12 +39,23 @@
 - Alta de centro con ciudad y layout **escritos por el usuario** (sin presets inventados)
 - Expedición: carrier del catálogo; tracking **manual**; ventana de muelle derivada del cut-off
 
-## Fase 7 — Pistola RF (esta entrega)
+## Fase 7 — Pistola RF
 - Cola RF derivada del snapshot (picado abierto, palet en muelle, reposición, conteo)
 - Escaneo real: hueco → SSCC → destino/cantidad; no confirma si no coincide
 - Tesorería del Hub ya no mezcla el P&L WMS inventado
 - Plantilla de turnos: no se inventan operarios para “cerrar huecos”
 
+## Fase 8 — Operación diaria (esta entrega)
+- Flujo del día navega a recepción / expedición / palets / flota
+- Prioridades del día en escritorio (heurística express · urgente · cut-off · palets) enlazadas a olas
+- Catálogo: alta/edición de SKU y categorías
+- Pasillos: búsqueda de producto/SSCC; picking con omitir y faltante
+- Palets y ASN: crear / editar / eliminar
+- Flota: torito y montacargas; batería solo con reporte (el cargador no inventa %)
+- Operarios: cupo 25/25/25 en Sevilla con plazas «Alta pendiente», CRUD, PIN y fichaje
+- Huella: adaptador documentado (`docs/WMS-HUELLA.md`); el navegador no lee ZKTeco
+
 ## Siguiente
+- Agente local pyzk → `ingestAdapterPunch` cuando haya terminal en planta
+- Telemetría real de flota (ISM / I_Site / InfoLink) cuando exista contrato
 - Tablas WMS en Postgres / RLS cuando haya stock real en el Hub
-- EDI carriers cuando haya feed real de tracking

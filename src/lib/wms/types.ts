@@ -1,4 +1,4 @@
-/** Dominio WMS — Campo Norte Logística (fase 6: org, onboarding y carriers). */
+/** Dominio WMS — Campo Norte Logística (fase 8: catálogo, prioridades, roster y fichaje). */
 
 export type WarehouseZone = "seco" | "fresco" | "congelado" | "picking" | "muelle" | "crossdock";
 
@@ -20,7 +20,12 @@ export type FleetKind =
   | "retractil_doble"
   | "transpaleta"
   | "recogepedidos"
-  | "apilador";
+  | "apilador"
+  | "toro"
+  | "montacargas";
+
+/** De dónde sale el % de batería. Nunca se fabrica telemetría de cargador. */
+export type BatterySource = "unknown" | "seed" | "manual";
 
 export type FleetStatus = "operativa" | "cargando" | "mantenimiento" | "fuera_servicio";
 
@@ -97,11 +102,20 @@ export interface WarehouseSite {
   temperatureModes: WarehouseZone[];
 }
 
+export interface ProductCategory {
+  id: string;
+  code: string;
+  labelEs: string;
+  labelEn: string;
+  system: boolean;
+}
+
 export interface Sku {
   id: string;
   sku: string;
   name: string;
-  category: CategoryCode;
+  /** id de ProductCategory (sistema o creada) */
+  category: string;
   uom: "ud" | "caja" | "kg" | "palet";
   unitsPerPallet: number;
   weightKg: number;
@@ -152,13 +166,27 @@ export interface FleetUnit {
   model: string;
   kind: FleetKind;
   status: FleetStatus;
-  batteryPct: number;
+  /** null = no hay lectura. No inventar % desde el cargador de pared. */
+  batteryPct: number | null;
+  batterySource: BatterySource;
+  batteryReportedAt: string | null;
+  chargerId: string | null;
   hoursToday: number;
   hoursTotal: number;
   operatorId: string | null;
   siteId: string;
   nextServiceAt: string;
   costPerHour: number;
+}
+
+/** Cargador de pared. Sin telemetría en el navegador: solo etiqueta y asignación. */
+export interface WallCharger {
+  id: string;
+  code: string;
+  siteId: string;
+  zone: string;
+  assignedFleetId: string | null;
+  telemetry: "none";
 }
 
 export interface Operator {
@@ -169,6 +197,8 @@ export interface Operator {
   shift: ShiftCode;
   siteId: string;
   active: boolean;
+  /** Plaza de cupo (25/turno) sin identidad real. */
+  vacant: boolean;
   certifications: string[];
   costPerHour: number;
   picksPerHour: number;
@@ -176,6 +206,21 @@ export interface Operator {
   hoursToday: number;
   overtimeHoursWeek: number;
   hiredAt: string;
+  fingerprintEnrolled: boolean;
+  /** Hash del PIN de verificación — no es plantilla biométrica. */
+  pinHash: string | null;
+}
+
+export type ClockMethod = "pin" | "adapter";
+
+export interface ClockPunch {
+  id: string;
+  operatorId: string;
+  siteId: string;
+  kind: "entrada" | "salida";
+  at: string;
+  method: ClockMethod;
+  note: string;
 }
 
 export interface InboundAsn {
@@ -237,11 +282,14 @@ export interface WmsSnapshot {
   /** true = semilla local de almacén, no es el Data Hub de producción */
   seededFromDemo: boolean;
   sites: WarehouseSite[];
+  categories: ProductCategory[];
   skus: Sku[];
   slots: Slot[];
   pallets: Pallet[];
   fleet: FleetUnit[];
+  chargers: WallCharger[];
   operators: Operator[];
+  clockPunches: ClockPunch[];
   inbound: InboundAsn[];
   outbound: OutboundOrder[];
   carriers: Carrier[];
@@ -282,6 +330,30 @@ export const FLEET_KIND_LABEL: Record<FleetKind, { es: string; en: string }> = {
   transpaleta: { es: "Transpaleta", en: "Pallet truck" },
   recogepedidos: { es: "Recogepedidos", en: "Order picker" },
   apilador: { es: "Apilador", en: "Stacker" },
+  toro: { es: "Torito / transpaleta conductor", en: "Walkie pallet truck" },
+  montacargas: { es: "Montacargas", en: "High-lift forklift" },
 };
 
-export const WMS_STORAGE_KEY = "cn-wms-hub-v7";
+export const SYSTEM_CATEGORIES: ProductCategory[] = (
+  Object.keys(CATEGORY_LABEL) as CategoryCode[]
+).map((id) => ({
+  id,
+  code: id,
+  labelEs: CATEGORY_LABEL[id].es,
+  labelEn: CATEGORY_LABEL[id].en,
+  system: true,
+}));
+
+export function categoryLabel(
+  code: string,
+  lang: "es" | "en",
+  categories: ProductCategory[] = SYSTEM_CATEGORIES,
+): string {
+  const found = categories.find((c) => c.id === code || c.code === code);
+  if (found) return lang === "es" ? found.labelEs : found.labelEn;
+  const sys = CATEGORY_LABEL[code as CategoryCode];
+  return sys ? sys[lang] : code;
+}
+
+export const WMS_STORAGE_KEY = "cn-wms-hub-v8";
+export const WMS_STORAGE_KEY_LEGACY = ["cn-wms-hub-v7"];

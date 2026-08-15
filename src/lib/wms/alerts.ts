@@ -33,15 +33,20 @@ export function computeWmsAlerts(
 
   for (const unit of snap.fleet) {
     if (!inSite(unit.siteId)) continue;
+    if (unit.batteryPct == null || unit.batterySource === "unknown") continue;
     if (unit.batteryPct >= BATTERY_MIN) continue;
+    const sourceEs =
+      unit.batterySource === "manual" ? "reporte manual" : "último reporte de semilla (no es el cargador)";
+    const sourceEn =
+      unit.batterySource === "manual" ? "manual report" : "seed last report (not the wall charger)";
     alerts.push({
       id: `bat-${unit.id}`,
       kind: "bateria",
       severity: unit.batteryPct < 15 ? "critical" : "warn",
       titleEs: `Batería ${unit.code} al ${unit.batteryPct}%`,
       titleEn: `Battery ${unit.code} at ${unit.batteryPct}%`,
-      detailEs: `${unit.brand} ${unit.model} · cambiar o cargar antes del siguiente turno`,
-      detailEn: `${unit.brand} ${unit.model} · swap or charge before next shift`,
+      detailEs: `${unit.brand} ${unit.model} · ${sourceEs}`,
+      detailEn: `${unit.brand} ${unit.model} · ${sourceEn}`,
       siteId: unit.siteId,
       entityId: unit.id,
     });

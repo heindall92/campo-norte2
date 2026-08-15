@@ -11,25 +11,25 @@ Este repositorio (`campo-norte2`) publica el ecosistema SaaS WMS. La base CRM/WM
 
 ---
 
-## Fases 2–6 (esta rama)
+## Fases 2–8 (esta rama)
 
-Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, movimientos en vivo, inventario cíclico, alertas, economía unitaria, planificación de turnos, **onboarding de centros** y **carriers**.
+Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, movimientos en vivo, inventario cíclico, alertas, economía unitaria, planificación de turnos, onboarding, carriers, pistola RF y **operación diaria** (CRUD, prioridades, fichaje).
 
 **Iconos:** siempre [Lucide](https://lucide.dev) (`lucide-react`).
 
 | Módulo | Qué controla |
 |---|---|
 | Torre de control | Ocupación, alertas, €/palet, €/línea pick, huecos de turno |
-| Stock | SKU / categorías / ABC / mínimos |
-| Pasillos / huecos | Digital twin de rack selectivo (2 palets/bahía, nivel 1 = picking) |
-| Picar mercancía | Ticket → hueco → SSCC → cantidad → siguiente línea |
+| Stock | SKU / categorías / ABC / mínimos · **alta y edición** |
+| Pasillos / huecos | Digital twin + **búsqueda** de producto/SSCC |
+| Picar mercancía | Ticket → hueco → SSCC → cantidad · omitir / faltante |
 | Movimientos | Putaway de muelle y traslados RF; reposición reserva → picking con retráctil doble |
 | Inventario cíclico | Cola por caducidad / ABC A / conteo viejo |
-| Palets | SSCC, lote, caducidad, hueco |
-| Flota eléctrica | Incluye **retráctil doble stand-up** asignada a reposición |
-| Recepción | ASN / muelle / putaway |
-| Expedición | Carrier del catálogo; **tracking manual**; cut-off |
-| Operarios | Turnos asignables; cubrir huecos **solo si hay excedente real** |
+| Palets | SSCC, lote, caducidad, hueco · **alta / edición** |
+| Flota eléctrica | Torito, montacargas, retráctil; batería **solo reporte real** |
+| Recepción | ASN crear / editar / cerrar |
+| Expedición | Prioridades del día enlazadas a olas; tracking manual |
+| Operarios | Cupo 25/25/25 (plazas vacantes) · CRUD · PIN / fichaje |
 | Centros | Alta de hub: ciudad y layout que escriba el usuario |
 | Pistola RF | Cola derivada del snapshot: hueco → SSCC → confirmar |
 | Costes | OPEX vs presupuesto y P&L tarifario WMS (**no** se mezcla con Tesorería del Hub) |
