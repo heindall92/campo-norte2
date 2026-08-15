@@ -13,6 +13,7 @@ import {
   proposeReplenishments,
   putawayReceivedPallet,
   suggestPutawaySlot,
+  transferPalletBetweenSites,
   type CycleCountError,
   type LiveMoveError,
 } from "@/lib/wms";
@@ -31,6 +32,9 @@ const MOVE_ERR: Record<LiveMoveError, { es: string; en: string }> = {
   slot_blocked: { es: "Destino bloqueado", en: "Destination blocked" },
   same_slot: { es: "Origen y destino son el mismo hueco", en: "Same slot" },
   not_on_dock: { es: "El palet no está en muelle", en: "Pallet is not on dock" },
+  same_site: { es: "Elige otro centro de destino", en: "Pick a different destination site" },
+  pallet_shipped: { es: "Ese palet ya salió", en: "That pallet already shipped" },
+  pallet_in_wave: { es: "El palet está en una ola o en muelle de salida", en: "Pallet is on a wave or outbound dock" },
 };
 
 const COUNT_ERR: Record<CycleCountError, { es: string; en: string }> = {
@@ -45,7 +49,10 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
   const { snap, commit } = useWmsLive();
   const matched = operatorForAppUser(snap, user);
   const isFloor = user?.role === "guide";
-  const [mode, setMode] = useState<"putaway" | "traslado">("putaway");
+  const [mode, setMode] = useState<"putaway" | "traslado" | "intersitio">("putaway");
+  const [hubPalletId, setHubPalletId] = useState("");
+  const [hubSiteId, setHubSiteId] = useState("");
+  const [hubSlot, setHubSlot] = useState("");
   const [sscc, setSscc] = useState("");
   const [fromCode, setFromCode] = useState("");
   const [toCode, setToCode] = useState("");
@@ -148,7 +155,129 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
         >
           {lang === "es" ? "Traslado" : "Transfer"}
         </button>
+        <button
+          type="button"
+          onClick={() => setMode("intersitio")}
+          className={cn(
+            "rounded-full px-4 py-2 text-sm font-semibold",
+            mode === "intersitio" ? "bg-[var(--accent)] text-white" : "border border-[var(--glass-border)]",
+          )}
+        >
+          {lang === "es" ? "Inter-centro" : "Inter-site"}
+        </button>
       </div>
+
+      {mode === "intersitio" && (
+        <Card
+          title={lang === "es" ? "Traslado entre centros" : "Inter-site transfer"}
+          subtitle={
+            lang === "es"
+              ? "Mueve un palet real a un hueco libre de otro hub. No se fabrica stock."
+              : "Move a real pallet to a free slot in another hub. No stock is invented."
+          }
+        >
+          <form
+            className="grid gap-2 md:grid-cols-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!gateFloor()) return;
+              const result = transferPalletBetweenSites(snap, {
+                palletId: hubPalletId,
+                destSiteId: hubSiteId,
+                toSlotCode: hubSlot,
+                operatorId,
+                fleetId: doubleReach?.id ?? null,
+              });
+              if (!result.ok) {
+                setOkMsg(null);
+                setFeedback(MOVE_ERR[result.error][lang]);
+                return;
+              }
+              commit(result.snap);
+              setFeedback(null);
+              setOkMsg(
+                lang === "es"
+                  ? `Traslado OK · ${hubSlot}`
+                  : `Transfer OK · ${hubSlot}`,
+              );
+              setHubPalletId("");
+              setHubSlot("");
+            }}
+          >
+            <select
+              required
+              value={hubPalletId}
+              onChange={(e) => setHubPalletId(e.target.value)}
+              className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+            >
+              <option value="">{lang === "es" ? "Palet origen" : "Source pallet"}</option>
+              {snap.pallets
+                .filter((p) => p.status === "en_ubicacion" && p.qty > 0)
+                .slice(0, 80)
+                .map((p) => {
+                  const sku = snap.skus.find((s) => s.id === p.skuId);
+                  const site = snap.sites.find((s) => s.id === p.siteId);
+                  return (
+                    <option key={p.id} value={p.id}>
+                      {p.sscc.slice(-10)} · {sku?.sku} · {site?.code}
+                    </option>
+                  );
+                })}
+            </select>
+            <select
+              required
+              value={hubSiteId}
+              onChange={(e) => {
+                setHubSiteId(e.target.value);
+                setHubSlot("");
+              }}
+              className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+            >
+              <option value="">{lang === "es" ? "Centro destino" : "Destination site"}</option>
+              {snap.sites
+                .filter((s) => s.id !== snap.pallets.find((p) => p.id === hubPalletId)?.siteId)
+                .map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.city} · {s.code}
+                  </option>
+                ))}
+            </select>
+            <select
+              required
+              value={hubSlot}
+              onChange={(e) => setHubSlot(e.target.value)}
+              className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+            >
+              <option value="">{lang === "es" ? "Hueco libre destino" : "Free destination slot"}</option>
+              {snap.slots
+                .filter((s) => s.siteId === hubSiteId && s.status === "libre" && !s.palletId)
+                .slice(0, 80)
+                .map((s) => (
+                  <option key={s.id} value={s.code}>
+                    {s.code} · {s.zone}
+                  </option>
+                ))}
+            </select>
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white md:col-span-3"
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+              {lang === "es" ? "Trasladar palet" : "Transfer pallet"}
+            </button>
+          </form>
+          {feedback && (
+            <p className="mt-2 rounded-xl bg-[var(--warn-bg)] px-3 py-2 text-xs font-semibold text-[var(--warn-ink)]">
+              {feedback}
+            </p>
+          )}
+          {okMsg && (
+            <p className="mt-2 rounded-xl bg-[color-mix(in_oklab,var(--ok)_16%,transparent)] px-3 py-2 text-xs font-semibold text-[var(--ok)]">
+              {okMsg}
+            </p>
+          )}
+        </Card>
+      )}
 
       {mode === "putaway" && dockPals.length > 0 && (
         <Card title={lang === "es" ? "Palets en muelle" : "Dock pallets"} subtitle={`${dockPals.length}`}>
@@ -203,7 +332,7 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
         </Card>
       )}
 
-      <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
+      {mode !== "intersitio" && <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
         <Card title={lang === "es" ? "Confirmar con escáner" : "Confirm with scanner"}>
           <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
             SSCC
@@ -325,7 +454,7 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
             </ul>
           )}
         </Card>
-      </div>
+      </div>}
 
       <Card title={lang === "es" ? "Últimos movimientos" : "Latest movements"}>
         <ul className="space-y-2 text-sm">

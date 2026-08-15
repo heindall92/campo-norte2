@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { applyReplenishment, confirmPutaway, confirmTransfer, proposeReplenishments } from "./movements";
+import {
+  applyReplenishment,
+  confirmPutaway,
+  confirmTransfer,
+  proposeReplenishments,
+  transferPalletBetweenSites,
+} from "./movements";
 import { buildWmsSeed } from "./seed";
 
 describe("wms live movements", () => {
@@ -62,5 +68,49 @@ describe("wms live movements", () => {
     const to = applied.snap.slots.find((s) => s.id === proposals[0]!.toSlotId);
     expect(to?.pickFace).toBe(true);
     expect(to?.palletId).toBe(proposals[0]!.palletId);
+  });
+
+  it("traslada un palet real a un hueco libre de otro centro", () => {
+    const snap = buildWmsSeed();
+    const reserved = new Set(
+      snap.pickWaves.flatMap((w) =>
+        w.status === "cerrada" ? [] : w.lines.map((l) => l.palletId).filter(Boolean),
+      ),
+    );
+    const pallet = snap.pallets.find(
+      (p) =>
+        p.siteId === "site-sev" &&
+        p.status === "en_ubicacion" &&
+        p.qty > 0 &&
+        !reserved.has(p.id),
+    )!;
+    const dest = snap.slots.find(
+      (s) => s.siteId === "site-hue" && s.status === "libre" && !s.palletId && s.zone !== "muelle",
+    )!;
+    expect(pallet && dest).toBeTruthy();
+    const same = transferPalletBetweenSites(snap, {
+      palletId: pallet.id,
+      destSiteId: pallet.siteId,
+      toSlotCode: dest.code,
+    });
+    expect(same.ok).toBe(false);
+    if (!same.ok) expect(same.error).toBe("same_site");
+
+    const moved = transferPalletBetweenSites(snap, {
+      palletId: pallet.id,
+      destSiteId: "site-hue",
+      toSlotCode: dest.code,
+      operatorId: "op-02",
+    });
+    expect(moved.ok).toBe(true);
+    if (!moved.ok) return;
+    const next = moved.snap.pallets.find((p) => p.id === pallet.id)!;
+    expect(next.siteId).toBe("site-hue");
+    expect(next.slotId).toBe(dest.id);
+    expect(next.qty).toBe(pallet.qty);
+    expect(moved.snap.slots.find((s) => s.id === pallet.slotId)?.palletId).toBeNull();
+    expect(moved.snap.slots.find((s) => s.id === dest.id)?.palletId).toBe(pallet.id);
+    expect(moved.snap.movements[0]?.type).toBe("traslado");
+    expect(moved.snap.movements[0]?.note).toMatch(/Inter-centro/);
   });
 });

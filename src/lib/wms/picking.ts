@@ -62,7 +62,7 @@ export function confirmPick(
   }
 
   const nextLines = wave.lines.map((l) => {
-    if (l.id === line.id) return { ...l, status: "picada" as const, qtyPicked: input.qty, qtyPacked: 0 };
+    if (l.id === line.id) return { ...l, status: "picada" as const, qtyPicked: input.qty, qtyPacked: 0, cartonSscc: null };
     if (l.status === "pendiente" && l.sequence === line.sequence + 1) {
       return { ...l, status: "en_curso" as const };
     }
@@ -144,7 +144,7 @@ function closeLine(
   }
 
   const nextLines = wave.lines.map((l) => {
-    if (l.id === line.id) return { ...l, status, qtyPicked, qtyPacked: 0 };
+    if (l.id === line.id) return { ...l, status, qtyPicked, qtyPacked: 0, cartonSscc: null };
     if (l.status === "pendiente" && l.sequence === line.sequence + 1) {
       return { ...l, status: "en_curso" as const };
     }

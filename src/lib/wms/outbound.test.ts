@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildLoadManifest,
+  loadManifestPrintHtml,
   buildWmsSeed,
   confirmPick,
   createOutboundOrder,
@@ -176,5 +177,41 @@ describe("fase 12 · cargar muelle y expedir", () => {
     const order = ok.snap.outbound.find((o) => o.code === line.orderCode)!;
     const manifest = buildLoadManifest(ok.snap, order.id);
     expect(manifest?.rows.some((r) => r.kind === "caja" && r.qty === 2 && r.sscc === null)).toBe(true);
+  });
+
+  it("guarda el SSCC de caja solo si lo escribe el operario", () => {
+    const snap = buildWmsSeed();
+    const wave = snap.pickWaves.find((w) => w.id === "wave-01")!;
+    const line = nextOpenLine(wave)!;
+    const slot = snap.slots.find((s) => s.id === line.slotId)!;
+    const pallet = snap.pallets.find((p) => p.id === line.palletId)!;
+    const picked = confirmPick(snap, "wave-01", line.id, {
+      slotCode: slot.code,
+      sscc: pallet.sscc,
+      qty: 2,
+    });
+    expect(picked.ok).toBe(true);
+    if (!picked.ok) return;
+    const packed = packPickLine(picked.snap, "wave-01", line.id, 2, "  00384100CAJA0001  ");
+    expect(packed.ok).toBe(true);
+    if (!packed.ok) return;
+    const packedLine = packed.snap.pickWaves
+      .find((w) => w.id === "wave-01")!
+      .lines.find((l) => l.id === line.id);
+    expect(packedLine?.cartonSscc).toBe("00384100CAJA0001");
+    const order = packed.snap.outbound.find((o) => o.code === line.orderCode)!;
+    const manifest = buildLoadManifest(packed.snap, order.id);
+    expect(manifest?.rows.some((r) => r.kind === "caja" && r.sscc === "00384100CAJA0001")).toBe(true);
+    const blank = packPickLine(packed.snap, "wave-01", line.id, 2, "   ");
+    expect(blank.ok).toBe(true);
+    if (!blank.ok) return;
+    const cleared = blank.snap.pickWaves
+      .find((w) => w.id === "wave-01")!
+      .lines.find((l) => l.id === line.id);
+    expect(cleared?.cartonSscc).toBeNull();
+    const html = loadManifestPrintHtml(blank.snap, buildLoadManifest(blank.snap, order.id)!, "es");
+    expect(html).toContain(order.code);
+    expect(html).toContain("sin tracking");
+    expect(html).toContain("sin SSCC");
   });
 });

@@ -9,8 +9,10 @@ import {
   enrollOperatorPin,
   openWaveFromOrder,
   operatorJornada,
+  buildShiftClose,
   outboundItinerary,
   receiveAsnPallet,
+  splitWaveByOrder,
   SHIFT_WINDOW,
 } from "@/lib/wms";
 
@@ -107,6 +109,46 @@ describe("fase 9 · jornada y olas", () => {
     expect(pal?.skuId).toBe("sku-aceite");
     expect(pal?.qty).toBe(48);
     expect(pal?.asnId).toBe(asn.id);
+  });
+
+  it("cierra la jornada solo con fichajes y movimientos del día", () => {
+    const snap = buildWmsSeed();
+    const empty = buildShiftClose(snap, "site-sev", "2026-08-15T11:00:00.000Z");
+    expect(empty.operators).toHaveLength(0);
+    expect(empty.punchesTotal).toBe(0);
+    expect(empty.movements.length).toBeGreaterThan(0);
+
+    const inPunch = clockManual(snap, "op-08", "entrada", "2026-08-15T06:00:00.000Z");
+    expect(inPunch.ok).toBe(true);
+    if (!inPunch.ok) return;
+    const outPunch = clockManual(inPunch.snap, "op-08", "salida", "2026-08-15T14:00:00.000Z");
+    expect(outPunch.ok).toBe(true);
+    if (!outPunch.ok) return;
+    const closed = buildShiftClose(outPunch.snap, "site-sev", "2026-08-15T16:00:00.000Z");
+    expect(closed.operators).toHaveLength(1);
+    expect(closed.operators[0]?.operator.id).toBe("op-08");
+    expect(closed.operators[0]?.hoursWorked).toBe(8);
+    expect(closed.operators[0]?.clockedIn).toBe(false);
+    expect(closed.hoursTotal).toBe(8);
+    expect(closed.stillIn).toBe(0);
+  });
+
+  it("separa una ola mezclada sin inventar líneas", () => {
+    const snap = buildWmsSeed();
+    const before = snap.pickWaves.find((w) => w.id === "wave-01")!;
+    const codes = [...new Set(before.lines.map((l) => l.orderCode))];
+    expect(codes.length).toBeGreaterThan(1);
+    const split = splitWaveByOrder(snap, "wave-01");
+    expect(split.ok).toBe(true);
+    if (!split.ok) return;
+    expect(split.snap.pickWaves.find((w) => w.id === "wave-01")).toBeUndefined();
+    const parts = split.snap.pickWaves.filter((w) => w.id.startsWith("wave-01-"));
+    expect(parts).toHaveLength(codes.length);
+    expect(parts.every((w) => new Set(w.lines.map((l) => l.orderCode)).size === 1)).toBe(true);
+    expect(parts.reduce((s, w) => s + w.lines.length, 0)).toBe(before.lines.length);
+    const again = splitWaveByOrder(split.snap, parts[0]!.id);
+    expect(again.ok).toBe(true);
+    if (again.ok) expect(again.waveId).toBe(parts[0]!.id);
   });
 
   it("ordena el itinerario de muelle por ventana y prioridad", () => {

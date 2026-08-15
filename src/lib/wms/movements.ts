@@ -10,7 +10,10 @@ export type LiveMoveError =
   | "slot_occupied"
   | "slot_blocked"
   | "same_slot"
-  | "not_on_dock";
+  | "not_on_dock"
+  | "same_site"
+  | "pallet_shipped"
+  | "pallet_in_wave";
 
 export type LiveMoveResult =
   | { ok: true; snap: WmsSnapshot }
@@ -236,6 +239,82 @@ export function proposeReplenishments(snap: WmsSnapshot): ReplenishmentProposal[
     });
   }
   return proposals;
+}
+
+/**
+ * Traslado de un palet real a un hueco libre de otro centro.
+ * No fabrica mercancía ni huecos; el destino lo elige quien mueve.
+ */
+export function transferPalletBetweenSites(
+  snap: WmsSnapshot,
+  input: {
+    palletId: string;
+    destSiteId: string;
+    toSlotCode: string;
+    operatorId?: string | null;
+    fleetId?: string | null;
+    note?: string;
+  },
+  at = new Date().toISOString(),
+): LiveMoveResult {
+  const pallet = snap.pallets.find((p) => p.id === input.palletId);
+  if (!pallet) return { ok: false, error: "pallet_missing" };
+  if (pallet.status === "expedido") return { ok: false, error: "pallet_shipped" };
+  if (pallet.siteId === input.destSiteId) return { ok: false, error: "same_site" };
+  if (pallet.status === "picking" || pallet.status === "muelle") {
+    return { ok: false, error: "pallet_in_wave" };
+  }
+  const reserved = snap.pickWaves.some(
+    (w) =>
+      w.status !== "cerrada" &&
+      w.lines.some(
+        (l) =>
+          l.palletId === pallet.id &&
+          (l.status === "pendiente" || l.status === "en_curso"),
+      ),
+  );
+  if (reserved) return { ok: false, error: "pallet_in_wave" };
+
+  const dest = snap.sites.find((s) => s.id === input.destSiteId);
+  if (!dest) return { ok: false, error: "to_missing" };
+  const to = findSlot(snap, input.toSlotCode, input.destSiteId);
+  if (!to) return { ok: false, error: "to_missing" };
+  if (to.status === "bloqueado") return { ok: false, error: "slot_blocked" };
+  if (to.palletId) return { ok: false, error: "slot_occupied" };
+
+  const from = pallet.slotId ? snap.slots.find((s) => s.id === pallet.slotId) : undefined;
+  const nextSlots = snap.slots.map((s) => {
+    if (from && s.id === from.id) return vacate(s);
+    if (s.id === to.id) return occupy(s, pallet);
+    return s;
+  });
+  const nextPallets = snap.pallets.map((p) =>
+    p.id === pallet.id
+      ? {
+          ...p,
+          siteId: input.destSiteId,
+          slotId: to.id,
+          status: to.zone === "muelle" ? ("muelle" as const) : ("en_ubicacion" as const),
+        }
+      : p,
+  );
+  const fromSite = snap.sites.find((s) => s.id === pallet.siteId);
+  const movement: StockMovement = {
+    id: `mv-hub-${pallet.id}-${at}`,
+    at,
+    type: "traslado",
+    skuId: pallet.skuId,
+    palletId: pallet.id,
+    fromSlotId: from?.id ?? null,
+    toSlotId: to.id,
+    qty: pallet.qty,
+    operatorId: input.operatorId ?? null,
+    fleetId: input.fleetId ?? null,
+    note:
+      input.note ??
+      `Inter-centro ${fromSite?.code ?? pallet.siteId} ${from?.code ?? "—"} → ${dest.code} ${to.code}`,
+  };
+  return { ok: true, snap: appendMove(snap, movement, nextSlots, nextPallets) };
 }
 
 export function applyReplenishment(

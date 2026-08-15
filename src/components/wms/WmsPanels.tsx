@@ -22,10 +22,14 @@ import {
   orderFulfillment,
   outboundItinerary,
   packPickedLines,
+  packPickLine,
   rankDayPriorities,
   shipOutboundOrder,
   stageOrderToDock,
   buildLoadManifest,
+  openLoadManifestPrint,
+  splitWaveByOrder,
+  waveOrderCodes,
   monthCosts,
   occupancyByZone,
   type FleetStatus,
@@ -44,6 +48,8 @@ import {
   ClipboardCheck,
   ClipboardList,
   Coins,
+  Printer,
+  Split,
   Forklift,
   Grid3X3,
   Package,
@@ -54,7 +60,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useState } from "react";
-import { WmsJornadaCard } from "./WmsJornadaCard";
+import { WmsJornadaCard, WmsShiftCloseCard } from "./WmsJornadaCard";
 import { useWmsLive } from "./useWmsLive";
 import {
   Bar,
@@ -136,6 +142,7 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
       </header>
 
       {matched && <WmsJornadaCard lang={lang} snap={snap} operatorId={matched.id} onChange={commit} />}
+      <WmsShiftCloseCard lang={lang} snap={snap} siteId={siteId} />
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -421,7 +428,21 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
   const [pallets, setPallets] = useState(3);
   const [pickerId, setPickerId] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
+  const [packQty, setPackQty] = useState<Record<string, number>>({});
+  const [packSscc, setPackSscc] = useState<Record<string, string>>({});
   const pickers = snap.operators.filter((o) => !o.vacant && o.active);
+  const mixedWaves = snap.pickWaves.filter(
+    (w) => w.status !== "cerrada" && waveOrderCodes(w).length > 1,
+  );
+  const packable = ranked
+    .map((row) => {
+      const fill = orderFulfillment(snap, row.order.id);
+      const cases = (fill?.lines ?? []).filter(
+        (l) => l.status === "picada" && l.qtyPicked > 0 && (fill?.unpackedCases.some((u) => u.id === l.id) || (l.qtyPacked ?? 0) > 0),
+      );
+      return { row, fill, cases };
+    })
+    .filter((x) => x.fill && (x.fill.canPack || x.cases.length > 0) && x.row.order.status !== "expedido");
 
   return (
     <div className="space-y-4">
@@ -512,6 +533,137 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
         </form>
         {msg && <p className="mt-2 text-xs font-semibold text-[var(--danger)]">{msg}</p>}
       </Card>
+      {mixedWaves.length > 0 && (
+        <Card
+          title={lang === "es" ? "Olas mezcladas" : "Mixed waves"}
+          subtitle={
+            lang === "es"
+              ? "Una ola con varios pedidos se puede separar. No se inventan líneas."
+              : "A wave with several orders can be split. No lines are invented."
+          }
+        >
+          <ul className="space-y-2">
+            {mixedWaves.map((w) => (
+              <li key={w.id} className="flex items-center justify-between gap-2 text-sm">
+                <span>
+                  <span className="font-mono text-xs font-semibold">{w.code}</span>
+                  <span className="ml-2 text-[var(--ink-muted)]">{waveOrderCodes(w).join(" · ")}</span>
+                </span>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] px-3 py-1.5 text-xs font-semibold"
+                  onClick={() => {
+                    const result = splitWaveByOrder(snap, w.id);
+                    if (result.ok) {
+                      commit(result.snap);
+                      setMsg(null);
+                    }
+                  }}
+                >
+                  <Split className="h-3.5 w-3.5" />
+                  {lang === "es" ? "Separar por pedido" : "Split by order"}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+      {packable.length > 0 && (
+        <Card
+          title={lang === "es" ? "Embalaje por línea" : "Pack by line"}
+          subtitle={
+            lang === "es"
+              ? "Cantidad ≤ picado. El SSCC de caja solo cuenta si lo escribes."
+              : "Qty ≤ picked. Case SSCC is stored only if you type it."
+          }
+        >
+          <ul className="space-y-4">
+            {packable.map(({ row, fill, cases }) => (
+              <li key={row.order.id}>
+                <p className="mb-2 flex flex-wrap items-center gap-2 text-sm">
+                  <span className="font-mono text-xs font-semibold">{row.order.code}</span>
+                  <span className="text-[var(--ink-muted)]">{row.order.customer}</span>
+                  {fill?.canPack && (
+                    <button
+                      type="button"
+                      className="rounded-full border border-[var(--glass-border)] px-2 py-0.5 text-[11px] font-semibold"
+                      onClick={() => {
+                        const result = packPickedLines(snap, row.order.id, pickerId || null);
+                        if (result.ok) {
+                          commit(result.snap);
+                          setMsg(null);
+                        } else setMsg(OUT_ERR[result.error]?.[lang] ?? result.error);
+                      }}
+                    >
+                      {lang === "es" ? "Embalar todo lo picado" : "Pack all picked"}
+                    </button>
+                  )}
+                </p>
+                <ul className="space-y-2">
+                  {cases.map((line) => {
+                    const sku = snap.skus.find((s) => s.id === line.skuId);
+                    return (
+                      <li
+                        key={line.id}
+                        className="grid gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2 md:grid-cols-[1fr_5rem_10rem_auto]"
+                      >
+                        <span className="text-sm">
+                          <span className="font-medium">{sku?.name ?? line.skuId}</span>
+                          <span className="mt-0.5 block text-[11px] text-[var(--ink-muted)]">
+                            {lang === "es" ? "Picado" : "Picked"} {line.qtyPicked}
+                            {" · "}
+                            {lang === "es" ? "embalado" : "packed"} {line.qtyPacked}
+                            {line.cartonSscc ? ` · ${line.cartonSscc}` : ""}
+                          </span>
+                        </span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={line.qtyPicked}
+                          value={packQty[line.id] ?? line.qtyPicked}
+                          onChange={(e) =>
+                            setPackQty((prev) => ({ ...prev, [line.id]: Number(e.target.value) }))
+                          }
+                          className="rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-2 py-1 font-mono text-sm"
+                        />
+                        <input
+                          value={packSscc[line.id] ?? line.cartonSscc ?? ""}
+                          onChange={(e) =>
+                            setPackSscc((prev) => ({ ...prev, [line.id]: e.target.value }))
+                          }
+                          placeholder={lang === "es" ? "SSCC caja (opcional)" : "Case SSCC (optional)"}
+                          className="rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-2 py-1 font-mono text-[11px]"
+                        />
+                        <button
+                          type="button"
+                          className="rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-white"
+                          onClick={() => {
+                            const result = packPickLine(
+                              snap,
+                              line.waveId,
+                              line.id,
+                              packQty[line.id] ?? line.qtyPicked,
+                              packSscc[line.id] ?? line.cartonSscc,
+                            );
+                            if (!result.ok) {
+                              setMsg(OUT_ERR[result.error]?.[lang] ?? result.error);
+                              return;
+                            }
+                            commit(result.snap);
+                            setMsg(null);
+                          }}
+                        >
+                          {lang === "es" ? "Embalar línea" : "Pack line"}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
       <Card
         title={lang === "es" ? "Itinerario de muelle" : "Dock itinerary"}
         subtitle={lang === "es" ? "Orden de salida según ventana y prioridad" : "Outbound sequence by window and priority"}
@@ -807,6 +959,22 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
                     <Badge tone="neutral">
                       {manifest.tracking ?? (lang === "es" ? "sin tracking" : "no tracking")}
                     </Badge>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] px-2 py-0.5 text-[11px] font-semibold"
+                      onClick={() => {
+                        if (!openLoadManifestPrint(snap, row.order.id, lang)) {
+                          setMsg(
+                            lang === "es"
+                              ? "Nada que imprimir o el navegador bloqueó la ventana"
+                              : "Nothing to print or the browser blocked the window",
+                          );
+                        }
+                      }}
+                    >
+                      <Printer className="h-3 w-3" />
+                      {lang === "es" ? "Imprimir" : "Print"}
+                    </button>
                   </p>
                   <ul className="space-y-1 text-xs">
                     {manifest.rows.map((r, i) => {

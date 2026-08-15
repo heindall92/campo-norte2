@@ -9,7 +9,7 @@ import {
   rankDayPriorities,
 } from "@/lib/wms";
 import { ArrowLeftRight, ChevronRight, ClipboardCheck, Clock, Package, ScanBarcode, Truck } from "lucide-react";
-import { WmsJornadaCard } from "./WmsJornadaCard";
+import { WmsJornadaCard, WmsShiftCloseCard } from "./WmsJornadaCard";
 import { useWmsLive } from "./useWmsLive";
 
 export function WmsMobileHome({
@@ -51,6 +51,7 @@ export function WmsMobileHome({
       </div>
 
       {matched && <WmsJornadaCard lang={lang} snap={snap} operatorId={matched.id} onChange={commit} />}
+      <WmsShiftCloseCard lang={lang} snap={snap} siteId={siteId} />
 
       <div>
         <div className="mb-2 flex items-center justify-between">

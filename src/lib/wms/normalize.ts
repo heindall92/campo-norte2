@@ -18,7 +18,11 @@ function normalizePallet(pallet: Pallet): Pallet {
 function normalizeWave(wave: PickWave): PickWave {
   return {
     ...wave,
-    lines: wave.lines.map((l) => ({ ...l, qtyPacked: l.qtyPacked ?? 0 })),
+    lines: wave.lines.map((l) => ({
+      ...l,
+      qtyPacked: l.qtyPacked ?? 0,
+      cartonSscc: l.cartonSscc ?? null,
+    })),
   };
 }
 

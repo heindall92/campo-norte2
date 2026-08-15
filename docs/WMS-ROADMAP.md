@@ -88,6 +88,13 @@
 - Manifiesto de muelle: palets cargados + cajas embaladas; tracking vacío si no lo escribes
 - CSP de Vercel permite las fuentes de Google (la web deja de verse sin tipografía)
 
+## Fase 14 — Cierre de muelle y jornada (esta entrega)
+- Embalaje por línea: cantidad escrita y SSCC de caja solo si lo teclea el operario
+- Manifiesto imprimible (`window.print`); no fabrica tracking ni SSCC
+- Cierre de jornada: horas y movimientos del día a partir de fichajes reales
+- Traslado inter-centro de un palet existente a un hueco libre del otro hub
+- Separar ola mezclada (p. ej. `WAVE-A-0815-01`) en una ola por pedido
+
 ## Siguiente
 - Agente pyzk en la LAN cuando haya terminal físico
 - Telemetría real de flota (ISM / I_Site / InfoLink) cuando exista contrato

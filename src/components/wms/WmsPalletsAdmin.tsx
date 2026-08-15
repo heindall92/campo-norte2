@@ -1,8 +1,14 @@
 import { Badge, Card } from "@/components/CrmChrome";
 import type { Lang } from "@/lib/i18n";
-import { createPallet, deletePallet, updatePallet, type PalletStatus } from "@/lib/wms";
+import {
+  createPallet,
+  deletePallet,
+  transferPalletBetweenSites,
+  updatePallet,
+  type PalletStatus,
+} from "@/lib/wms";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2 } from "lucide-react";
+import { ArrowLeftRight, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useWmsLive } from "./useWmsLive";
 
@@ -34,6 +40,9 @@ export function WmsPalletsPanel({ lang }: { lang: Lang }) {
   const [supplier, setSupplier] = useState("");
   const [slotId, setSlotId] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
+  const [hubPalletId, setHubPalletId] = useState("");
+  const [hubSiteId, setHubSiteId] = useState("");
+  const [hubSlot, setHubSlot] = useState("");
 
   const freeSlots = snap.slots.filter(
     (s) => s.siteId === siteId && s.status === "libre" && s.aisle !== "M",
@@ -155,6 +164,103 @@ export function WmsPalletsPanel({ lang }: { lang: Lang }) {
           </button>
         </form>
         {msg && <p className="mt-2 text-xs font-semibold text-[var(--danger)]">{msg}</p>}
+      </Card>
+
+      <Card
+        title={lang === "es" ? "Traslado entre centros" : "Inter-site transfer"}
+        subtitle={
+          lang === "es"
+            ? "El palet tiene que existir y el hueco destino estar libre. No se inventa mercancía."
+            : "The pallet must exist and the destination slot must be free. No goods are invented."
+        }
+      >
+        <form
+          className="grid gap-2 md:grid-cols-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const result = transferPalletBetweenSites(snap, {
+              palletId: hubPalletId,
+              destSiteId: hubSiteId,
+              toSlotCode: hubSlot,
+            });
+            if (!result.ok) {
+              setMsg(
+                result.error === "same_site"
+                  ? lang === "es"
+                    ? "Elige otro centro"
+                    : "Pick another site"
+                  : result.error === "pallet_in_wave"
+                    ? lang === "es"
+                      ? "Ese palet está en una ola o en muelle de salida"
+                      : "That pallet is on a wave or outbound dock"
+                    : lang === "es"
+                      ? "No se pudo trasladar"
+                      : "Could not transfer",
+              );
+              return;
+            }
+            commit(result.snap);
+            setHubPalletId("");
+            setHubSlot("");
+            setMsg(null);
+          }}
+        >
+          <select
+            required
+            value={hubPalletId}
+            onChange={(e) => setHubPalletId(e.target.value)}
+            className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+          >
+            <option value="">{lang === "es" ? "Palet" : "Pallet"}</option>
+            {snap.pallets
+              .filter((p) => p.status === "en_ubicacion" && p.qty > 0)
+              .slice(0, 80)
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.sscc.slice(-10)} · {skuMap.get(p.skuId)?.sku}
+                </option>
+              ))}
+          </select>
+          <select
+            required
+            value={hubSiteId}
+            onChange={(e) => {
+              setHubSiteId(e.target.value);
+              setHubSlot("");
+            }}
+            className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+          >
+            <option value="">{lang === "es" ? "Centro destino" : "Destination site"}</option>
+            {snap.sites.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.city}
+              </option>
+            ))}
+          </select>
+          <select
+            required
+            value={hubSlot}
+            onChange={(e) => setHubSlot(e.target.value)}
+            className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+          >
+            <option value="">{lang === "es" ? "Hueco libre" : "Free slot"}</option>
+            {snap.slots
+              .filter((s) => s.siteId === hubSiteId && s.status === "libre" && !s.palletId)
+              .slice(0, 80)
+              .map((s) => (
+                <option key={s.id} value={s.code}>
+                  {s.code}
+                </option>
+              ))}
+          </select>
+          <button
+            type="submit"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[var(--glass-border)] px-3 py-2 text-sm font-semibold md:col-span-3"
+          >
+            <ArrowLeftRight className="h-4 w-4" />
+            {lang === "es" ? "Trasladar" : "Transfer"}
+          </button>
+        </form>
       </Card>
 
       <Card>

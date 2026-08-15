@@ -185,7 +185,7 @@ export function buildLoadManifest(snap: WmsSnapshot, orderId: string): LoadManif
       kind: "caja",
       skuId: line.skuId,
       qty: line.qtyPacked,
-      sscc: null,
+      sscc: line.cartonSscc,
       slotCode: slot?.code ?? null,
       lineId: line.id,
     });
@@ -258,11 +258,17 @@ export function packPickedLines(
   };
 }
 
+function cleanCartonSscc(value: string | null | undefined): string | null {
+  const t = value?.trim() ?? "";
+  return t.length ? t : null;
+}
+
 export function packPickLine(
   snap: WmsSnapshot,
   waveId: string,
   lineId: string,
   qty: number,
+  cartonSscc?: string | null,
 ): OutboundOpResult {
   const wave = snap.pickWaves.find((w) => w.id === waveId);
   const line = wave?.lines.find((l) => l.id === lineId);
@@ -271,17 +277,98 @@ export function packPickLine(
   if (!Number.isFinite(qty) || qty < 0 || qty > line.qtyPicked) {
     return { ok: false, error: "invalid_qty" };
   }
+  const sscc = qty < 1 ? null : cartonSscc === undefined ? line.cartonSscc : cleanCartonSscc(cartonSscc);
   return {
     ok: true,
     snap: {
       ...snap,
       pickWaves: snap.pickWaves.map((w) =>
         w.id === waveId
-          ? { ...w, lines: w.lines.map((l) => (l.id === lineId ? { ...l, qtyPacked: qty } : l)) }
+          ? {
+              ...w,
+              lines: w.lines.map((l) =>
+                l.id === lineId ? { ...l, qtyPacked: qty, cartonSscc: sscc } : l,
+              ),
+            }
           : w,
       ),
     },
   };
+}
+
+/** HTML del manifiesto para imprimir. No inventa SSCC ni tracking. */
+export function loadManifestPrintHtml(
+  snap: WmsSnapshot,
+  manifest: LoadManifest,
+  lang: "es" | "en" = "es",
+): string {
+  const site = snap.sites.find((s) => s.id === manifest.order.siteId);
+  const skuName = (id: string) => snap.skus.find((s) => s.id === id)?.name ?? id;
+  const esc = (v: string) =>
+    v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const rows = manifest.rows
+    .map((r) => {
+      const kind = r.kind === "pallet" ? (lang === "es" ? "Palet" : "Pallet") : lang === "es" ? "Caja" : "Case";
+      return `<tr>
+        <td>${esc(kind)}</td>
+        <td>${esc(skuName(r.skuId))}</td>
+        <td>${esc(r.sscc ?? (lang === "es" ? "sin SSCC" : "no SSCC"))}</td>
+        <td>${esc(r.slotCode ?? "—")}</td>
+        <td style="text-align:right">${r.qty}</td>
+      </tr>`;
+    })
+    .join("");
+  const title = lang === "es" ? "Manifiesto de muelle" : "Dock manifest";
+  const tracking = manifest.tracking ?? (lang === "es" ? "sin tracking" : "no tracking");
+  const carrier = manifest.carrierName ?? (lang === "es" ? "sin carrier" : "no carrier");
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"/><title>${esc(title)} ${esc(manifest.order.code)}</title>
+<style>
+  body{font-family:ui-sans-serif,system-ui,sans-serif;color:#0f172a;margin:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  p,td,th{font-size:13px}
+  table{width:100%;border-collapse:collapse;margin-top:16px}
+  th,td{border-bottom:1px solid #cbd5e1;padding:6px 4px;text-align:left}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#475569}
+  .meta{color:#475569}
+  @media print{body{margin:12mm}}
+</style></head><body>
+  <h1>${esc(title)}</h1>
+  <p class="meta">${esc(snap.org.legalName)} · ${esc(site?.name ?? site?.city ?? "")}</p>
+  <p><strong>${esc(manifest.order.code)}</strong> · ${esc(manifest.order.customer)} · ${esc(manifest.dock)}</p>
+  <p class="meta">${esc(carrier)} · ${esc(tracking)}
+    · ${manifest.palletCount} ${lang === "es" ? "palets" : "pallets"}
+    · ${manifest.caseCount} ${lang === "es" ? "cajas" : "cases"}</p>
+  <table>
+    <thead><tr>
+      <th>${lang === "es" ? "Tipo" : "Kind"}</th>
+      <th>SKU</th>
+      <th>SSCC</th>
+      <th>${lang === "es" ? "Hueco" : "Slot"}</th>
+      <th style="text-align:right">${lang === "es" ? "Cant." : "Qty"}</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <p class="meta">${lang === "es"
+    ? "Solo figura lo picado y embalado o cargado. El SSCC y el tracking vacíos no se rellenan solos."
+    : "Only picked and packed or staged goods. Empty SSCC and tracking are not filled in."}</p>
+</body></html>`;
+}
+
+export function openLoadManifestPrint(
+  snap: WmsSnapshot,
+  orderId: string,
+  lang: "es" | "en" = "es",
+): boolean {
+  if (typeof window === "undefined") return false;
+  const manifest = buildLoadManifest(snap, orderId);
+  if (!manifest || !manifest.rows.length) return false;
+  const popup = window.open("", "_blank", "noopener,noreferrer,width=720,height=900");
+  if (!popup) return false;
+  popup.document.write(loadManifestPrintHtml(snap, manifest, lang));
+  popup.document.close();
+  popup.focus();
+  popup.print();
+  return true;
 }
 
 /**

@@ -15,7 +15,9 @@ import {
   peekWmsFocus,
   shipOutboundOrder,
   skipPickLine,
+  splitWaveByOrder,
   stageOrderToDock,
+  waveOrderCodes,
   type ConfirmPickError,
   type PickGateError,
   type PickWave,
@@ -31,6 +33,7 @@ import {
   Package,
   Search,
   SkipForward,
+  Split,
   TriangleAlert,
   Truck,
   UserRound,
@@ -460,6 +463,23 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
             </option>
           ))}
         </select>
+        {wave && waveOrderCodes(wave).length > 1 && (
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] px-3 py-2 text-sm font-semibold"
+            onClick={() => {
+              const result = splitWaveByOrder(snap, wave.id);
+              if (result.ok) {
+                setSnap(result.snap);
+                setWaveId(result.waveId);
+                setFeedback(null);
+              }
+            }}
+          >
+            <Split className="h-4 w-4" />
+            {lang === "es" ? "Separar por pedido" : "Split by order"}
+          </button>
+        )}
         {!isFloor && wave && (
           <select
             className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"

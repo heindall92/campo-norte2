@@ -47,6 +47,8 @@ export interface PickLine {
   qtyPicked: number;
   /** Unidades embaladas. Nunca mayor que qtyPicked; 0 si aún no se ha embalado. */
   qtyPacked: number;
+  /** SSCC de caja suelta. Solo si lo escribe el operario; nunca se fabrica. */
+  cartonSscc: string | null;
   slotId: string;
   palletId: string | null;
   status: PickLineStatus;

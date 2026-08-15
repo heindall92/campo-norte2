@@ -11,7 +11,7 @@ Este repositorio (`campo-norte2`) publica el ecosistema SaaS WMS. La base CRM/WM
 
 ---
 
-## Fases 2–13 (esta rama)
+## Fases 2–14 (esta rama)
 
 Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, movimientos en vivo, inventario cíclico, alertas, economía unitaria, planificación de turnos, onboarding, carriers, pistola RF y **operación diaria** (CRUD, prioridades, fichaje).
 
@@ -28,7 +28,7 @@ Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, mov
 | Palets | SSCC, lote, caducidad, hueco · **alta / edición** |
 | Flota eléctrica | Torito, montacargas, retráctil; batería **solo reporte real** |
 | Recepción | ASN crear / recepcionar / **ubicar y cerrar** cuando no queda palet en muelle |
-| Expedición | Pedido · ola · **embalar cajas** · **cargar muelle** · manifiesto · tracking manual |
+| Expedición | Pedido · ola · **embalar por línea** · **imprimir manifiesto** · **cargar muelle** · tracking manual |
 | Operarios | Cupo 25/25/25 (plazas vacantes) · CRUD · PIN / fichaje |
 | Centros | Alta de hub: ciudad y layout que escriba el usuario |
 | Pistola RF | Cola derivada del snapshot: hueco → SSCC → confirmar |
@@ -72,8 +72,9 @@ Cómo probar fase 2:
 10. **Operarios** → cobertura mañana/tarde/noche. **Cubrir huecos** mueve excedente (picker noche + carretillero tarde). Lo que queda es contratar.
 11. **Costes** o **Tesorería** → P&L 3PL del hub (€/palet y contribución).
 12. **Centros** → escribe ciudad y pasillos reales (sin presets). Luego **Pasillos / huecos**.
-13. **Expedición** → elige carrier; el tracking se escribe a mano. Tras picar: **Cargar** palets enteros y **Expedir**.
+13. **Expedición** → elige carrier; el tracking se escribe a mano. Tras picar: **Embalar línea** (SSCC opcional), **Imprimir** manifiesto, **Cargar** palets enteros y **Expedir**.
 14. **Pistola RF** → escanea el hueco y el SSCC de la cola; si no coinciden, no confirma.
+15. **Torre** → cierre de jornada: solo horas de fichaje. **Movimientos / Palets** → traslado Sevilla ↔ Huelva a un hueco libre.
 
 ---
 

@@ -99,6 +99,7 @@ export function openWaveFromOrder(
       qty: row.pallet.qty,
       qtyPicked: 0,
       qtyPacked: 0,
+      cartonSscc: null,
       slotId: row.slot.id,
       palletId: row.pallet.id,
       status: i === 0 ? ("en_curso" as const) : ("pendiente" as const),
@@ -174,6 +175,47 @@ export function assignWaveOperator(
     snap: {
       ...snap,
       pickWaves: snap.pickWaves.map((w) => (w.id === waveId ? { ...w, operatorId } : w)),
+    },
+  };
+}
+
+export function waveOrderCodes(wave: PickWave): string[] {
+  return [...new Set(wave.lines.map((l) => l.orderCode))];
+}
+
+/**
+ * Separa una ola mezclada en una ola por pedido.
+ * No inventa líneas: solo reparte las que ya existen.
+ */
+export function splitWaveByOrder(snap: WmsSnapshot, waveId: string): WaveResult {
+  const wave = snap.pickWaves.find((w) => w.id === waveId);
+  if (!wave) return { ok: false, error: "wave_missing" };
+  const codes = waveOrderCodes(wave);
+  if (codes.length < 2) return { ok: true, snap, waveId };
+
+  const created: PickWave[] = codes.map((orderCode) => {
+    const lines = wave.lines
+      .filter((l) => l.orderCode === orderCode)
+      .map((l, i) => ({
+        ...l,
+        id: `${wave.id}-${orderCode}-l${i + 1}`,
+        waveId: `${wave.id}-${orderCode}`,
+        sequence: i + 1,
+      }));
+    return {
+      ...wave,
+      id: `${wave.id}-${orderCode}`,
+      code: `${wave.code}-${orderCode.replace(/[^A-Z0-9]/gi, "").slice(-4)}`,
+      lines,
+    };
+  });
+
+  return {
+    ok: true,
+    waveId: created[0]!.id,
+    snap: {
+      ...snap,
+      pickWaves: snap.pickWaves.flatMap((w) => (w.id === waveId ? created : [w])),
     },
   };
 }
