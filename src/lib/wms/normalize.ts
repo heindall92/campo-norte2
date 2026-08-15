@@ -22,6 +22,7 @@ function normalizeWave(wave: PickWave): PickWave {
       ...l,
       qtyPacked: l.qtyPacked ?? 0,
       cartonSscc: l.cartonSscc ?? null,
+      pickPack: l.pickPack === "contenedor" ? "contenedor" : "caja",
     })),
   };
 }

@@ -108,6 +108,12 @@
 - El área de merma solo se apunta si el hueco existe; no se inventa un pasillo
 - Carta de porte: los jefes la mencionan; no está modelada porque no sabemos en qué consiste
 
+## Fase 17 — Auriculares y guía de pasillos (esta entrega)
+- El aparato dicta: súper, pasillo, hueco y cantidad
+- Cajas enteras o unidades de un contenedor (cuando el artículo trae cajas pequeñas dentro)
+- Guía de planta 8–37 (droguería, leche 28, cerveza 29, agua 31–32…) tal como la relató el operario
+- El twin digital sigue en letras A/B/C; no se inventan SKU de vino, cerveza ni especias
+
 ## Siguiente
 - Agente pyzk en la LAN cuando haya terminal físico
 - Telemetría real de flota (ISM / I_Site / InfoLink) cuando exista contrato

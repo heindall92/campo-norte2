@@ -61,6 +61,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useState } from "react";
 import { WmsAssignSuperCard, WmsAisleTraceCard, WmsFloorHint, WmsLoadUnitCard, WmsMermaCard } from "./WmsFloorBoard";
+import { WmsAisleGuideCard } from "./WmsVoiceHeadset";
 import { WmsJornadaCard, WmsShiftCloseCard } from "./WmsJornadaCard";
 import { useWmsLive } from "./useWmsLive";
 import {
@@ -144,6 +145,7 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
 
       {matched && <WmsJornadaCard lang={lang} snap={snap} operatorId={matched.id} onChange={commit} />}
       <WmsAisleTraceCard lang={lang} siteId={siteId} />
+      <WmsAisleGuideCard lang={lang} />
       <WmsMermaCard lang={lang} siteId={siteId} />
       <WmsShiftCloseCard lang={lang} snap={snap} siteId={siteId} />
 

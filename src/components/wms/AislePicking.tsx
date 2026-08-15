@@ -42,6 +42,7 @@ import {
 import { useMemo, useState } from "react";
 import { WmsMermaCard } from "./WmsFloorBoard";
 import { WmsJornadaCard } from "./WmsJornadaCard";
+import { WmsAisleGuideCard, WmsVoiceHeadset } from "./WmsVoiceHeadset";
 import { useWmsLive } from "./useWmsLive";
 
 const GATE_ERR: Record<PickGateError, { es: string; en: string }> = {
@@ -288,6 +289,7 @@ export function WmsSlotsPanel({ lang }: { lang: Lang }) {
           </select>
         </div>
       </header>
+      <WmsAisleGuideCard lang={lang} />
 
       {hits.length > 0 && (
         <ul className="flex flex-wrap gap-2">
@@ -615,6 +617,20 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                         {ticket?.orderCode ?? line.orderCode} · SSCC {pallet.sscc} ·{" "}
                         {lang === "es" ? "lote" : "lot"} {pallet.lot}
                       </p>
+                      <div className="mt-3">
+                        <WmsVoiceHeadset
+                          lang={lang}
+                          ticket={{
+                            storeName: order?.customer ?? line.orderCode,
+                            aisle: slot.aisle,
+                            slotCode: slot.code,
+                            skuName: sku.name,
+                            skuId: sku.id,
+                            qty: line.qty,
+                            pickPack: line.pickPack ?? "caja",
+                          }}
+                        />
+                      </div>
                     </>
                   );
                 })()}

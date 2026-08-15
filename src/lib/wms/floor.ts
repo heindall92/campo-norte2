@@ -45,6 +45,7 @@ export interface FloorTicket {
   skuId: string;
   skuName: string;
   qty: number;
+  pickPack: PickLine["pickPack"];
 }
 
 export function storeNameOf(order: OutboundOrder | undefined): string {
@@ -73,6 +74,7 @@ export function nextFloorTicket(snap: WmsSnapshot, operatorId: string): FloorTic
       skuId: sku.id,
       skuName: sku.name,
       qty: line.qty,
+      pickPack: line.pickPack ?? "caja",
     };
   }
   return null;

@@ -23,6 +23,7 @@ export * from "./waves";
 export * from "./outbound";
 export * from "./floor";
 export * from "./merma";
+export * from "./voice";
 
 import { buildWmsSeed } from "./seed";
 import { normalizeWmsSnapshot, snapshotLooksUsable } from "./normalize";

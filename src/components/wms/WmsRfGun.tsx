@@ -19,6 +19,7 @@ import { Check, MapPin, Package, ScanLine, UserRound, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { WmsMermaCard } from "./WmsFloorBoard";
 import { WmsJornadaCard } from "./WmsJornadaCard";
+import { WmsVoiceHeadset } from "./WmsVoiceHeadset";
 import { useWmsLive } from "./useWmsLive";
 
 const SCAN_ERR: Record<RfScanError, { es: string; en: string }> = {
@@ -124,6 +125,8 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
     setOkMsg(lang === "es" ? "Movimiento registrado" : "Move recorded");
     setFeedback(null);
   }
+
+  const floorTicket = operatorId ? nextFloorTicket(snap, operatorId) : null;
 
   return (
     <div className="space-y-4">
@@ -323,6 +326,7 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
           )}
         </Card>
       </div>
+      {task?.kind === "pick" && floorTicket && <WmsVoiceHeadset lang={lang} ticket={floorTicket} />}
       {task?.kind === "pick" && (
         <WmsMermaCard
           lang={lang}

@@ -60,6 +60,9 @@ export interface MermaEvent {
 /** Línea de picado para operario (escáner de pasillo). */
 export type PickLineStatus = "pendiente" | "en_curso" | "picada" | "faltante" | "omitida";
 
+/** Caja entera o unidades de dentro de un contenedor (droguería / inner pack). */
+export type PickPack = "caja" | "contenedor";
+
 export interface PickLine {
   id: string;
   waveId: string;
@@ -71,6 +74,7 @@ export interface PickLine {
   qtyPacked: number;
   /** SSCC de caja suelta. Solo si lo escribe el operario; nunca se fabrica. */
   cartonSscc: string | null;
+  pickPack: PickPack;
   slotId: string;
   palletId: string | null;
   status: PickLineStatus;

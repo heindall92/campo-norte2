@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-15 · Cloud Agent · WMS fase 16: merma/rotura declarada
+**Última actualización:** 2026-08-15 · Cloud Agent · WMS fase 17: auriculares y guía de pasillos 8–37
 
 ---
 
@@ -163,9 +163,9 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–16 hechas. La 16 ataja el hueco de planta: si se cae una caja y se coge otra sin decirlo, el almacén queda con un faltante invisible. Ahora la merma se declara, baja el stock y queda en torre. Carta de porte y oficina de recepción siguen sin modelar: no están descritas.
+Fases 8–17 hechas. La 17: auriculares que dictan pasillo/hueco/cantidad; caja vs contenedor; guía 8–37 del relato de planta. El twin sigue en A/B/C. No hay SKU inventados de cerveza, vino ni especias.
 
-Siguiente: terminal ZKTeco y APIs de flota cuando existan.
+Siguiente: layout numérico en el snapshot cuando se confirme; ZKTeco y flota cuando existan.
 
 ### Plan B — repo público (fecha límite 2026-08-22)
 

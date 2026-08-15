@@ -1,5 +1,6 @@
 import { dockWindowFor } from "./carriers";
 import { recommendedFleetKind } from "./picking";
+import { pickPackForSku } from "./voice";
 import type { OutboundOrder, Pallet, PickWave, Sku, Slot, WmsSnapshot } from "./types";
 
 export type WaveError =
@@ -100,6 +101,7 @@ export function openWaveFromOrder(
       qtyPicked: 0,
       qtyPacked: 0,
       cartonSscc: null,
+      pickPack: pickPackForSku(row.sku),
       slotId: row.slot.id,
       palletId: row.pallet.id,
       status: i === 0 ? ("en_curso" as const) : ("pendiente" as const),
