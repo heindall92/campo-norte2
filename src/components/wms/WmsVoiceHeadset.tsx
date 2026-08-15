@@ -3,21 +3,55 @@ import type { Lang } from "@/lib/i18n";
 import {
   AISLE_GUIDE,
   aisleRangeLabel,
+  buildArticlePrompt,
   buildClosePrompt,
+  buildSlotRepeatPrompt,
   buildVoicePrompt,
+  bumpVoiceRate,
+  bumpVoiceVolume,
   familyForSku,
   loadHeadsetOn,
+  loadVoicePrefs,
+  parseVoiceCommand,
   remainderLabel,
   saveHeadsetOn,
+  slotMatchesTake,
   speakVoicePrompt,
   stopVoicePrompt,
   type CloseCueInput,
   type FloorTicket,
   type PickPack,
+  type VoiceCommand,
 } from "@/lib/wms";
-import { Headphones, MapPinned, Repeat, Volume2, VolumeX } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import {
+  Headphones,
+  MapPinned,
+  Mic,
+  Repeat,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useWmsLive } from "./useWmsLive";
+
+type HeadsetTicket = Pick<
+  FloorTicket,
+  "storeName" | "aisle" | "slotCode" | "skuName" | "skuId" | "qty" | "pickPack"
+> & { stockInSlot?: number | null };
+
+function browserSpeechRecognition(): { start: () => void; stop: () => void; lang: string; onresult: ((ev: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null } | null {
+  if (typeof window === "undefined") return null;
+  const Ctor = (
+    window as unknown as {
+      SpeechRecognition?: new () => ReturnType<typeof browserSpeechRecognition>;
+      webkitSpeechRecognition?: new () => ReturnType<typeof browserSpeechRecognition>;
+    }
+  ).SpeechRecognition ?? (
+    window as unknown as { webkitSpeechRecognition?: new () => ReturnType<typeof browserSpeechRecognition> }
+  ).webkitSpeechRecognition;
+  if (!Ctor) return null;
+  return new Ctor();
+}
 
 export function WmsVoiceHeadset({
   lang,
@@ -26,15 +60,23 @@ export function WmsVoiceHeadset({
   remaining,
   pickPack,
   autoSpeak = true,
+  onConfirmOk,
+  onReportMismatch,
 }: {
   lang: Lang;
-  ticket?: Pick<FloorTicket, "storeName" | "aisle" | "slotCode" | "skuName" | "skuId" | "qty" | "pickPack">;
+  ticket?: HeadsetTicket;
   close?: CloseCueInput;
   remaining?: number | null;
   pickPack?: PickPack;
   autoSpeak?: boolean;
+  onConfirmOk?: (qty: number) => void;
+  onReportMismatch?: () => void;
 }) {
   const [headsetOn, setHeadsetOn] = useState(loadHeadsetOn);
+  const [prefs, setPrefs] = useState(loadVoicePrefs);
+  const [heard, setHeard] = useState<string | null>(null);
+  const [listening, setListening] = useState(false);
+  const recRef = useRef<ReturnType<typeof browserSpeechRecognition>>(null);
   const voice = useMemo(() => {
     if (ticket) return { kind: "ticket" as const, ...buildVoicePrompt(ticket, lang) };
     if (close) return { kind: "close" as const, ...buildClosePrompt(close, lang) };
@@ -42,7 +84,8 @@ export function WmsVoiceHeadset({
   }, [ticket, close, lang]);
   const family = ticket ? familyForSku(ticket.skuId) : null;
   const pack = pickPack ?? ticket?.pickPack ?? "caja";
-  const left = remainderLabel(remaining, pack, lang);
+  const left = remainderLabel(remaining ?? ticket?.stockInSlot, pack, lang);
+  const matches = ticket ? slotMatchesTake(ticket.stockInSlot, ticket.qty) : true;
 
   useEffect(() => () => stopVoicePrompt(), []);
 
@@ -50,6 +93,62 @@ export function WmsVoiceHeadset({
     if (!autoSpeak || !headsetOn || !voice) return;
     speakVoicePrompt(voice.text, lang);
   }, [autoSpeak, headsetOn, voice?.text, lang]);
+
+  function applyCommand(cmd: VoiceCommand) {
+    if (cmd.kind === "volume_up") {
+      setPrefs(bumpVoiceVolume(0.15));
+      speakVoicePrompt(lang === "es" ? "Volumen más alto." : "Volume up.", lang);
+      return;
+    }
+    if (cmd.kind === "volume_down") {
+      setPrefs(bumpVoiceVolume(-0.15));
+      speakVoicePrompt(lang === "es" ? "Volumen más bajo." : "Volume down.", lang);
+      return;
+    }
+    if (cmd.kind === "faster") {
+      setPrefs(bumpVoiceRate(0.15));
+      speakVoicePrompt(lang === "es" ? "Más rápido." : "Faster.", lang);
+      return;
+    }
+    if (cmd.kind === "repeat_slot" && ticket) {
+      speakVoicePrompt(buildSlotRepeatPrompt(ticket, lang), lang);
+      return;
+    }
+    if (cmd.kind === "article" && ticket) {
+      speakVoicePrompt(buildArticlePrompt(ticket, lang), lang);
+      return;
+    }
+    if (cmd.kind === "confirm") {
+      onConfirmOk?.(cmd.qty);
+    }
+  }
+
+  function hearUtterance(raw: string) {
+    setHeard(raw);
+    applyCommand(parseVoiceCommand(raw));
+  }
+
+  function toggleListen() {
+    if (listening) {
+      recRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const rec = browserSpeechRecognition();
+    if (!rec) {
+      setHeard(lang === "es" ? "Este navegador no oye. Escribe o pulsa el mando." : "This browser cannot hear. Type or tap a command.");
+      return;
+    }
+    rec.lang = lang === "es" ? "es-ES" : "en-GB";
+    rec.onresult = (ev) => {
+      const said = ev.results[0]?.[0]?.transcript ?? "";
+      if (said) hearUtterance(said);
+    };
+    rec.onend = () => setListening(false);
+    recRef.current = rec;
+    rec.start();
+    setListening(true);
+  }
 
   if (!voice) return null;
   const spoken = voice;
@@ -67,8 +166,8 @@ export function WmsVoiceHeadset({
       title={lang === "es" ? "Auriculares" : "Headset"}
       subtitle={
         lang === "es"
-          ? "El aparato dicta el ticket. Al marcar, el siguiente; al terminar el súper, fleje, etiqueta y muelle."
-          : "The device speaks the ticket. After a mark, the next one; when the store is done, strap, label and dock."
+          ? "El aparato dice cuánto hay en el hueco. Sube, baja, acelera, atrás, artículo. Cuando oigas la cantidad, di «N ok»."
+          : "The device says how many are in the slot. Up, down, faster, back, article. When you hear the qty, say “N ok”."
       }
     >
       <p className="mb-3 flex items-start gap-2 text-sm text-[var(--ink)]">
@@ -94,10 +193,57 @@ export function WmsVoiceHeadset({
             {family.familyEs} · {aisleRangeLabel(family)}
           </Badge>
         )}
-        {left && <Badge tone="neutral">{left}</Badge>}
+        {left && <Badge tone={matches ? "neutral" : "bad"}>{left}</Badge>}
+        {ticket && !matches && (
+          <Badge tone="bad">{lang === "es" ? "No coincide · avisa al jefe" : "Mismatch · tell the lead"}</Badge>
+        )}
         <Badge tone={headsetOn ? "good" : "neutral"}>
           {headsetOn ? (lang === "es" ? "Dictando" : "Speaking") : lang === "es" ? "Silencio" : "Muted"}
         </Badge>
+        <Badge tone="neutral">
+          {lang === "es" ? "Vol" : "Vol"} {Math.round(prefs.volume * 100)}% · {prefs.rate.toFixed(2)}×
+        </Badge>
+      </div>
+      {ticket && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="rounded-full bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            disabled={!matches || !onConfirmOk}
+            onClick={() => onConfirmOk?.(ticket.qty)}
+          >
+            {ticket.qty} ok
+          </button>
+          {onReportMismatch && (
+            <button
+              type="button"
+              className="rounded-full border border-[var(--glass-border)] px-3 py-2 text-sm font-semibold"
+              onClick={onReportMismatch}
+            >
+              {lang === "es" ? "No coincide" : "No match"}
+            </button>
+          )}
+        </div>
+      )}
+      <div className="mb-3 flex flex-wrap gap-2">
+        {(
+          [
+            ["sube", { kind: "volume_up" as const }],
+            ["baja", { kind: "volume_down" as const }],
+            ["acelera", { kind: "faster" as const }],
+            ["atrás", { kind: "repeat_slot" as const }],
+            ["artículo", { kind: "article" as const }],
+          ] as const
+        ).map(([label, cmd]) => (
+          <button
+            key={label}
+            type="button"
+            className="rounded-full border border-[var(--glass-border)] px-3 py-1.5 text-xs font-semibold"
+            onClick={() => applyCommand(cmd)}
+          >
+            {label}
+          </button>
+        ))}
       </div>
       <div className="flex flex-wrap gap-2">
         <button
@@ -107,6 +253,20 @@ export function WmsVoiceHeadset({
         >
           <Repeat className="h-4 w-4" />
           {lang === "es" ? "Repetir" : "Repeat"}
+        </button>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] px-3 py-2 text-sm font-semibold"
+          onClick={toggleListen}
+        >
+          <Mic className="h-4 w-4" />
+          {listening
+            ? lang === "es"
+              ? "Oyendo…"
+              : "Listening…"
+            : lang === "es"
+              ? "Hablar"
+              : "Speak"}
         </button>
         <button
           type="button"
@@ -123,6 +283,7 @@ export function WmsVoiceHeadset({
               : "Headset on"}
         </button>
       </div>
+      {heard && <p className="mt-2 text-xs text-[var(--ink-muted)]">«{heard}»</p>}
     </Card>
   );
 }

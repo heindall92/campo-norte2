@@ -57,6 +57,36 @@ export interface MermaEvent {
   mermaSlotId: string | null;
 }
 
+/**
+ * Faltante de hueco que el jefe tiene que cuadrar en el sistema.
+ * El operario no debería ir a la oficina: avisa desde el aparato.
+ * La cantidad contada la escribe el jefe; no se inventa.
+ */
+export type SlotFixReason = "merma" | "de_mas" | "roto" | "pico_mal" | "otra";
+
+export type SlotFixStatus = "pendiente" | "arreglado";
+
+export interface SlotFix {
+  id: string;
+  at: string;
+  siteId: string;
+  slotId: string;
+  palletId: string | null;
+  skuId: string;
+  /** Lo que decía el sistema al avisar. */
+  systemQty: number;
+  /** Lo que pidió el ticket. */
+  takeQty: number;
+  /** Lo que cuenta el jefe. null mientras está pendiente. */
+  countedQty: number | null;
+  reason: SlotFixReason | null;
+  note: string;
+  reportedBy: string | null;
+  fixedBy: string | null;
+  status: SlotFixStatus;
+  fixedAt: string | null;
+}
+
 /** Línea de picado para operario (escáner de pasillo). */
 export type PickLineStatus = "pendiente" | "en_curso" | "picada" | "faltante" | "omitida";
 
@@ -368,6 +398,7 @@ export interface WmsSnapshot {
   loadUnits: LoadUnit[];
   superAssignments: SuperAssignment[];
   mermaEvents: MermaEvent[];
+  slotFixes: SlotFix[];
 }
 
 export const CATEGORY_LABEL: Record<CategoryCode, { es: string; en: string }> = {

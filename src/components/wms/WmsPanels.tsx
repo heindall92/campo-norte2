@@ -60,7 +60,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useState } from "react";
-import { WmsAssignSuperCard, WmsAisleTraceCard, WmsFloorHint, WmsLoadUnitCard, WmsMermaCard } from "./WmsFloorBoard";
+import { WmsAssignSuperCard, WmsAisleTraceCard, WmsFloorHint, WmsLoadUnitCard, WmsMermaCard, WmsSlotFixCard } from "./WmsFloorBoard";
 import { WmsAisleGuideCard } from "./WmsVoiceHeadset";
 import { WmsJornadaCard, WmsShiftCloseCard } from "./WmsJornadaCard";
 import { useWmsLive } from "./useWmsLive";
@@ -147,6 +147,7 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
       <WmsAisleTraceCard lang={lang} siteId={siteId} />
       <WmsAisleGuideCard lang={lang} />
       <WmsMermaCard lang={lang} siteId={siteId} />
+      <WmsSlotFixCard lang={lang} siteId={siteId} />
       <WmsShiftCloseCard lang={lang} snap={snap} siteId={siteId} />
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -541,6 +542,7 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
       <WmsAssignSuperCard lang={lang} />
       <WmsLoadUnitCard lang={lang} />
       <WmsMermaCard lang={lang} />
+      <WmsSlotFixCard lang={lang} />
       <WmsFloorHint lang={lang} />
       {mixedWaves.length > 0 && (
         <Card

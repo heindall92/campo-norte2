@@ -41,10 +41,17 @@ describe("fase 17 · voz de auriculares y guía de pasillos", () => {
     expect(voice.text).toMatch(/Tomar \d+ cajas/);
     expect(voice.text).toContain(`Pasillo ${ticket.aisle}`);
     expect(voice.text).toContain(order.customer);
+    expect(voice.text).toMatch(/En el hueco hay \d+/);
+    expect(voice.text).toMatch(/Di \d+ ok/);
 
-    const inner = buildVoicePrompt({ ...ticket, pickPack: "contenedor", qty: 4 }, "es");
+    const inner = buildVoicePrompt({ ...ticket, pickPack: "contenedor", qty: 4, stockInSlot: 4 }, "es");
     expect(inner.text).toContain("Del contenedor, tomar 4");
     expect(inner.pickPack).toBe("contenedor");
+
+    const mismatch = buildVoicePrompt({ ...ticket, qty: 5, stockInSlot: 2 }, "es");
+    expect(mismatch.text).toContain("En el hueco hay 2");
+    expect(mismatch.text).toContain("Hacen falta 5");
+    expect(mismatch.text).toContain("No coincide");
   });
 
   it("un SKU a unidad se pica del contenedor; el resto en caja", () => {

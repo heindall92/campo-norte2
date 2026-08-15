@@ -11,7 +11,9 @@ import {
   nextFloorTicket,
   nextOpenLine,
   operatorForAppUser,
+  confirmVoicePick,
   remainingOnPallet,
+  reportSlotMismatch,
   voiceCueAfterMark,
   orderFulfillment,
   packPickedLines,
@@ -44,7 +46,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { WmsLoadUnitCard, WmsMermaCard } from "./WmsFloorBoard";
+import { WmsLoadUnitCard, WmsMermaCard, WmsSlotFixCard } from "./WmsFloorBoard";
 import { WmsJornadaCard } from "./WmsJornadaCard";
 import { WmsAisleGuideCard, WmsVoiceHeadset } from "./WmsVoiceHeadset";
 import { useWmsLive } from "./useWmsLive";
@@ -65,6 +67,7 @@ const PICK_ERROR: Record<ConfirmPickError, { es: string; en: string }> = {
   wrong_sscc: { es: "SSCC incorrecto — escanea la etiqueta del palet", en: "Wrong SSCC — scan pallet label" },
   invalid_qty: { es: "Cantidad no válida", en: "Invalid quantity" },
   pallet_missing: { es: "Palet no localizado en el hueco", en: "Pallet missing in slot" },
+  slot_blocked: { es: "Hueco bloqueado: el jefe tiene que cuadrarlo", en: "Slot blocked: the lead must fix it" },
 };
 
 /** Vista pasillo: rack selectivo (montantes azules, 2 palets/bahía, film + SSCC). */
@@ -453,6 +456,59 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
     if (last) speakAfterMark(result.snap, last);
   }
 
+  function applyVoiceOk(spokenQty: number) {
+    const operatorId = wave?.operatorId ?? matched?.id ?? "";
+    if (!operatorId || !wave || !line) return;
+    if (!gateFloor()) return;
+    const last = lineCloseCue();
+    const result = confirmVoicePick(snap, operatorId, spokenQty);
+    if (!result.ok) {
+      setFeedback(
+        result.error === "qty_mismatch"
+          ? lang === "es"
+            ? `Di ${line.qty} ok, la cantidad del ticket`
+            : `Say ${line.qty} ok, the ticket qty`
+          : result.error === "slot_short"
+            ? lang === "es"
+              ? "En el hueco no hay tantas. Avisa al jefe."
+              : "The slot does not have that many. Tell the lead."
+            : result.error === "no_ticket"
+              ? lang === "es"
+                ? "No hay ticket abierto"
+                : "No open ticket"
+              : PICK_ERROR[result.error][lang],
+      );
+      return;
+    }
+    setSnap(result.snap);
+    setScanSlot("");
+    setScanSscc("");
+    setFeedback(null);
+    const nextWave = result.snap.pickWaves.find((w) => w.id === wave.id);
+    const nxt = nextWave ? nextOpenLine(nextWave) : null;
+    setQty(nxt?.qty ?? 0);
+    if (last) speakAfterMark(result.snap, last);
+  }
+
+  function applyMismatch() {
+    if (!line || !slot) return;
+    const result = reportSlotMismatch(snap, {
+      slotCode: slot.code,
+      takeQty: line.qty,
+      operatorId: matched?.id ?? wave?.operatorId ?? null,
+    });
+    if (!result.ok) {
+      setFeedback(lang === "es" ? "No se pudo avisar el hueco" : "Could not report the slot");
+      return;
+    }
+    setSnap(result.snap);
+    setFeedback(
+      lang === "es"
+        ? "Aviso al jefe. Sigue al siguiente hueco que te diga el aparato."
+        : "Lead notified. Go to the next slot the device speaks.",
+    );
+  }
+
   if (!wave) {
     return (
       <Card title={lang === "es" ? "Sin olas de picking" : "No pick waves"}>
@@ -656,8 +712,11 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                             skuId: sku.id,
                             qty: line.qty,
                             pickPack: line.pickPack ?? "caja",
+                            stockInSlot: remainingOnPallet(snap, line.palletId),
                           }}
                           remaining={remainingOnPallet(snap, line.palletId)}
+                          onConfirmOk={applyVoiceOk}
+                          onReportMismatch={applyMismatch}
                         />
                       </div>
                     </>
@@ -810,6 +869,7 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                 operatorId={matched?.id ?? wave.operatorId}
                 preset={{ sscc: pallet.sscc, fromSlotCode: slot.code }}
               />
+              <WmsSlotFixCard lang={lang} siteId={wave.siteId} />
             </>
           ) : (
             <Card title={lang === "es" ? "Ola completada" : "Wave complete"}>

@@ -41,6 +41,7 @@ export function normalizeWmsSnapshot(snap: WmsSnapshot): WmsSnapshot {
     loadUnits: Array.isArray(snap.loadUnits) ? snap.loadUnits : [],
     superAssignments: Array.isArray(snap.superAssignments) ? snap.superAssignments : [],
     mermaEvents: Array.isArray(snap.mermaEvents) ? snap.mermaEvents : [],
+    slotFixes: Array.isArray(snap.slotFixes) ? snap.slotFixes : [],
   };
 }
 

@@ -9,7 +9,9 @@ import {
   nextFloorTicket,
   operatorByCode,
   operatorForAppUser,
+  confirmVoicePick,
   remainingOnPallet,
+  reportSlotMismatch,
   voiceCueAfterMark,
   startRfSession,
   type CloseCueInput,
@@ -20,7 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Check, MapPin, Package, ScanLine, UserRound, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { WmsMermaCard } from "./WmsFloorBoard";
+import { WmsMermaCard, WmsSlotFixCard } from "./WmsFloorBoard";
 import { WmsJornadaCard } from "./WmsJornadaCard";
 import { WmsVoiceHeadset } from "./WmsVoiceHeadset";
 import { useWmsLive } from "./useWmsLive";
@@ -347,6 +349,58 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
           lang={lang}
           ticket={floorTicket}
           remaining={remainingOnPallet(snap, floorTicket.line.palletId)}
+          onConfirmOk={(spokenQty) => {
+            const opId = operatorId || matched?.id || "";
+            if (!opId) return;
+            const last = {
+              storeName: floorTicket.storeName,
+              orderCode: floorTicket.orderCode,
+              dockAisle: floorTicket.dockAisle,
+              palletId: floorTicket.line.palletId,
+              pickPack: floorTicket.pickPack,
+            };
+            const result = confirmVoicePick(snap, opId, spokenQty);
+            if (!result.ok) {
+              setOkMsg(null);
+              setFeedback(
+                result.error === "qty_mismatch"
+                  ? lang === "es"
+                    ? `Di ${floorTicket.qty} ok`
+                    : `Say ${floorTicket.qty} ok`
+                  : result.error === "slot_short"
+                    ? lang === "es"
+                      ? "En el hueco no hay tantas. Avisa al jefe."
+                      : "The slot does not have that many. Tell the lead."
+                    : lang === "es"
+                      ? "No se pudo picar"
+                      : "Could not pick",
+              );
+              return;
+            }
+            persist(result.snap);
+            const cue = voiceCueAfterMark(result.snap, opId, last, lang);
+            setCloseCue(cue.kind === "close" ? last : null);
+            setOkMsg(lang === "es" ? "Picado. Siguiente hueco." : "Picked. Next slot.");
+            setFeedback(null);
+            const nextQueue = buildRfQueue(result.snap, siteId, isFloor ? matched?.id ?? operatorId : operatorId || null);
+            const next = nextQueue[0] ?? null;
+            setTaskId(next?.id ?? "");
+            setSession(next ? startRfSession(next) : null);
+          }}
+          onReportMismatch={() => {
+            const result = reportSlotMismatch(snap, {
+              slotCode: floorTicket.slotCode,
+              takeQty: floorTicket.qty,
+              operatorId: operatorId || matched?.id || null,
+            });
+            if (!result.ok) {
+              setFeedback(lang === "es" ? "No se pudo avisar" : "Could not report");
+              return;
+            }
+            persist(result.snap);
+            setFeedback(null);
+            setOkMsg(lang === "es" ? "Aviso al jefe. Sigue al siguiente hueco." : "Lead notified. Next slot.");
+          }}
         />
       )}
       {!floorTicket && closeCue && <WmsVoiceHeadset lang={lang} close={closeCue} />}
@@ -358,6 +412,7 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
           preset={{ sscc: task.sscc, fromSlotCode: task.fromCode }}
         />
       )}
+      <WmsSlotFixCard lang={lang} siteId={siteId} />
     </div>
   );
 }

@@ -22,7 +22,8 @@ export type ConfirmPickError =
   | "wrong_slot"
   | "wrong_sscc"
   | "invalid_qty"
-  | "pallet_missing";
+  | "pallet_missing"
+  | "slot_blocked";
 
 export type ConfirmPickResult =
   | { ok: true; snap: WmsSnapshot }
@@ -52,6 +53,9 @@ export function confirmPick(
   const slot = snap.slots.find((s) => s.id === line.slotId);
   if (!slot || !codesEqual(slot.code, input.slotCode)) {
     return { ok: false, error: "wrong_slot" };
+  }
+  if (slot.status === "bloqueado") {
+    return { ok: false, error: "slot_blocked" };
   }
 
   const pallet = line.palletId ? snap.pallets.find((p) => p.id === line.palletId) : null;

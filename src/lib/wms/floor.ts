@@ -1,6 +1,6 @@
 import { assignWaveOperator, openWaveFromOrder } from "./waves";
-import { nextOpenLine } from "./picking";
 import { codesEqual } from "./location";
+import { blockedSlotIds } from "./slot-fix";
 import type {
   LoadUnit,
   LoadUnitKind,
@@ -46,6 +46,9 @@ export interface FloorTicket {
   skuName: string;
   qty: number;
   pickPack: PickLine["pickPack"];
+  /** Stock del palet en el hueco. null si no hay palet. No se inventa. */
+  stockInSlot: number | null;
+  sscc: string;
 }
 
 export function storeNameOf(order: OutboundOrder | undefined): string {
@@ -56,26 +59,34 @@ export function nextFloorTicket(snap: WmsSnapshot, operatorId: string): FloorTic
   const waves = snap.pickWaves.filter(
     (w) => w.status !== "cerrada" && w.operatorId === operatorId && w.kind === "picking",
   );
+  const blocked = blockedSlotIds(snap);
   for (const wave of waves) {
-    const line = nextOpenLine(wave);
-    if (!line) continue;
-    const slot = snap.slots.find((s) => s.id === line.slotId);
-    const sku = snap.skus.find((s) => s.id === line.skuId);
-    const order = snap.outbound.find((o) => o.code === line.orderCode);
-    if (!slot || !sku) continue;
-    return {
-      line,
-      waveId: wave.id,
-      orderCode: line.orderCode,
-      storeName: storeNameOf(order),
-      dockAisle: order?.dock ?? "",
-      aisle: slot.aisle,
-      slotCode: slot.code,
-      skuId: sku.id,
-      skuName: sku.name,
-      qty: line.qty,
-      pickPack: line.pickPack ?? "caja",
-    };
+    const open = wave.lines
+      .filter((l) => l.status === "en_curso" || l.status === "pendiente")
+      .sort((a, b) => a.sequence - b.sequence);
+    for (const line of open) {
+      const slot = snap.slots.find((s) => s.id === line.slotId);
+      const sku = snap.skus.find((s) => s.id === line.skuId);
+      const order = snap.outbound.find((o) => o.code === line.orderCode);
+      if (!slot || !sku) continue;
+      if (blocked.has(slot.id) || slot.status === "bloqueado") continue;
+      const pallet = line.palletId ? snap.pallets.find((p) => p.id === line.palletId) : null;
+      return {
+        line,
+        waveId: wave.id,
+        orderCode: line.orderCode,
+        storeName: storeNameOf(order),
+        dockAisle: order?.dock ?? "",
+        aisle: slot.aisle,
+        slotCode: slot.code,
+        skuId: sku.id,
+        skuName: sku.name,
+        qty: line.qty,
+        pickPack: line.pickPack ?? "caja",
+        stockInSlot: pallet?.qty ?? null,
+        sscc: pallet?.sscc ?? "",
+      };
+    }
   }
   return null;
 }

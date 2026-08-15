@@ -7,17 +7,22 @@ import {
   aisleTraces,
   assignSuperToOperator,
   declareMerma,
+  fixSlotCount,
   labelLoadUnit,
   mermaToday,
   openLoadUnit,
+  pendingSlotFixes,
   placeLoadUnitOnDock,
+  SLOT_FIX_REASON_LABEL,
   strapLoadUnit,
   type FloorError,
   type LoadUnitKind,
   type MermaError,
   type MermaReason,
+  type SlotFixError,
+  type SlotFixReason,
 } from "@/lib/wms";
-import { Footprints, MapPin, PackageX, Tag, UserRound } from "lucide-react";
+import { Footprints, MapPin, PackageX, Tag, UserRound, Wrench } from "lucide-react";
 import { useState } from "react";
 import { useWmsLive } from "./useWmsLive";
 
@@ -457,13 +462,162 @@ export function WmsMermaCard({
   );
 }
 
+const SLOT_FIX_ERR: Record<SlotFixError, { es: string; en: string }> = {
+  slot_missing: { es: "Hueco no encontrado", en: "Slot not found" },
+  invalid_qty: { es: "La cuenta tiene que ser 0 o más", en: "Count must be 0 or more" },
+  no_pallet: { es: "No hay palet en ese hueco; no se inventa stock", en: "No pallet in that slot; stock is not invented" },
+  fix_missing: { es: "Aviso no encontrado", en: "Report not found" },
+  already_fixed: { es: "Ese hueco ya está cuadrado", en: "That slot is already fixed" },
+};
+
+export function WmsSlotFixCard({ lang, siteId }: { lang: Lang; siteId?: string }) {
+  const { user } = useAuth();
+  const { snap, commit } = useWmsLive();
+  const canFix = user?.role === "admin" || user?.role === "ops";
+  const pending = pendingSlotFixes(snap, siteId);
+  const [slotCode, setSlotCode] = useState("");
+  const [counted, setCounted] = useState(0);
+  const [reason, setReason] = useState<SlotFixReason>("pico_mal");
+  const [note, setNote] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+
+  if (!canFix && pending.length === 0) {
+    return (
+      <Card
+        title={lang === "es" ? "Faltante de hueco" : "Slot shortage"}
+        subtitle={
+          lang === "es"
+            ? "Si el hueco no coincide, avisa desde el aparato. El jefe lo cuadra en el sistema; no hace falta ir a la oficina."
+            : "If the slot does not match, report from the device. The lead fixes it in the system; no walk to the office."
+        }
+      >
+        <p className="text-sm text-[var(--ink-muted)]">
+          {lang === "es" ? "No hay huecos pendientes de cuadrar." : "No slots waiting to be fixed."}
+        </p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card
+      title={lang === "es" ? "Arreglar hueco con faltante" : "Fix slot shortage"}
+      subtitle={
+        lang === "es"
+          ? "El jefe escribe lo que hay de verdad. Merma, cogió de más, roto o picó mal. El operario sigue al siguiente hueco."
+          : "The lead types what is really there. Shrink, extra taken, broken or wrong pick. The picker goes to the next slot."
+      }
+    >
+      {canFix && (
+        <form
+          className="mb-3 grid gap-2 md:grid-cols-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const result = fixSlotCount(snap, {
+              slotCode,
+              countedQty: counted,
+              reason,
+              note,
+              fixedBy: user?.name ?? null,
+            });
+            if (!result.ok) {
+              setMsg(SLOT_FIX_ERR[result.error][lang]);
+              return;
+            }
+            commit(result.snap);
+            setNote("");
+            setMsg(null);
+          }}
+        >
+          <input
+            required
+            value={slotCode}
+            onChange={(e) => setSlotCode(e.target.value)}
+            placeholder={lang === "es" ? "Hueco A-03-02-1" : "Slot A-03-02-1"}
+            className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+          />
+          <input
+            type="number"
+            min={0}
+            required
+            value={counted}
+            onChange={(e) => setCounted(Number(e.target.value))}
+            className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+          />
+          <select
+            value={reason}
+            onChange={(e) => setReason(e.target.value as SlotFixReason)}
+            className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+          >
+            {(Object.keys(SLOT_FIX_REASON_LABEL) as SlotFixReason[]).map((r) => (
+              <option key={r} value={r}>
+                {SLOT_FIX_REASON_LABEL[r][lang]}
+              </option>
+            ))}
+          </select>
+          <button type="submit" className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white">
+            <Wrench className="h-4 w-4" />
+            {lang === "es" ? "Cuadrar hueco" : "Fix slot"}
+          </button>
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={lang === "es" ? "Nota (opcional)" : "Note (optional)"}
+            className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm md:col-span-4"
+          />
+        </form>
+      )}
+      {msg && <p className="mb-2 text-xs font-semibold text-[var(--danger)]">{msg}</p>}
+      {pending.length === 0 ? (
+        <p className="text-sm text-[var(--ink-muted)]">
+          {lang === "es" ? "No hay avisos pendientes." : "No pending reports."}
+        </p>
+      ) : (
+        <ul className="space-y-2 text-sm">
+          {pending.map((f) => {
+            const slot = snap.slots.find((s) => s.id === f.slotId);
+            const sku = snap.skus.find((s) => s.id === f.skuId);
+            const op = f.reportedBy ? snap.operators.find((o) => o.id === f.reportedBy) : null;
+            return (
+              <li
+                key={f.id}
+                className="flex items-start justify-between gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2"
+              >
+                <span>
+                  <span className="font-mono text-xs font-semibold">{slot?.code}</span>
+                  <span className="mt-0.5 block text-xs text-[var(--ink-muted)]">
+                    {sku?.name ?? f.skuId} · {lang === "es" ? "sistema" : "system"} {f.systemQty} ·{" "}
+                    {lang === "es" ? "ticket" : "ticket"} {f.takeQty}
+                    {op ? ` · ${op.code}` : ""}
+                  </span>
+                </span>
+                {canFix && (
+                  <button
+                    type="button"
+                    className="rounded-full border border-[var(--glass-border)] px-2 py-1 text-[11px] font-semibold"
+                    onClick={() => {
+                      setSlotCode(slot?.code ?? "");
+                      setCounted(f.systemQty);
+                    }}
+                  >
+                    {lang === "es" ? "Usar" : "Use"}
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
 export function WmsFloorHint({ lang }: { lang: Lang }) {
   return (
     <p className="inline-flex items-start gap-2 text-xs text-[var(--ink-muted)]">
       <Footprints className="mt-0.5 h-3.5 w-3.5 shrink-0" />
       {lang === "es"
-        ? "Carta de porte: los jefes la mencionan; no sabemos en qué consiste y no se finge. Recepción de oficina, igual. Merma sí: hay que declararla o el hueco miente."
-        : "Consignment note: bosses mention it; we do not know what it is and will not fake it. Inbound office, same. Shrink yes: declare it or the slot lies."}
+        ? "Carta de porte: los jefes la mencionan; no sabemos en qué consiste y no se finge. Recepción de oficina, igual. Merma y faltante de hueco sí: se declaran o se cuadran en el sistema, sin mandar al operario a la oficina."
+        : "Consignment note: bosses mention it; we do not know what it is and will not fake it. Inbound office, same. Shrink and slot shortage yes: declare or fix them in the system, without sending the picker to the office."}
     </p>
   );
 }

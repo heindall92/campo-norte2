@@ -1,4 +1,5 @@
 import { nextFloorTicket, type FloorTicket } from "./floor";
+import { confirmPick, type ConfirmPickError, type ConfirmPickResult } from "./picking";
 import type { PickPack, Sku, WmsSnapshot } from "./types";
 
 /** Preferencia del aparato: si los auriculares dictan solos. No es telemetría. */
@@ -22,6 +23,59 @@ export function saveHeadsetOn(on: boolean): void {
   } catch {
     /* ignore */
   }
+}
+
+export const VOICE_PREFS_KEY = "cn-wms-voice-prefs";
+
+export interface VoicePrefs {
+  volume: number;
+  rate: number;
+}
+
+const DEFAULT_VOICE_PREFS: VoicePrefs = { volume: 1, rate: 0.95 };
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, n));
+}
+
+export function loadVoicePrefs(): VoicePrefs {
+  if (typeof localStorage === "undefined") return { ...DEFAULT_VOICE_PREFS };
+  try {
+    const raw = localStorage.getItem(VOICE_PREFS_KEY);
+    if (!raw) return { ...DEFAULT_VOICE_PREFS };
+    const parsed = JSON.parse(raw) as Partial<VoicePrefs>;
+    return {
+      volume: clamp(typeof parsed.volume === "number" ? parsed.volume : DEFAULT_VOICE_PREFS.volume, 0.2, 1),
+      rate: clamp(typeof parsed.rate === "number" ? parsed.rate : DEFAULT_VOICE_PREFS.rate, 0.7, 1.6),
+    };
+  } catch {
+    return { ...DEFAULT_VOICE_PREFS };
+  }
+}
+
+export function saveVoicePrefs(next: Partial<VoicePrefs>): VoicePrefs {
+  const merged: VoicePrefs = {
+    ...loadVoicePrefs(),
+    ...next,
+  };
+  merged.volume = clamp(merged.volume, 0.2, 1);
+  merged.rate = clamp(merged.rate, 0.7, 1.6);
+  if (typeof localStorage !== "undefined") {
+    try {
+      localStorage.setItem(VOICE_PREFS_KEY, JSON.stringify(merged));
+    } catch {
+      /* ignore */
+    }
+  }
+  return merged;
+}
+
+export function bumpVoiceVolume(delta: number): VoicePrefs {
+  return saveVoicePrefs({ volume: loadVoicePrefs().volume + delta });
+}
+
+export function bumpVoiceRate(delta: number): VoicePrefs {
+  return saveVoicePrefs({ rate: loadVoicePrefs().rate + delta });
 }
 
 /**
@@ -70,15 +124,22 @@ export interface VoicePrompt {
   pickPack: PickPack;
 }
 
+export type VoiceTicket = Pick<FloorTicket, "storeName" | "aisle" | "slotCode" | "skuName" | "skuId" | "qty"> & {
+  pickPack?: PickPack;
+  stockInSlot?: number | null;
+};
+
+export function slotMatchesTake(stockInSlot: number | null | undefined, takeQty: number): boolean {
+  if (stockInSlot == null) return true;
+  return stockInSlot >= takeQty;
+}
+
 /** Lo que dirían los auriculares. Usa el hueco real del ticket; la familia 8–37 es orientación de planta. */
-export function buildVoicePrompt(
-  ticket: Pick<FloorTicket, "storeName" | "aisle" | "slotCode" | "skuName" | "skuId" | "qty"> & {
-    pickPack?: PickPack;
-  },
-  lang: "es" | "en" = "es",
-): VoicePrompt {
+export function buildVoicePrompt(ticket: VoiceTicket, lang: "es" | "en" = "es"): VoicePrompt {
   const pack = ticket.pickPack ?? "caja";
   const family = familyForSku(ticket.skuId);
+  const stock = ticket.stockInSlot;
+  const matches = slotMatchesTake(stock, ticket.qty);
   const take =
     pack === "contenedor"
       ? lang === "es"
@@ -87,6 +148,19 @@ export function buildVoicePrompt(
       : lang === "es"
         ? `Tomar ${ticket.qty} cajas`
         : `Take ${ticket.qty} cases`;
+  const stockStep =
+    stock == null
+      ? null
+      : lang === "es"
+        ? `En el hueco hay ${stock}`
+        : `The slot has ${stock}`;
+  const confirmStep = matches
+    ? lang === "es"
+      ? `Di ${ticket.qty} ok`
+      : `Say ${ticket.qty} ok`
+    : lang === "es"
+      ? `Hacen falta ${ticket.qty}. No coincide`
+      : `${ticket.qty} needed. It does not match`;
 
   const familyStep = family
     ? lang === "es"
@@ -100,18 +174,40 @@ export function buildVoicePrompt(
     lang === "es" ? `Pasillo ${ticket.aisle}` : `Aisle ${ticket.aisle}`,
     lang === "es" ? `Hueco ${ticket.slotCode}` : `Slot ${ticket.slotCode}`,
     ticket.skuName,
+    stockStep,
     take,
+    confirmStep,
   ].filter((s): s is string => Boolean(s));
 
   return { text: `${steps.join(". ")}.`, steps, pickPack: pack };
 }
 
+export function buildSlotRepeatPrompt(ticket: Pick<VoiceTicket, "aisle" | "slotCode">, lang: "es" | "en" = "es"): string {
+  return lang === "es"
+    ? `Pasillo ${ticket.aisle}. Hueco ${ticket.slotCode}.`
+    : `Aisle ${ticket.aisle}. Slot ${ticket.slotCode}.`;
+}
+
+export function buildArticlePrompt(ticket: Pick<VoiceTicket, "skuName" | "stockInSlot" | "pickPack">, lang: "es" | "en" = "es"): string {
+  const stock =
+    ticket.stockInSlot == null
+      ? ""
+      : lang === "es"
+        ? `. En el hueco hay ${ticket.stockInSlot}`
+        : `. The slot has ${ticket.stockInSlot}`;
+  return lang === "es"
+    ? `Artículo: ${ticket.skuName}${stock}.`
+    : `Article: ${ticket.skuName}${stock}.`;
+}
+
 export function speakVoicePrompt(text: string, lang: "es" | "en" = "es"): boolean {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return false;
+  const prefs = loadVoicePrefs();
   window.speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = lang === "es" ? "es-ES" : "en-GB";
-  utter.rate = 0.95;
+  utter.rate = prefs.rate;
+  utter.volume = prefs.volume;
   window.speechSynthesis.speak(utter);
   return true;
 }
@@ -199,4 +295,114 @@ export function voiceCueAfterMark(
 export function speakVoiceCue(cue: VoiceCue, lang: "es" | "en" = "es"): boolean {
   if (!loadHeadsetOn()) return false;
   return speakVoicePrompt(cue.prompt.text, lang);
+}
+
+export type VoiceCommand =
+  | { kind: "volume_up" }
+  | { kind: "volume_down" }
+  | { kind: "faster" }
+  | { kind: "repeat_slot" }
+  | { kind: "article" }
+  | { kind: "confirm"; qty: number }
+  | { kind: "unknown" };
+
+const SPOKEN_NUMBERS: Record<string, number> = {
+  uno: 1,
+  una: 1,
+  dos: 2,
+  tres: 3,
+  cuatro: 4,
+  cinco: 5,
+  seis: 6,
+  siete: 7,
+  ocho: 8,
+  nueve: 9,
+  diez: 10,
+  once: 11,
+  doce: 12,
+  trece: 13,
+  catorce: 14,
+  quince: 15,
+  dieciseis: 16,
+  diecisiete: 17,
+  dieciocho: 18,
+  diecinueve: 19,
+  veinte: 20,
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+};
+
+function foldVoice(raw: string): string {
+  return raw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseSpokenQty(token: string): number | null {
+  if (/^\d+$/.test(token)) return Number(token);
+  return SPOKEN_NUMBERS[token] ?? null;
+}
+
+/** Mandos de planta: sube, baja, acelera, atrás, artículo, «5 ok». */
+export function parseVoiceCommand(utterance: string): VoiceCommand {
+  const text = foldVoice(utterance);
+  if (!text) return { kind: "unknown" };
+  if (/^(sube|sube volumen|mas alto|mas volumen|volume up)$/.test(text) || text === "sube") {
+    return { kind: "volume_up" };
+  }
+  if (/^(baja|baja volumen|mas bajo|menos volumen|volume down)$/.test(text) || text === "baja") {
+    return { kind: "volume_down" };
+  }
+  if (/^(acelera|mas rapido|rapido|faster)$/.test(text)) return { kind: "faster" };
+  if (/^(atras|detras|repite|repetir|otra vez|hueco)$/.test(text)) return { kind: "repeat_slot" };
+  if (/^(articulo|producto|item)$/.test(text)) return { kind: "article" };
+
+  const confirm = text.match(/^(\d+|[a-z]+)\s+(ok|okay|okey|vale)$/);
+  if (confirm) {
+    const qty = parseSpokenQty(confirm[1] ?? "");
+    if (qty != null && qty > 0) return { kind: "confirm", qty };
+  }
+  return { kind: "unknown" };
+}
+
+export type VoicePickError = ConfirmPickError | "no_ticket" | "qty_mismatch" | "slot_short";
+
+export type VoicePickResult = ConfirmPickResult | { ok: false; error: VoicePickError };
+
+/**
+ * «5 ok»: confirma la cantidad que dijo el aparato y pica con el hueco/SSCC del ticket.
+ * Si el hueco no tiene tantas, no pica: hay que avisar al jefe.
+ */
+export function confirmVoicePick(
+  snap: WmsSnapshot,
+  operatorId: string,
+  spokenQty: number,
+  at = "2026-08-15T10:00:00.000Z",
+): VoicePickResult {
+  const ticket = nextFloorTicket(snap, operatorId);
+  if (!ticket) return { ok: false, error: "no_ticket" };
+  if (spokenQty !== ticket.qty) return { ok: false, error: "qty_mismatch" };
+  if (ticket.stockInSlot != null && ticket.stockInSlot < ticket.qty) {
+    return { ok: false, error: "slot_short" };
+  }
+  if (!ticket.sscc) return { ok: false, error: "pallet_missing" };
+  return confirmPick(
+    snap,
+    ticket.waveId,
+    ticket.line.id,
+    { slotCode: ticket.slotCode, sscc: ticket.sscc, qty: spokenQty },
+    at,
+  );
 }
