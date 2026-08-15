@@ -19,8 +19,11 @@ import {
   navigateWmsSection,
   openWaveFromOrder,
   operatorForAppUser,
+  orderFulfillment,
   outboundItinerary,
   rankDayPriorities,
+  shipOutboundOrder,
+  stageOrderToDock,
   monthCosts,
   occupancyByZone,
   type FleetStatus,
@@ -391,6 +394,15 @@ export { WmsOperatorsPanel } from "./WmsOperatorsAdmin";
 export { WmsInboundPanel } from "./WmsInboundAdmin";
 
 
+const OUT_ERR: Record<string, { es: string; en: string }> = {
+  order_missing: { es: "Pedido no encontrado", en: "Order missing" },
+  order_done: { es: "Ya está expedido", en: "Already shipped" },
+  wave_open: { es: "Cierra la ola de picking primero", en: "Close the pick wave first" },
+  nothing_picked: { es: "No hay mercancía picada", en: "Nothing picked" },
+  pallets_not_staged: { es: "Carga primero los palets enteros a muelle", en: "Stage full pallets to dock first" },
+  dock_full: { es: "No hay hueco libre en muelle", en: "No free dock slot" },
+};
+
 export function WmsOutboundPanel({ lang }: { lang: Lang }) {
   const { snap, commit } = useWmsLive();
   const carriers = snap.carriers.filter((c) => c.active && c.orgId === snap.org.id);
@@ -413,8 +425,8 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
         </h2>
         <p className="mt-1 text-sm text-[var(--ink-muted)]">
           {lang === "es"
-            ? "Pedido del día → itinerario de muelle → abrir ola con palets reales del pasillo. El tracking lo escribes tú."
-            : "Daily order → dock itinerary → open a wave from real pick-face pallets. You type the tracking."}
+            ? "Pedido → ola con palets reales → cargar muelle → expedir lo picado. El tracking lo escribes tú; no se fabrica."
+            : "Order → wave from real pallets → load dock → ship what was picked. You type tracking; nothing is invented."}
         </p>
       </header>
       <Card title={lang === "es" ? "Pedido diario" : "Daily order"}>
@@ -499,7 +511,9 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
         subtitle={lang === "es" ? "Orden de salida según ventana y prioridad" : "Outbound sequence by window and priority"}
       >
         <ol className="space-y-2">
-          {itinerary.map((stop) => (
+          {itinerary.map((stop) => {
+            const fill = orderFulfillment(snap, stop.order.id);
+            return (
             <li
               key={stop.order.id}
               className="flex items-center justify-between gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2 text-sm"
@@ -511,14 +525,47 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
                   {stop.order.dock} · {stop.order.customer}
                 </span>
               </span>
-              <Badge tone="neutral">
-                {new Date(stop.windowStart ?? stop.order.cutOff).toLocaleTimeString(lang === "es" ? "es-ES" : "en-GB", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </Badge>
+              <span className="flex items-center gap-2">
+                {fill?.canStage && (
+                  <button
+                    type="button"
+                    className="rounded-full border border-[var(--glass-border)] px-2 py-0.5 text-[11px] font-semibold"
+                    onClick={() => {
+                      const result = stageOrderToDock(snap, stop.order.id, pickerId || null);
+                      if (result.ok) {
+                        commit(result.snap);
+                        setMsg(null);
+                      } else setMsg(OUT_ERR[result.error]?.[lang] ?? result.error);
+                    }}
+                  >
+                    {lang === "es" ? "Cargar" : "Load"}
+                  </button>
+                )}
+                {fill?.canShip && (
+                  <button
+                    type="button"
+                    className="rounded-full bg-[var(--accent)] px-2 py-0.5 text-[11px] font-semibold text-white"
+                    onClick={() => {
+                      const result = shipOutboundOrder(snap, stop.order.id, pickerId || null);
+                      if (result.ok) {
+                        commit(result.snap);
+                        setMsg(null);
+                      } else setMsg(OUT_ERR[result.error]?.[lang] ?? result.error);
+                    }}
+                  >
+                    {lang === "es" ? "Expedir" : "Ship"}
+                  </button>
+                )}
+                <Badge tone="neutral">
+                  {new Date(stop.windowStart ?? stop.order.cutOff).toLocaleTimeString(lang === "es" ? "es-ES" : "en-GB", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Badge>
+              </span>
             </li>
-          ))}
+            );
+          })}
         </ol>
       </Card>
       <div className="flex flex-wrap gap-2">
@@ -533,7 +580,7 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
       </div>
       <Card>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-left text-sm">
+          <table className="w-full min-w-[980px] text-left text-sm">
             <thead className="text-xs uppercase tracking-wide text-[var(--ink-muted)]">
               <tr>
                 <th className="pb-2 pr-3">{lang === "es" ? "Pedido" : "Order"}</th>
@@ -545,11 +592,13 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
                 <th className="pb-2 pr-3">{lang === "es" ? "Estado" : "Status"}</th>
                 <th className="pb-2 pr-3">Palets</th>
                 <th className="pb-2">{lang === "es" ? "Ola" : "Wave"}</th>
+                <th className="pb-2">{lang === "es" ? "Salida" : "Ship"}</th>
               </tr>
             </thead>
             <tbody>
               {ranked.map((row) => {
                 const o = row.order;
+                const fill = orderFulfillment(snap, o.id);
                 return (
                 <tr key={o.id} className="border-t border-[var(--glass-border)]">
                   <td className="py-2.5 pr-3 font-mono text-xs">{o.code}</td>
@@ -640,6 +689,55 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
                         {lang === "es" ? "Abrir ola" : "Open wave"}
                       </button>
                     )}
+                  </td>
+                  <td className="py-2.5">
+                    <div className="flex flex-wrap gap-1">
+                      {fill?.canStage && (
+                        <button
+                          type="button"
+                          className="rounded-full bg-[var(--accent)] px-2 py-1 text-[11px] font-semibold text-white"
+                          onClick={() => {
+                            const result = stageOrderToDock(snap, o.id, pickerId || null);
+                            if (!result.ok) {
+                              setMsg(OUT_ERR[result.error]?.[lang] ?? result.error);
+                              return;
+                            }
+                            commit(result.snap);
+                            setMsg(null);
+                          }}
+                        >
+                          {lang === "es" ? "Cargar" : "Load"}
+                        </button>
+                      )}
+                      {fill?.canShip && (
+                        <button
+                          type="button"
+                          className="rounded-full bg-[var(--accent)] px-2 py-1 text-[11px] font-semibold text-white"
+                          onClick={() => {
+                            const result = shipOutboundOrder(snap, o.id, pickerId || null);
+                            if (!result.ok) {
+                              setMsg(OUT_ERR[result.error]?.[lang] ?? result.error);
+                              return;
+                            }
+                            commit(result.snap);
+                            setMsg(null);
+                          }}
+                        >
+                          {lang === "es" ? "Expedir" : "Ship"}
+                        </button>
+                      )}
+                      {fill && !fill.canStage && !fill.canShip && o.status !== "expedido" && fill.hasWave && (
+                        <span className="text-[11px] text-[var(--ink-muted)]">
+                          {fill.openLines
+                            ? lang === "es"
+                              ? `${fill.qtyPicked} ud. picadas`
+                              : `${fill.qtyPicked} u. picked`
+                            : lang === "es"
+                              ? "Sin picado"
+                              : "Nothing picked"}
+                        </span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

@@ -20,6 +20,7 @@ export * from "./catalog";
 export * from "./normalize";
 export * from "./jornada";
 export * from "./waves";
+export * from "./outbound";
 
 import { buildWmsSeed } from "./seed";
 import { normalizeWmsSnapshot, snapshotLooksUsable } from "./normalize";

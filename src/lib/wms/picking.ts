@@ -78,15 +78,22 @@ export function confirmPick(
   };
 
   const remaining = pallet.qty - input.qty;
+  const emptied = remaining <= 0;
   const nextPallets = snap.pallets.map((p) =>
     p.id === pallet.id
       ? {
           ...p,
           qty: Math.max(0, remaining),
-          status: remaining <= 0 ? ("picking" as const) : p.status,
+          status: emptied ? ("picking" as const) : p.status,
+          slotId: emptied ? null : p.slotId,
         }
       : p,
   );
+  const nextSlots = emptied
+    ? snap.slots.map((s) =>
+        s.id === slot.id ? { ...s, palletId: null, status: "libre" as const } : s,
+      )
+    : snap.slots;
 
   const movement: StockMovement = {
     id: `mv-pick-${line.id}`,
@@ -111,6 +118,7 @@ export function confirmPick(
     snap: {
       ...snap,
       pickWaves: snap.pickWaves.map((w) => (w.id === nextWave.id ? nextWave : w)),
+      slots: nextSlots,
       pallets: nextPallets,
       movements: [movement, ...snap.movements],
       operators: nextOperators,

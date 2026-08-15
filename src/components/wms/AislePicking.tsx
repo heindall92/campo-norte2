@@ -7,10 +7,14 @@ import {
   assignWaveOperator,
   confirmPick,
   markShortage,
+  navigateWmsSection,
   nextOpenLine,
   operatorForAppUser,
+  orderFulfillment,
   peekWmsFocus,
+  shipOutboundOrder,
   skipPickLine,
+  stageOrderToDock,
   type ConfirmPickError,
   type PickGateError,
   type PickWave,
@@ -27,6 +31,7 @@ import {
   Search,
   SkipForward,
   TriangleAlert,
+  Truck,
   UserRound,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -711,11 +716,72 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
             </>
           ) : (
             <Card title={lang === "es" ? "Ola completada" : "Wave complete"}>
-              <p className="text-sm text-[var(--ink-muted)]">
+              <p className="mb-3 text-sm text-[var(--ink-muted)]">
                 {lang === "es"
-                  ? "Todas las líneas picadas. Listo para muelle."
-                  : "All lines picked. Ready for dock."}
+                  ? "Todas las líneas cerradas. Carga los palets enteros a muelle y expede solo lo picado."
+                  : "All lines closed. Stage full pallets to dock and ship only what was picked."}
               </p>
+              <div className="flex flex-wrap gap-2">
+                {[...new Set(wave.lines.map((l) => l.orderCode))].map((code) => {
+                  const order = snap.outbound.find((o) => o.code === code);
+                  const fill = order ? orderFulfillment(snap, order.id) : null;
+                  if (!order || !fill) return null;
+                  return (
+                    <span key={code} className="flex flex-wrap items-center gap-2">
+                      {fill.canStage && (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white"
+                          onClick={() => {
+                            if (!gateFloor()) return;
+                            const result = stageOrderToDock(snap, order.id, matched?.id ?? wave.operatorId);
+                            if (!result.ok) {
+                              setFeedback(
+                                result.error === "dock_full"
+                                  ? lang === "es"
+                                    ? "No hay hueco libre en muelle"
+                                    : "No free dock slot"
+                                  : result.error,
+                              );
+                              return;
+                            }
+                            setSnap(result.snap);
+                            setFeedback(null);
+                          }}
+                        >
+                          <Truck className="h-4 w-4" />
+                          {lang === "es" ? `Cargar ${code}` : `Load ${code}`}
+                        </button>
+                      )}
+                      {fill.canShip && (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white"
+                          onClick={() => {
+                            const result = shipOutboundOrder(snap, order.id, matched?.id ?? wave.operatorId);
+                            if (!result.ok) {
+                              setFeedback(result.error);
+                              return;
+                            }
+                            setSnap(result.snap);
+                            setFeedback(null);
+                          }}
+                        >
+                          <Truck className="h-4 w-4" />
+                          {lang === "es" ? `Expedir ${code}` : `Ship ${code}`}
+                        </button>
+                      )}
+                    </span>
+                  );
+                })}
+                <button
+                  type="button"
+                  className="rounded-full border border-[var(--glass-border)] px-3 py-2 text-sm font-semibold"
+                  onClick={() => navigateWmsSection("expedicion")}
+                >
+                  {lang === "es" ? "Ir a expedición" : "Go to outbound"}
+                </button>
+              </div>
             </Card>
           )}
         </div>

@@ -8,7 +8,7 @@ import {
   operatorJornada,
   rankDayPriorities,
 } from "@/lib/wms";
-import { ArrowLeftRight, ChevronRight, ClipboardCheck, Clock, Package, ScanBarcode } from "lucide-react";
+import { ArrowLeftRight, ChevronRight, ClipboardCheck, Clock, Package, ScanBarcode, Truck } from "lucide-react";
 import { WmsJornadaCard } from "./WmsJornadaCard";
 import { useWmsLive } from "./useWmsLive";
 
@@ -130,6 +130,14 @@ export function WmsMobileHome({
         >
           <ClipboardCheck className="h-5 w-5 text-[var(--accent)]" />
           <span className="text-sm font-semibold">{lang === "es" ? "Conteo" : "Count"}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onNavigate("expedicion")}
+          className="flex min-h-[4.5rem] items-center gap-2 rounded-[1.15rem] bg-[var(--field-bg)] px-3 py-2 text-left shadow-sm"
+        >
+          <Truck className="h-5 w-5 text-[var(--accent)]" />
+          <span className="text-sm font-semibold">{lang === "es" ? "Expedir" : "Ship"}</span>
         </button>
       </div>
     </div>

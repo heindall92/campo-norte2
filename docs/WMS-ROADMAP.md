@@ -69,12 +69,18 @@
 - Inicio móvil WMS (planta/almacén/dirección): prioridades + fichaje
 - Faltante con cantidad encontrada
 
-## Fase 11 — Ubicación y conteo con jornada (esta entrega)
+## Fase 11 — Ubicación y conteo con jornada
 - Destino de putaway por zona del SKU (seco / fresco / congelado); no el primer hueco libre
 - Palet recepcionado lleva `asnId`; el ASN se cierra al ubicar el último
 - Movimientos y conteo usan el snapshot compartido, el operario real y la jornada de planta
 - Conteo cíclico firma el desvío con `operatorId`
 - Inicio móvil: atajos a ubicar y conteo
+
+## Fase 12 — Expedir lo picado (esta entrega)
+- Palet entero vaciado en picking libera el hueco
+- Cargar a muelle solo palets con qty 0 ya picados
+- Expedir exige ola cerrada y al menos una línea picada; no inventa tracking
+- Cajas sueltas (pick parcial) salen en el movimiento de picking; no se fabrica un palet nuevo
 
 ## Siguiente
 - Agente pyzk en la LAN cuando haya terminal físico
