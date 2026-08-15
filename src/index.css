@@ -1,0 +1,517 @@
+@import "tailwindcss";
+
+/* ================================================================== *
+ * SISTEMA DE TOKENS — 3 capas
+ * ------------------------------------------------------------------
+ * Capa 1 · paleta      valores crudos. Solo aquí hay hex.
+ * Capa 2 · semántica   qué significa un color (positivo, superficie…).
+ * Capa 3 · componente  slots por pieza (--kpi-*, --table-*).
+ *
+ * Regla: los componentes SOLO consumen capa 2 y 3. Nunca capa 1.
+ * Un rebrand = editar la capa 1.
+ * ================================================================== */
+
+:root {
+  --mps-display: "Fraunces", Georgia, serif;
+  --mps-body: "Source Sans 3", "Segoe UI", sans-serif;
+
+  /* ---------- Capa 1 · paleta de marca ---------- */
+  --mps-ink-900: #0f172a;
+  --mps-ink-700: #334155;
+  --mps-ink-500: #475569;
+  --mps-ink-300: #94a3b8;
+  --mps-ink-100: #cbd5e1;
+  --mps-paper: #e8eef2;
+  --mps-paper-deep: #d5dee8;
+  --mps-night: #0b1220;
+  --mps-night-2: #111827;
+
+  --mps-green-600: #047857;
+  --mps-green-400: #34d399;
+  --mps-red-600: #b91c1c;
+  --mps-red-400: #f87171;
+  --mps-amber-600: #9a3412;
+  --mps-amber-300: #fdba74;
+  --mps-blue-600: #b45309;
+  --mps-blue-400: #f59e0b;
+
+  --radius-card: 1rem;
+  --radius-chip: 0.625rem;
+}
+
+/* Modo claro */
+html[data-theme="light"] {
+  --bg0: #e8eef2;
+  --bg1: #d5dee8;
+  --ink: #0f172a;
+  --ink-muted: #475569;
+  --glass: #ffffff;
+  --glass-strong: #ffffff;
+  --glass-border: color-mix(in oklab, #0f172a 14%, transparent);
+  /* Campos de formulario: contraste real sobre glass blanco */
+  --field-bg: #f1f5f9;
+  --field-border: #94a3b8;
+  --field-border-strong: #64748b;
+  --chip-idle-bg: #f8fafc;
+  --chip-idle-border: #cbd5e1;
+  --sidebar: rgba(15, 23, 42, 0.88);
+  --sidebar-text: #f8fafc;
+  --sidebar-muted: #cbd5e1;
+  /* Default: ámbar industrial (override por prefs de usuario) */
+  --accent: #b45309;
+  --accent-2: #ca8a04;
+  --chip: rgba(255, 255, 255, 0.9);
+  --chart: #b45309;
+  --chart-2: #ca8a04;
+  /* Series económicas (estructura Aurora, paleta camponorte) */
+  --chart-in: var(--mps-green-600);
+  --chart-out: var(--mps-red-600);
+  --chart-forecast: var(--mps-amber-600);
+  --header: rgba(232, 238, 242, 0.72);
+  --danger: #b91c1c;
+  --ok: #047857;
+  --warn-bg: #fff7ed;
+  --warn-ink: #9a3412;
+
+  /* ---------- Capa 2 · semántica (claro) ---------- */
+  --surface-card: var(--glass-strong);
+  --surface-elevated: #ffffff;
+  --surface-sunken: var(--field-bg);
+  --surface-hover: color-mix(in oklab, var(--mps-ink-900) 5%, transparent);
+  --surface-active: color-mix(in oklab, var(--accent) 12%, transparent);
+
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-muted);
+  --text-tertiary: color-mix(in oklab, var(--ink-muted) 70%, transparent);
+
+  --border-subtle: color-mix(in oklab, var(--mps-ink-900) 8%, transparent);
+  --border-default: var(--glass-border);
+  --border-strong: color-mix(in oklab, var(--mps-ink-900) 24%, transparent);
+
+  --positive: var(--mps-green-600);
+  --positive-soft: color-mix(in oklab, var(--mps-green-600) 14%, transparent);
+  --negative: var(--mps-red-600);
+  --negative-soft: color-mix(in oklab, var(--mps-red-600) 12%, transparent);
+  --warning: var(--mps-amber-600);
+  --warning-soft: color-mix(in oklab, var(--mps-amber-600) 14%, transparent);
+  --info: var(--accent);
+  --info-soft: color-mix(in oklab, var(--accent) 14%, transparent);
+  --neutral-soft: color-mix(in oklab, var(--ink-muted) 12%, transparent);
+}
+
+/* Modo oscuro */
+html[data-theme="dark"] {
+  --bg0: #0b1220;
+  --bg1: #111827;
+  --ink: #f1f5f9;
+  --ink-muted: #94a3b8;
+  --glass: rgba(30, 41, 59, 0.55);
+  --glass-strong: rgba(30, 41, 59, 0.78);
+  --glass-border: rgba(148, 163, 184, 0.22);
+  --field-bg: rgba(15, 23, 42, 0.72);
+  --field-border: rgba(148, 163, 184, 0.45);
+  --field-border-strong: rgba(148, 163, 184, 0.7);
+  --chip-idle-bg: rgba(15, 23, 42, 0.55);
+  --chip-idle-border: rgba(148, 163, 184, 0.35);
+  --sidebar: rgba(2, 6, 23, 0.92);
+  --sidebar-text: #f8fafc;
+  --sidebar-muted: #94a3b8;
+  /* Default oscuro: ámbar industrial */
+  --accent: #f59e0b;
+  --accent-2: #fbbf24;
+  --chip: rgba(15, 23, 42, 0.85);
+  --chart: #f59e0b;
+  --chart-2: #fbbf24;
+  --chart-in: var(--mps-green-400);
+  --chart-out: var(--mps-red-400);
+  --chart-forecast: var(--mps-amber-300);
+  --header: rgba(11, 18, 32, 0.72);
+  --danger: #f87171;
+  --ok: #34d399;
+  --warn-bg: rgba(154, 52, 18, 0.25);
+  --warn-ink: #fdba74;
+
+  /* ---------- Capa 2 · semántica (oscuro) ---------- */
+  --surface-card: var(--glass-strong);
+  --surface-elevated: rgba(51, 65, 85, 0.72);
+  --surface-sunken: var(--field-bg);
+  --surface-hover: color-mix(in oklab, #f8fafc 6%, transparent);
+  --surface-active: color-mix(in oklab, var(--accent) 20%, transparent);
+
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-muted);
+  --text-tertiary: color-mix(in oklab, var(--ink-muted) 70%, transparent);
+
+  --border-subtle: color-mix(in oklab, #f8fafc 10%, transparent);
+  --border-default: var(--glass-border);
+  --border-strong: color-mix(in oklab, #f8fafc 26%, transparent);
+
+  --positive: var(--mps-green-400);
+  --positive-soft: color-mix(in oklab, var(--mps-green-400) 18%, transparent);
+  --negative: var(--mps-red-400);
+  --negative-soft: color-mix(in oklab, var(--mps-red-400) 16%, transparent);
+  --warning: var(--mps-amber-300);
+  --warning-soft: color-mix(in oklab, var(--mps-amber-300) 16%, transparent);
+  --info: var(--accent);
+  --info-soft: color-mix(in oklab, var(--accent) 20%, transparent);
+  --neutral-soft: color-mix(in oklab, var(--ink-muted) 16%, transparent);
+}
+
+/* ================================================================== *
+ * Capa 3 · slots por componente
+ * Los componentes leen SOLO estos. Cambiar el look de las KPI o de
+ * las tablas no obliga a tocar un solo .tsx.
+ * ================================================================== */
+:root {
+  --kpi-bg: var(--surface-card);
+  --kpi-border: var(--border-default);
+  --kpi-label-fg: var(--text-tertiary);
+  --kpi-value-fg: var(--text-primary);
+  --kpi-helper-fg: var(--text-secondary);
+  --kpi-delta-up-fg: var(--positive);
+  --kpi-delta-down-fg: var(--negative);
+  --kpi-spark-stroke: var(--chart);
+
+  --chart-grid: var(--border-subtle);
+  --chart-tick: var(--text-tertiary);
+  --chart-tooltip-bg: var(--surface-elevated);
+  --chart-tooltip-border: var(--border-default);
+  --chart-cursor: var(--surface-hover);
+  --chart-bar-in: var(--chart-in);
+  --chart-bar-out: var(--chart-out);
+  --chart-bar-forecast: var(--chart-forecast);
+  --chart-area: var(--chart);
+  --chart-area-2: var(--chart-2);
+
+  --projection-actual: var(--text-primary);
+  --projection-in: var(--positive);
+  --projection-out: var(--negative);
+
+  --table-header-fg: var(--text-tertiary);
+  --table-row-border: var(--border-subtle);
+  --table-row-hover: var(--surface-hover);
+  --table-detail-fg: var(--text-secondary);
+  --table-total-border: var(--border-strong);
+  --table-highlight-bg: var(--surface-active);
+
+  --attention-overdue: var(--negative);
+  --attention-soon: var(--warning);
+  --attention-ok: var(--positive);
+
+  --ai-accent: var(--accent);
+  --ai-halo: var(--accent);
+  --ai-fg: #f8fafc;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--mps-body);
+  color: var(--ink);
+  background: var(--bg0);
+  -webkit-font-smoothing: antialiased;
+}
+
+.mps-crm {
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+.mps-crm h1,
+.mps-crm h2,
+.mps-crm h3,
+.mps-crm h4 {
+  font-family: var(--mps-display);
+  color: var(--ink);
+}
+
+.glass-panel {
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 12px 40px rgba(2, 6, 23, 0.12);
+}
+
+html[data-theme="dark"] .glass-panel {
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+}
+
+.glass-sidebar {
+  background: var(--sidebar);
+  border-right: 1px solid var(--glass-border);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  color: var(--sidebar-text);
+}
+
+.glass-chip {
+  background: var(--chip);
+  border: 1px solid var(--glass-border);
+  color: var(--ink);
+  backdrop-filter: blur(10px);
+}
+
+.mps-bg {
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 42%),
+    radial-gradient(circle at 100% 10%, color-mix(in oklab, var(--accent-2) 18%, transparent), transparent 40%),
+    linear-gradient(160deg, var(--bg0), var(--bg1));
+}
+
+/* Controles de formulario con contraste (Ajustes / forms) */
+.mps-field {
+  background: var(--field-bg);
+  border: 1px solid var(--field-border);
+  color: var(--ink);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.mps-field::placeholder {
+  color: color-mix(in oklab, var(--ink-muted) 75%, transparent);
+}
+
+.mps-field:hover {
+  border-color: var(--field-border-strong);
+}
+
+.mps-field:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 28%, transparent);
+}
+
+.mps-choice {
+  background: var(--chip-idle-bg);
+  border: 1px solid var(--chip-idle-border);
+  color: var(--ink-muted);
+}
+
+.mps-choice:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.mps-choice.is-active {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 16%, var(--chip-idle-bg));
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.mps-settings-tile {
+  background: var(--field-bg);
+  border: 1px solid var(--field-border);
+  color: var(--ink-muted);
+}
+
+/* Hoja inferior móvil: entra desde abajo con muelle suave */
+@keyframes mps-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mps-mobile *,
+  .mps-mobile *::before,
+  .mps-mobile *::after,
+  [role="dialog"] {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ---------- Tablas de datos ---------- *
+ * Jerarquía por 4 ejes (sangría · peso · color · borde), filas hermanas.
+ * `tabular-nums` alinea las comas decimales en vertical: sin esto una
+ * tabla de cifras nunca parece seria. */
+
+.mps-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.mps-table th {
+  color: var(--table-header-fg);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+  padding: 0.5rem 1rem;
+}
+
+.mps-table td {
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--table-row-border);
+  vertical-align: middle;
+}
+
+.mps-table tbody tr:hover {
+  background: var(--table-row-hover);
+}
+
+/* Columna numérica: derecha + cifras de ancho fijo */
+.mps-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Ejes de jerarquía */
+.mps-row-l1 {
+  padding-left: 1rem;
+  font-weight: 500;
+}
+.mps-row-l2 {
+  padding-left: 2.5rem;
+  font-weight: 400;
+  color: var(--table-detail-fg);
+}
+.mps-row-derived td {
+  border-top: 1px solid var(--table-total-border);
+  font-weight: 600;
+}
+.mps-row-final td {
+  background: var(--table-highlight-bg);
+  font-weight: 700;
+}
+
+/* ---------- Botón flotante de IA ---------- *
+ * El "glow" son dos capas: sombra proyectada DEL COLOR del acento
+ * (no negra) + un halo difuminado por debajo. Sin canvas ni filtros caros. */
+
+.mps-ai-fab {
+  position: relative;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ai-fg);
+  background: var(--ai-accent);
+  border: 1px solid color-mix(in oklab, #f8fafc 20%, transparent);
+  box-shadow: 0 14px 34px -8px var(--ai-accent);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: grab;
+}
+
+.mps-ai-fab:active {
+  cursor: grabbing;
+}
+
+.mps-ai-fab:hover {
+  transform: scale(1.05);
+  box-shadow: 0 18px 42px -6px var(--ai-accent);
+}
+
+.mps-ai-fab::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: var(--ai-halo);
+  opacity: 0.4;
+  filter: blur(12px);
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.mps-ai-fab:hover::before {
+  opacity: 0.6;
+}
+
+.mps-ai-fab:focus-visible {
+  outline: 2px solid var(--ai-accent);
+  outline-offset: 3px;
+}
+
+/* Botón de IA por fila / por tarjeta: discreto hasta el hover */
+.mps-ai-inline {
+  color: var(--text-tertiary);
+  border-radius: 0.5rem;
+  padding: 0.25rem;
+  transition: all 0.2s ease;
+}
+
+.mps-ai-inline:hover {
+  color: var(--ai-accent);
+  background: var(--info-soft);
+}
+
+.mps-ai-fab.is-alive {
+  animation: mps-ai-breathe 2.8s ease-in-out infinite;
+}
+
+@keyframes mps-ai-breathe {
+  0%,
+  100% {
+    box-shadow: 0 14px 34px -8px var(--ai-accent);
+  }
+  50% {
+    box-shadow: 0 16px 40px -6px var(--ai-accent);
+  }
+}
+
+@keyframes notif-blink {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.25;
+    transform: scale(0.82);
+  }
+}
+
+/* Pasillo WMS — entrada escalonada de bahías */
+@keyframes wms-bay-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wms-bay {
+  animation: wms-bay-in 0.45s ease-out both;
+}
+
+.wms-pallet-film {
+  background-image: repeating-linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0.35) 0 2px,
+    rgba(148, 163, 184, 0.12) 2px 5px
+  );
+}
+
+.wms-sscc-bars {
+  background: repeating-linear-gradient(
+    90deg,
+    #0f172a 0 1px,
+    transparent 1px 2px,
+    #0f172a 2px 3px,
+    transparent 3px 5px
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wms-bay {
+    animation: none;
+  }
+}

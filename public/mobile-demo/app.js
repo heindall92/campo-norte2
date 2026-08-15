@@ -1,0 +1,1376 @@
+/* Generado desde docs/mobile-demo/index.html — no editar a mano.
+   Cambia el fuente y ejecuta: node docs/mobile-demo/build-public.mjs */
+(() => {
+  "use strict";
+
+  /* =====================================================================
+     1 · Iconos (subconjunto Lucide, el mismo set del CRM)
+     ===================================================================== */
+  const I = {
+    home: 'M3 10.5 12 3l9 7.5M5.5 9.5V20h13V9.5',
+    users: 'M16 20v-1.5A3.5 3.5 0 0 0 12.5 15h-5A3.5 3.5 0 0 0 4 18.5V20M10 12a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M20 20v-1.5a3.5 3.5 0 0 0-2.6-3.4M15.5 5.1a3.5 3.5 0 0 1 0 6.8',
+    calendar: 'M7 3v3m10-3v3M4 9h16M5 6h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z',
+    user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 20a7 7 0 0 1 14 0',
+    gauge: 'M12 21a9 9 0 1 1 9-9M12 12l4.5-3.5',
+    database: 'M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3ZM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
+    file: 'M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7l-4-4Zm0 0v4h4M9 13h6M9 17h4',
+    sparkles: 'm12 3 1.9 4.6L18.5 9.5 13.9 11.4 12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3ZM18 15l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9L18 15Z',
+    book: 'M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5V5.5ZM4 20.5A2.5 2.5 0 0 1 6.5 18H19v3H6.5A2.5 2.5 0 0 1 4 20.5Z',
+    workflow: 'M5 4h5v5H5V4Zm9 11h5v5h-5v-5ZM7.5 9v3.5A2.5 2.5 0 0 0 10 15h4',
+    clipboard: 'M9 4h6v3H9V4Zm-2 1H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-1M9 12h6M9 16h4',
+    presentation: 'M3 4h18M4 4v10h16V4M12 14v4m-3 3 3-3 3 3',
+    settings: 'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm8-3.5a8 8 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a8 8 0 0 0-2-1.2L15 3H9l-.5 2.6a8 8 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a8 8 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a8 8 0 0 0 2 1.2L9 21h6l.5-2.6a8 8 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.06-.4.1-.8.1-1.2Z',
+    bell: 'M18 8.5a6 6 0 0 0-12 0c0 5-2 6.5-2 6.5h16s-2-1.5-2-6.5ZM10.3 19a2 2 0 0 0 3.4 0',
+    refresh: 'M20 11a8 8 0 1 0-.6 4M20 5v6h-6',
+    plus: 'M12 5v14M5 12h14',
+    chevron: 'm9 5 7 7-7 7',
+    back: 'm14 6-6 6 6 6',
+    check: 'm4.5 12.5 5 5 10-11',
+    phone: 'M4.5 5.5c0-.8.7-1.5 1.5-1.5h2.2c.6 0 1.2.4 1.4 1l.9 2.6c.2.5 0 1.1-.4 1.5l-1.3 1.1a12 12 0 0 0 5 5l1.1-1.3c.4-.4 1-.6 1.5-.4l2.6.9c.6.2 1 .8 1 1.4V18c0 .8-.7 1.5-1.5 1.5A15 15 0 0 1 4.5 5.5Z',
+    message: 'M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12Z',
+    alert: 'M12 8v5m0 3.5h.01M10.3 3.9 2.6 17.5a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z',
+    flame: 'M12 3s5 4.3 5 9a5 5 0 0 1-10 0c0-1.8 1-3.2 1.8-4.2.3 1.3 1 2.2 1.7 2.2 1 0 1.5-1.6 1.5-3.4 0-1.5-.5-2.7-1-3.6Z',
+    globe: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3.5 9h17M3.5 15h17M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18',
+    camera: 'M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Zm8 9.5a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z',
+    play: 'M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5v-13Zm6 3.5 5 3-5 3V9Z',
+    help: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm-2-11a2 2 0 1 1 2.8 1.8c-.5.3-.8.8-.8 1.4v.4m0 3h.01',
+    shield: 'M12 3 5 6v5.5c0 4 3 7.6 7 9.5 4-1.9 7-5.5 7-9.5V6l-7-3Z',
+    palette: 'M12 21a9 9 0 1 1 0-18c4.5 0 8 3 8 6.5 0 2.2-1.8 3.5-4 3.5h-1.5a1.8 1.8 0 0 0-1.2 3.1c.4.4.7.9.7 1.4 0 .9-.9 1.5-2 1.5ZM8 8.5h.01M7 12.5h.01M11.5 6.5h.01',
+    logout: 'M9 21H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4M16 16l4-4-4-4M20 12H10',
+    search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm5.5-1.5L21 21',
+    map: 'm9 4-6 3v13l6-3 6 3 6-3V4l-6 3-6-3Zm0 0v13m6-10v13',
+    truck: 'M3 7h11v9H3V7Zm11 3h4l3 3v3h-7v-6ZM7 19.5a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Zm10 0a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Z',
+    bike: 'M6.5 19.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm11 0a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM9 16l3.5-5H8l2-3h4l2.5 4M14 8h3',
+    euro: 'M17 6.5A6 6 0 0 0 8 12a6 6 0 0 0 9 5.5M5 10.5h7M5 13.5h7',
+    doc: 'M8 3h8l4 4v14H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm8 0v4h4',
+    trend: 'M4 16.5 9.5 11l3.5 3.5L20 7.5M20 7.5h-4.5M20 7.5V12',
+    clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v5l3.2 2',
+    star: 'm12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.7l5.9-.8L12 3.5Z',
+    layers: 'm12 3 9 5-9 5-9-5 9-5Zm9 9-9 5-9-5m18 4.5-9 5-9-5',
+    lang: 'M4 6h10M9 4v2c0 4-2 7-5 8.5M7.5 10a9 9 0 0 0 6.5 5M13 20l4-9 4 9m-6.6-2.5h5.2',
+  };
+  const icon = (name, w = 20) =>
+    `<svg viewBox="0 0 24 24" width="${w}" height="${w}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${I[name] || ''}"/></svg>`;
+
+  /* =====================================================================
+     2 · Idioma
+     ===================================================================== */
+  const T = {
+    es: {
+      tab_home: 'Inicio', tab_clients: 'Clientes', tab_bookings: 'Reservas', tab_account: 'Cuenta',
+      greet: 'Buenos días', demo: 'Demo · datos ficticios',
+      hero_eyebrow: 'Próxima salida', hero_cta: 'Ver reserva', hero_seats: 'plazas',
+      days: 'días',
+      today: 'Prioridad de hoy', today_all: 'Ver leads',
+      quick: 'Accesos rápidos', eco: 'Ecosistema Campo Norte',
+      kpi_leads: 'Leads esta semana', kpi_leads_foot: '+3 hoy · origen conocido 91 %',
+      kpi_occ: 'Ocupación salidas', kpi_occ_foot: '63 de 68 plazas',
+      kpi_pending: 'Saldo pendiente', kpi_pending_foot: 'Marta Vidal · Mongolia',
+      kpi_margin: 'Margen medio', kpi_margin_foot: 'objetivo 30 %',
+      pri_call: 'Llamar a Isabel Navarro',
+      pri_call_sub: 'Dormida 34 meses · NPS 10 · prioridad 96',
+      pri_lead: 'María Gálvez entra con 94',
+      pri_lead_sub: 'Referida · Mongolia moto · sin asignar respuesta',
+      pri_docs: 'Faltan documentos · Sergio Molina',
+      pri_docs_sub: 'Colombia · sale en 18 días · seguro y pasaporte',
+      foot: 'Datos semilla del repo. La tecnología prepara; el equipo llama. Nada se envía automáticamente al viajero.',
+      leads_title: 'Leads', leads_sub: 'Cola priorizada por scoring. Tú decides quién recibe la llamada.',
+      f_all: 'Todos', f_new: 'Nuevos', f_contact: 'En contacto', f_qual: 'Cualificados',
+      clients_title: 'Clientes', clients_sub: 'Ficha 360º, segmentos y cola de reactivación.',
+      search_clients: 'Buscar cliente, ciudad o ruta',
+      c_month: 'Contactar este mes', c_all: 'Todos', c_vip: 'VIP', c_sleep: 'Dormidos', c_risk: 'En riesgo', c_amb: 'Embajadores',
+      book_title: 'Reservas', book_sub: 'Logística, cobros y preparación de viaje.',
+      b_all: 'Todas', b_open: 'Activas', b_docs: 'Docs pendientes', b_closed: 'Cerradas',
+      acc_title: 'Cuenta',
+      g_account: 'Cuenta', g_look: 'Apariencia', g_modules: 'Módulos', g_support: 'Soporte',
+      s_profile: 'Perfil y datos', s_users: 'Usuarios y roles', s_notif: 'Notificaciones',
+      s_theme: 'Tema', s_accent: 'Acento', s_platform: 'Plataforma', s_lang: 'Idioma',
+      s_sound: 'Sonido de aviso', s_invoices: 'Facturas · Veri*FACTU', s_content: 'Fábrica de contenido',
+      s_know: 'Asistente de conocimiento', s_auto: 'Ecosistema CRM', s_pitch: 'Propuesta', s_slides: 'Presentación',
+      s_settings: 'Ajustes del negocio', s_help: 'Ayuda y licencia', s_legal: 'Legal y privacidad', s_logout: 'Cerrar sesión',
+      th_light: 'Claro', th_dark: 'Oscuro', th_auto: 'Auto',
+      st_trips: 'Expediciones', st_leads: 'Leads mes', st_role: 'Rol',
+      notif_title: 'Notificaciones', notif_read: 'Marcar todo leído', notif_empty: 'Todo al día. Sin avisos nuevos.',
+      more_title: 'Más módulos',
+      sheet_lead: 'Ficha de lead', sheet_client: 'Cliente 360º', sheet_res: 'Reserva',
+      why: 'Por qué esta puntuación', ai_btn: 'Reclasificar con IA', ai_done: 'Scoring actualizado',
+      call: 'Llamar', wa: 'WhatsApp', wa_note: 'Abre WhatsApp con el mensaje escrito por ti. La IA nunca envía sola.',
+      open_desktop: 'Vista completa en escritorio',
+      desktop_note: 'Este módulo vive en la vista de escritorio: tablas anchas, edición masiva y export. Aquí ves el resumen operativo.',
+      itinerary: 'Itinerario', logistics: 'Contactos de logística', payments: 'Cobros',
+      total: 'Total', paid: 'Cobrado', due: 'Pendiente', pax: 'Viajeros', leader: 'Tour leader',
+      refreshed: 'Hub actualizado', refreshed_sub: 'Leads, clientes, reservas y facturas recargados.',
+      marked: 'Bandeja al día', marked_sub: 'Has marcado todos los avisos como leídos.',
+      saved: 'Preferencia guardada', copied: 'Acción registrada en el CRM',
+      trips: 'viajes', ltv: 'Valor de cliente', nps: 'NPS', next: 'Próximo interés', owner: 'Responsable',
+      origin: 'Origen', route: 'Ruta', vehicle: 'Vehículo', status: 'Estado', score: 'Score',
+      inv_title: 'Facturas', inv_sub: 'Régimen especial de agencias (REAV, clave 05) y Veri*FACTU.',
+      auto_title: 'Ecosistema CRM', auto_sub: 'Automatizaciones internas orquestadas. Ninguna escribe al viajero.',
+      version: 'Growth OS · demo móvil v1.0 · datos semilla',
+    },
+    en: {
+      tab_home: 'Home', tab_clients: 'Clients', tab_bookings: 'Bookings', tab_account: 'Account',
+      greet: 'Good morning', demo: 'Demo · sample data',
+      hero_eyebrow: 'Next departure', hero_cta: 'Open booking', hero_seats: 'seats',
+      days: 'days',
+      today: "Today's priority", today_all: 'View leads',
+      quick: 'Quick access', eco: 'Campo Norte ecosystem',
+      kpi_leads: 'Leads this week', kpi_leads_foot: '+3 today · 91% with source',
+      kpi_occ: 'Departure occupancy', kpi_occ_foot: '63 of 68 seats',
+      kpi_pending: 'Outstanding balance', kpi_pending_foot: 'Marta Vidal · Mongolia',
+      kpi_margin: 'Average margin', kpi_margin_foot: 'target 30%',
+      pri_call: 'Call Isabel Navarro',
+      pri_call_sub: 'Dormant 34 months · NPS 10 · priority 96',
+      pri_lead: 'María Gálvez lands at 94',
+      pri_lead_sub: 'Referral · Mongolia bike · reply unassigned',
+      pri_docs: 'Missing documents · Sergio Molina',
+      pri_docs_sub: 'Colombia · departs in 18 days · insurance and passport',
+      foot: 'Seed data from the repo. Tech prepares; the team calls. Nothing is sent to the traveller automatically.',
+      leads_title: 'Leads', leads_sub: 'Queue ranked by scoring. You decide who gets the call.',
+      f_all: 'All', f_new: 'New', f_contact: 'In contact', f_qual: 'Qualified',
+      clients_title: 'Clients', clients_sub: '360º profile, segments and reactivation queue.',
+      search_clients: 'Search client, city or route',
+      c_month: 'Contact this month', c_all: 'All', c_vip: 'VIP', c_sleep: 'Dormant', c_risk: 'At risk', c_amb: 'Ambassadors',
+      book_title: 'Bookings', book_sub: 'Logistics, payments and trip prep.',
+      b_all: 'All', b_open: 'Active', b_docs: 'Docs pending', b_closed: 'Closed',
+      acc_title: 'Account',
+      g_account: 'Account', g_look: 'Appearance', g_modules: 'Modules', g_support: 'Support',
+      s_profile: 'Profile and details', s_users: 'Users and roles', s_notif: 'Notifications',
+      s_theme: 'Theme', s_accent: 'Accent', s_platform: 'Platform', s_lang: 'Language',
+      s_sound: 'Alert sound', s_invoices: 'Invoices · Veri*FACTU', s_content: 'Content factory',
+      s_know: 'Knowledge assistant', s_auto: 'CRM ecosystem', s_pitch: 'Proposal', s_slides: 'Slides',
+      s_settings: 'Business settings', s_help: 'Help and license', s_legal: 'Legal and privacy', s_logout: 'Sign out',
+      th_light: 'Light', th_dark: 'Dark', th_auto: 'Auto',
+      st_trips: 'Expeditions', st_leads: 'Leads month', st_role: 'Role',
+      notif_title: 'Notifications', notif_read: 'Mark all read', notif_empty: 'All clear. No new alerts.',
+      more_title: 'More modules',
+      sheet_lead: 'Lead profile', sheet_client: 'Client 360º', sheet_res: 'Booking',
+      why: 'Why this score', ai_btn: 'Re-score with AI', ai_done: 'Scoring updated',
+      call: 'Call', wa: 'WhatsApp', wa_note: 'Opens WhatsApp with a message you write. AI never sends on its own.',
+      open_desktop: 'Full view on desktop',
+      desktop_note: 'This module lives on the desktop view: wide tables, bulk editing and export. Here you get the operational summary.',
+      itinerary: 'Itinerary', logistics: 'Logistics contacts', payments: 'Payments',
+      total: 'Total', paid: 'Collected', due: 'Outstanding', pax: 'Travellers', leader: 'Tour leader',
+      refreshed: 'Hub updated', refreshed_sub: 'Leads, clients, bookings and invoices reloaded.',
+      marked: 'Inbox clear', marked_sub: 'All alerts marked as read.',
+      saved: 'Preference saved', copied: 'Action logged in the CRM',
+      trips: 'trips', ltv: 'Lifetime value', nps: 'NPS', next: 'Next interest', owner: 'Owner',
+      origin: 'Source', route: 'Route', vehicle: 'Vehicle', status: 'Status', score: 'Score',
+      inv_title: 'Invoices', inv_sub: 'Spanish travel-agency VAT scheme (REAV, key 05) and Veri*FACTU.',
+      auto_title: 'CRM ecosystem', auto_sub: 'Internal automations, orchestrated. None writes to the traveller.',
+      version: 'Growth OS · mobile demo v1.0 · seed data',
+    },
+  };
+  const t = (k) => (T[S.lang] && T[S.lang][k]) || T.es[k] || k;
+
+  /* =====================================================================
+     3 · Datos semilla (src/lib/demo-data.ts · src/lib/ops-data.ts)
+     ===================================================================== */
+  const ROUTE = {
+    MONGOLIA: 'Mongolia · Chinggis Khan',
+    NAMIBIA: 'Namibia · paraíso África',
+    ARGENTINA_PUNA: 'Argentina · La Puna',
+    COSTA_RICA: 'Costa Rica · Full Experience',
+    NEPAL_MUSTANG: 'Nepal · Mustang',
+    ALASKA: 'Alaska · Prudhoe Bay',
+    COLOMBIA: 'Colombia · Coffee Tour',
+    TANZANIA: 'Tanzania · Big Five',
+    CALIFORNIA: 'California · Pacific Road',
+  };
+  const ORIGIN = {
+    referral: { es: 'Referido', en: 'Referral' },
+    brevo_click: { es: 'Clic Brevo', en: 'Brevo click' },
+    web_form: { es: 'Formulario web', en: 'Web form' },
+    feria: { es: 'Feria / evento', en: 'Trade fair' },
+    instagram: { es: 'Instagram', en: 'Instagram' },
+    unknown: { es: 'Sin origen', en: 'No source' },
+  };
+  const LEAD_STATUS = {
+    nuevo: { es: 'Nuevo', en: 'New', tone: '' },
+    en_contacto: { es: 'En contacto', en: 'In contact', tone: 'chip-accent' },
+    cualificado: { es: 'Cualificado', en: 'Qualified', tone: 'chip-ok' },
+  };
+  const SEGMENT = {
+    vip: { es: 'VIP', en: 'VIP', tone: 'chip-accent' },
+    dormido: { es: 'Dormido', en: 'Dormant', tone: 'chip-warn' },
+    embajador: { es: 'Embajador', en: 'Ambassador', tone: 'chip-ok' },
+    en_riesgo: { es: 'En riesgo', en: 'At risk', tone: 'chip-danger' },
+    recurrente: { es: 'Recurrente', en: 'Returning', tone: 'chip-ok' },
+    activo: { es: 'Activo', en: 'Active', tone: '' },
+    prospecto_newsletter: { es: 'Newsletter', en: 'Newsletter', tone: '' },
+  };
+  const RES_STATUS = {
+    reservado: { es: 'Reservada', en: 'Booked', tone: 'chip-accent' },
+    docs_pendientes: { es: 'Docs pendientes', en: 'Docs pending', tone: 'chip-warn' },
+    prep_viaje: { es: 'Prep. viaje', en: 'Trip prep', tone: 'chip-accent' },
+    cerrado: { es: 'Cerrada', en: 'Closed', tone: 'chip-ok' },
+  };
+  const INV_STATUS = {
+    cobrada: { es: 'Cobrada', en: 'Paid', tone: 'chip-ok' },
+    enviada_aeat: { es: 'Enviada AEAT', en: 'Sent to AEAT', tone: 'chip-accent' },
+    emitida: { es: 'Emitida', en: 'Issued', tone: '' },
+    borrador: { es: 'Borrador', en: 'Draft', tone: 'chip-warn' },
+  };
+
+  const LEADS = [
+    { id: 'L-1042', name: 'María Gálvez', score: 94, status: 'cualificado', origin: 'referral', route: 'MONGOLIA', vehicle: 'moto', owner: 'Sofía', when: { es: 'hace 3 días', en: '3 days ago' },
+      why: { es: ['Referida por cliente de 3+ expediciones', 'Interés Mongolia en moto', 'Presupuesto alineado con ticket medio'], en: ['Referred by a 3+ expedition client', 'Wants Mongolia by motorcycle', 'Budget matches average ticket'] } },
+    { id: 'L-1041', name: 'Jordi Puig', score: 83, status: 'en_contacto', origin: 'brevo_click', route: 'NAMIBIA', vehicle: '4x4', owner: 'Laura', when: { es: 'hace 4 días', en: '4 days ago' },
+      why: { es: ['Clic en CTA Namibia', 'Abrió 5 de 7 newsletters', 'Viajó a Costa Rica en 2024'], en: ['Clicked the Namibia CTA', 'Opened 5 of 7 newsletters', 'Travelled to Costa Rica in 2024'] } },
+    { id: 'L-1038', name: 'Elena Ruiz', score: 76, status: 'nuevo', origin: 'web_form', route: 'ARGENTINA_PUNA', vehicle: '4x4', owner: '—', when: { es: 'hace 5 días', en: '5 days ago' },
+      why: { es: ['Formulario completo', 'UTM Instagram Stories', 'Pregunta por La Puna en 4x4'], en: ['Complete web form', 'Instagram Stories UTM', 'Asks about La Puna in 4x4'] } },
+    { id: 'L-1035', name: 'Carlos Méndez', score: 69, status: 'en_contacto', origin: 'feria', route: 'ALASKA', vehicle: 'moto', owner: 'Sofía', when: { es: 'hace 6 días', en: '6 days ago' },
+      why: { es: ['Lead de feria AdventureTravel-26', 'Interés Alaska', 'Sin historial previo'], en: ['Lead from AdventureTravel-26 fair', 'Interest in Alaska', 'No previous history'] } },
+    { id: 'L-1031', name: 'Ana Beltrán', score: 48, status: 'nuevo', origin: 'instagram', route: null, vehicle: null, owner: '—', when: { es: 'hace 4 días', en: '4 days ago' },
+      why: { es: ['DM sin formulario', 'Origen parcial', 'Sin ruta clara'], en: ['DM without a form', 'Partial source', 'No clear route'] } },
+    { id: 'L-1028', name: 'Pablo Soto', score: 26, status: 'nuevo', origin: 'unknown', route: null, vehicle: null, owner: '—', when: { es: 'hace 13 días', en: '13 days ago' },
+      why: { es: ['Sin origen conocido', 'Solo un email en la bandeja de Sofía', 'Falta contexto para priorizar'], en: ['Unknown source', 'Just an email in Sofía inbox', 'Not enough context to rank'] } },
+  ];
+
+  const CLIENTS = [
+    { id: 'C-012', name: 'Isabel Navarro', city: 'Madrid', segment: 'dormido', trips: 2, ltv: 11200, nps: 10, next: 'MONGOLIA', owner: 'Sofía', priority: 96, month: true,
+      note: { es: '34 meses sin viajar, NPS 10. Llamada de Sofía, no newsletter fría.', en: '34 months without travelling, NPS 10. Call from Sofía, not a cold newsletter.' },
+      history: [{ r: 'MONGOLIA', d: '2021', a: 5400 }, { r: 'NEPAL_MUSTANG', d: '2023', a: 5800 }] },
+    { id: 'C-003', name: 'Marta Vidal', city: 'Barcelona', segment: 'vip', trips: 11, ltv: 58000, nps: 10, next: 'ALASKA', owner: 'Sofía', priority: 88, month: true, due: 4800,
+      note: { es: '11 expediciones. Saldo de 4.800 € en Mongolia sep 2026.', en: '11 expeditions. €4,800 outstanding on Mongolia Sep 2026.' },
+      history: [{ r: 'ALASKA', d: '2024', a: 6100 }, { r: 'MONGOLIA', d: '2025', a: 5900 }] },
+    { id: 'C-055', name: 'Carlos Méndez', city: 'Bilbao', segment: 'embajador', trips: 3, ltv: 16800, nps: 9, next: 'TANZANIA', owner: 'Laura', priority: 64, month: false,
+      note: { es: 'Trae referidos cada temporada. Tanzania oct 2026 reservada.', en: 'Brings referrals every season. Tanzania Oct 2026 booked.' },
+      history: [{ r: 'NAMIBIA', d: '2022', a: 5600 }, { r: 'COSTA_RICA', d: '2024', a: 5300 }] },
+    { id: 'C-077', name: 'Ana Beltrán', city: 'Málaga', segment: 'recurrente', trips: 4, ltv: 21500, nps: 9, next: 'COSTA_RICA', owner: 'Laura', priority: 55, month: false,
+      note: { es: 'Namibia jun 2026 cerrada y facturada. Buen encaje para Costa Rica.', en: 'Namibia Jun 2026 closed and invoiced. Good fit for Costa Rica.' },
+      history: [{ r: 'NAMIBIA', d: '2026', a: 6200 }, { r: 'COLOMBIA', d: '2023', a: 5100 }] },
+    { id: 'C-120', name: 'Nuria Pons', city: 'Palma', segment: 'en_riesgo', trips: 1, ltv: 4900, nps: 6, next: null, owner: 'Laura', priority: 72, month: true,
+      note: { es: 'Una expedición y NPS 6: revisar qué falló antes de volver a ofrecer.', en: 'One expedition and NPS 6: review what went wrong before offering again.' },
+      history: [{ r: 'COSTA_RICA', d: '2024', a: 4900 }] },
+    { id: 'C-041', name: 'Sofía Torres', city: 'Valencia', segment: 'dormido', trips: 1, ltv: 5600, nps: 8, next: 'COLOMBIA', owner: 'Sofía', priority: 58, month: false,
+      note: { es: 'Preguntó por Colombia en enero y no hubo seguimiento.', en: 'Asked about Colombia in January with no follow-up.' },
+      history: [{ r: 'ARGENTINA_PUNA', d: '2023', a: 5600 }] },
+    { id: 'C-088', name: 'Sergio Molina', city: 'Sevilla', segment: 'activo', trips: 1, ltv: 5400, nps: 9, next: 'COLOMBIA', owner: 'Sofía', priority: 51, month: false, due: 7800,
+      note: { es: 'Colombia ago 2026 con documentación pendiente.', en: 'Colombia Aug 2026 with documents pending.' },
+      history: [{ r: 'COSTA_RICA', d: '2025', a: 5400 }] },
+  ];
+
+  const RESERVATIONS = [
+    { id: 'R-4821', client: 'Marta Vidal', route: 'MONGOLIA', trip: 'Mongolia · Chinggis Khan · sep 2026', vehicle: 'moto', status: 'prep_viaje',
+      departure: '2026-09-08', pax: 1, total: 6800, paid: 2000, leader: 'Jorge Peña',
+      itinerary: [
+        { day: 'D0–D1', place: 'Ulaanbaatar', detail: { es: 'Kempinski Khan Palace · cena de bienvenida', en: 'Kempinski Khan Palace · welcome dinner' } },
+        { day: 'D2–D4', place: 'Terelj / Gorkhi', detail: { es: 'Ger camp Terelj Nomads · pensión completa', en: 'Terelj Nomads ger camp · full board' } },
+        { day: 'D5–D8', place: { es: 'Estepa central', en: 'Central steppe' }, detail: { es: 'Campamentos móviles · picnic en ruta', en: 'Mobile camps · picnic on route' } },
+      ],
+      contacts: [
+        { role: { es: 'Operador local UB', en: 'Local operator UB' }, name: 'Bat-Erdene Travel', phone: '+976 9900 1122' },
+        { role: { es: 'Mecánico de ruta', en: 'Route mechanic' }, name: 'Tuguldur Garage', phone: '+976 8811 3344' },
+      ] },
+    { id: 'R-4822', client: 'Sergio Molina', route: 'COLOMBIA', trip: 'Colombia · Coffee Tour · ago 2026', vehicle: '4x4', status: 'docs_pendientes',
+      departure: '2026-08-18', pax: 2, total: 10800, paid: 3000, leader: 'Luis Ortega',
+      itinerary: [
+        { day: 'D1', place: 'Bogotá', detail: { es: 'Recogida y briefing de seguridad', en: 'Pick-up and safety briefing' } },
+        { day: 'D2–D5', place: { es: 'Eje cafetero', en: 'Coffee region' }, detail: { es: 'Haciendas · rutas 4x4 de montaña', en: 'Haciendas · mountain 4x4 routes' } },
+      ],
+      contacts: [{ role: { es: 'Operador local', en: 'Local operator' }, name: 'Andes Overland', phone: '+57 310 555 2211' }] },
+    { id: 'R-4820', client: 'Carlos Méndez', route: 'TANZANIA', trip: 'Tanzania · Big Five · oct 2026', vehicle: '4x4', status: 'reservado',
+      departure: '2026-10-12', pax: 1, total: 7400, paid: 1500, leader: 'Luis Ortega',
+      itinerary: [
+        { day: 'D1–D2', place: 'Arusha', detail: { es: 'Hotel base · revisión de vehículos', en: 'Base hotel · vehicle check' } },
+        { day: 'D3–D7', place: 'Serengeti', detail: { es: 'Campamentos · guía de fauna', en: 'Camps · wildlife guide' } },
+      ],
+      contacts: [{ role: { es: 'Operador local', en: 'Local operator' }, name: 'Kilimanjaro Fleet', phone: '+255 754 220 118' }] },
+    { id: 'R-4823', client: 'Ana Beltrán', route: 'NAMIBIA', trip: 'Namibia · paraíso África · jun 2026', vehicle: '4x4', status: 'cerrado',
+      departure: '2026-06-05', pax: 1, total: 6200, paid: 6200, leader: 'Luis Ortega',
+      itinerary: [{ day: 'D1–D9', place: 'Windhoek → Sossusvlei', detail: { es: 'Expedición completada y facturada', en: 'Expedition completed and invoiced' } }],
+      contacts: [{ role: { es: 'Operador local', en: 'Local operator' }, name: 'Namib Tracks', phone: '+264 61 300 442' }] },
+  ];
+
+  const INVOICES = [
+    { number: 'F-2026-0148', client: 'Ana Beltrán', trip: 'Namibia · jun 2026', total: 6200, status: 'cobrada', date: '01/04/2026', hash: 'a3f1…c92e' },
+    { number: 'F-2026-0161', client: 'Marta Vidal', trip: 'Mongolia · sep 2026', total: 2000, status: 'enviada_aeat', date: '12/04/2026', hash: 'b7c2…11aa' },
+    { number: 'F-2026-0162', client: 'Sergio Molina', trip: 'Colombia · ago 2026', total: 3000, status: 'emitida', date: '01/06/2026', hash: '—' },
+    { number: 'F-2026-0170', client: 'Carlos Méndez', trip: 'Tanzania · oct 2026', total: 1500, status: 'borrador', date: '02/07/2026', hash: '—' },
+  ];
+
+  const AUTOMATIONS = [
+    { id: 'A-01', name: { es: 'Formulario web → ficha + aviso interno', en: 'Web form → record + internal alert' }, on: true,
+      sub: { es: 'Crea el lead, puntúa con IA y avisa a Sofía en 40 s', en: 'Creates the lead, scores it and pings Sofía in 40s' } },
+    { id: 'A-02', name: { es: 'Cola de reactivación mensual', en: 'Monthly reactivation queue' }, on: true,
+      sub: { es: 'Lista «llamar este mes» · la llamada la hace una persona', en: '“Call this month” list · a human makes the call' } },
+    { id: 'A-03', name: { es: 'Checklist de documentos por salida', en: 'Per-departure document checklist' }, on: true,
+      sub: { es: 'Avisa 30 y 15 días antes si falta seguro o pasaporte', en: 'Alerts 30 and 15 days out on missing insurance or passport' } },
+    { id: 'A-04', name: { es: 'Export gestoría (REAV 05)', en: 'Accountant export (REAV 05)' }, on: false,
+      sub: { es: 'CSV mensual de facturas con clave de régimen', en: 'Monthly invoice CSV with VAT scheme key' } },
+  ];
+
+  const NOTIFICATIONS = [
+    { icon: 'flame', tone: 'chip-danger', title: { es: 'Lead 94 sin asignar', en: 'Lead 94 unassigned' }, sub: { es: 'María Gálvez · Mongolia moto · entró hace 3 días', en: 'María Gálvez · Mongolia bike · 3 days ago' }, when: '09:12', to: 'leads' },
+    { icon: 'alert', tone: 'chip-warn', title: { es: 'Documentos pendientes', en: 'Documents pending' }, sub: { es: 'Sergio Molina · Colombia sale en 18 días', en: 'Sergio Molina · Colombia departs in 18 days' }, when: '08:40', to: 'bookings' },
+    { icon: 'euro', tone: 'chip-accent', title: { es: 'Saldo de 4.800 € pendiente', en: '€4,800 outstanding' }, sub: { es: 'Marta Vidal · Mongolia sep 2026', en: 'Marta Vidal · Mongolia Sep 2026' }, when: 'Ayer', to: 'bookings' },
+    { icon: 'check', tone: 'chip-ok', title: { es: 'Factura F-2026-0148 cobrada', en: 'Invoice F-2026-0148 paid' }, sub: { es: 'Ana Beltrán · 6.200 € · Namibia', en: 'Ana Beltrán · €6,200 · Namibia' }, when: 'Ayer', to: 'invoices' },
+  ];
+
+  const ECO = [
+    { id: 'web', icon: 'globe', from: '#1d4ed8', to: '#0ea5e9', title: { es: 'Web oficial', en: 'Official site' }, sub: { es: 'Lo publicado en example.com', en: "What's live on example.com" } },
+    { id: 'ig', icon: 'camera', from: '#be2f6b', to: '#f59e0b', title: { es: 'Instagram', en: 'Instagram' }, sub: { es: 'Pulso de marca y stories', en: 'Brand pulse and stories' } },
+    { id: 'yt', icon: 'play', from: '#b91c1c', to: '#f97316', title: { es: 'YouTube', en: 'YouTube' }, sub: { es: 'Rutas en vídeo', en: 'Routes on video' } },
+    { id: 'support', icon: 'help', from: '#0f766e', to: '#22c55e', title: { es: 'Soporte y licencia', en: 'Support & license' }, sub: { es: 'Uso interno · documentación', en: 'Internal use · docs' } },
+    { id: 'settings', icon: 'settings', from: '#334155', to: '#64748b', title: { es: 'Ajustes del negocio', en: 'Business settings' }, sub: { es: 'Datos fiscales y WhatsApp', en: 'Tax data and WhatsApp' } },
+  ];
+
+  const QUICK = [
+    { id: 'leads', icon: 'gauge', es: 'Leads', en: 'Leads' },
+    { id: 'bookings', icon: 'calendar', es: 'Reservas', en: 'Bookings' },
+    { id: 'clients', icon: 'users', es: 'Clientes', en: 'Clients' },
+    { id: 'invoices', icon: 'file', es: 'Facturas', en: 'Invoices' },
+    { id: 'hub', icon: 'database', es: 'Data Hub', en: 'Data Hub' },
+    { id: 'automations', icon: 'workflow', es: 'Ecosistema', en: 'Ecosystem' },
+    { id: 'knowledge', icon: 'book', es: 'Conocimiento', en: 'Knowledge' },
+    { id: 'more', icon: 'plus', es: 'Más', en: 'More' },
+  ];
+
+  const MODULES = [
+    { id: 'invoices', icon: 'file', es: 'Facturas', en: 'Invoices' },
+    { id: 'content', icon: 'sparkles', es: 'Contenido', en: 'Content' },
+    { id: 'knowledge', icon: 'book', es: 'Conocimiento', en: 'Knowledge' },
+    { id: 'automations', icon: 'workflow', es: 'Ecosistema', en: 'Ecosystem' },
+    { id: 'hub', icon: 'database', es: 'Data Hub', en: 'Data Hub' },
+    { id: 'pitch', icon: 'clipboard', es: 'Propuesta', en: 'Proposal' },
+    { id: 'slides', icon: 'presentation', es: 'Presentación', en: 'Slides' },
+    { id: 'users', icon: 'user', es: 'Usuarios', en: 'Users' },
+    { id: 'settings', icon: 'settings', es: 'Ajustes', en: 'Settings' },
+  ];
+
+  const MODULE_COPY = {
+    hub: { title: { es: 'Data Hub', en: 'Data Hub' }, sub: { es: 'Memoria única: leads, clientes, reservas y facturas.', en: 'Single memory: leads, clients, bookings and invoices.' },
+      rows: [['Leads', '128'], ['Clientes', '96'], [{ es: 'Reservas', en: 'Bookings' }, '41'], [{ es: 'Facturas', en: 'Invoices' }, '37'], [{ es: 'Modo', en: 'Mode' }, 'localStorage'], [{ es: 'Último backup', en: 'Last backup' }, '31/07/2026']] },
+    content: { title: { es: 'Fábrica de contenido', en: 'Content factory' }, sub: { es: 'Borradores que revisa una persona antes de salir.', en: 'Drafts a human reviews before anything ships.' },
+      rows: [[{ es: 'En revisión', en: 'In review' }, '3'], [{ es: 'Listos para Brevo', en: 'Ready for Brevo' }, '2'], [{ es: 'Publicados este mes', en: 'Published this month' }, '6'], [{ es: 'Canal principal', en: 'Main channel' }, 'Email / Brevo']] },
+    knowledge: { title: { es: 'Asistente de conocimiento', en: 'Knowledge assistant' }, sub: { es: 'Responde con documentos internos y datos del Hub.', en: 'Answers from internal docs and live Hub data.' },
+      rows: [[{ es: 'Documentos indexados', en: 'Indexed documents' }, '24'], [{ es: 'Preguntas este mes', en: 'Questions this month' }, '61'], [{ es: 'Motor', en: 'Engine' }, 'RAG local + Ollama'], [{ es: 'Envía al viajero', en: 'Writes to traveller' }, 'No']] },
+    pitch: { title: { es: 'Propuesta', en: 'Proposal' }, sub: { es: 'Presentación producto Campo Norte (demo).', en: 'Campo Norte product pitch (demo).' },
+      rows: [[{ es: 'Metas a 6 meses', en: '6-month goals' }, '6'], [{ es: 'Origen conocido', en: 'Known source' }, '95 %'], [{ es: 'Menos papeleo', en: 'Less paperwork' }, '−60 %'], [{ es: 'Reactivación', en: 'Reactivation' }, '15 %']] },
+    slides: { title: { es: 'Presentación', en: 'Slides' }, sub: { es: '15 diapositivas del pitch, listas para proyectar.', en: '15 pitch slides, ready to project.' },
+      rows: [[{ es: 'Diapositivas', en: 'Slides' }, '15'], [{ es: 'Formato', en: 'Format' }, '16:9 · PPTX'], [{ es: 'Última edición', en: 'Last edit' }, '28/07/2026']] },
+    users: { title: { es: 'Usuarios y roles', en: 'Users and roles' }, sub: { es: 'Quién entra y qué puede tocar.', en: 'Who signs in and what they can touch.' },
+      rows: [['Sofía Navarro', 'Admin'], ['Marta Vega', { es: 'Operaciones', en: 'Operations' }], ['Luis Ortega', 'Tour leader'], ['Demo', 'Growth OS']] },
+    settings: { title: { es: 'Ajustes del negocio', en: 'Business settings' }, sub: { es: 'Datos fiscales, WhatsApp saliente y proveedores de IA.', en: 'Tax data, outbound WhatsApp and AI providers.' },
+      rows: [[{ es: 'Razón social', en: 'Legal name' }, 'Campo Norte Expediciones, S.L.'], [{ es: 'Régimen IVA', en: 'VAT scheme' }, 'REAV · clave 05'], [{ es: 'Proveedor IA', en: 'AI provider' }, 'Ollama (local)'], [{ es: 'Claves en cliente', en: 'Client-side keys' }, 'No']] },
+  };
+
+  const ACCENTS = [
+    { id: 'blue', c: '#2563eb', es: 'Azul eléctrico', en: 'Electric blue' },
+    { id: 'magma', c: '#d4442c', es: 'Magma', en: 'Magma' },
+    { id: 'dune', c: '#a16207', es: 'Duna', en: 'Dune' },
+    { id: 'basalt', c: '#0f766e', es: 'Basalto', en: 'Basalt' },
+    { id: 'violet', c: '#6d28d9', es: 'Violeta', en: 'Violet' },
+  ];
+
+  /* =====================================================================
+     4 · Estado
+     ===================================================================== */
+  const S = {
+    lang: 'es',
+    theme: 'auto',
+    accent: 'blue',
+    platform: 'ios',
+    tab: 'home',
+    push: null,          // pantalla apilada (leads, invoices, …)
+    leadFilter: 'all',
+    clientFilter: 'all',
+    bookFilter: 'all',
+    query: '',
+    unread: 4,
+    sound: true,
+    scores: {},          // reclasificaciones IA de la sesión
+    autos: Object.fromEntries(AUTOMATIONS.map((a) => [a.id, a.on])),
+    anim: 'anim-tab',
+  };
+
+  const $ = (sel) => document.querySelector(sel);
+  const el = { appbar: $('#appbar'), screen: $('#screen'), tabbar: $('#tabbar'), scroll: $('#scroll'),
+    sheetHost: $('#sheetHost'), sheetBody: $('#sheetBody'), sheetTitle: $('#sheetTitle'),
+    toast: $('#toast'), ptr: $('#ptr'), fab: $('#fab'), device: $('#device') };
+
+  const L = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? (v[S.lang] ?? v.es) : v);
+  const eur = (n) => new Intl.NumberFormat(S.lang === 'es' ? 'es-ES' : 'en-GB', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const scoreOf = (l) => S.scores[l.id] ?? l.score;
+  const scoreTone = (n) => (n >= 85 ? 'var(--ok)' : n >= 65 ? 'var(--accent)' : n >= 45 ? 'var(--warn)' : 'var(--danger)');
+  const initials = (n) => n.split(' ').slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+  const paxLabel = (n) => (S.lang === 'es' ? (n === 1 ? 'viajero' : 'viajeros') : (n === 1 ? 'traveller' : 'travellers'));
+  const tripsLabel = (n) => (S.lang === 'es' ? (n === 1 ? 'viaje' : 'viajes') : (n === 1 ? 'trip' : 'trips'));
+
+  const TODAY = new Date('2026-07-31T09:41:00');
+  const daysTo = (iso) => Math.max(0, Math.round((new Date(iso + 'T00:00:00') - TODAY) / 86400000));
+  const longDate = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString(
+    S.lang === 'es' ? 'es-ES' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).replace('.', '');
+  const shortDate = (iso) => {
+    const d = new Date(iso + 'T00:00:00');
+    return { day: String(d.getDate()).padStart(2, '0'),
+      mon: d.toLocaleDateString(S.lang === 'es' ? 'es-ES' : 'en-GB', { month: 'short' }).replace('.', '') };
+  };
+
+  /* =====================================================================
+     5 · Piezas reutilizables
+     ===================================================================== */
+  const chip = (label, tone = '') => `<span class="chip ${tone}">${esc(label)}</span>`;
+
+  function ring(value, size = 44, stroke = 4, color) {
+    const r = (size - stroke) / 2;
+    const c = 2 * Math.PI * r;
+    const off = c * (1 - Math.min(100, value) / 100);
+    const col = color || scoreTone(value);
+    return `<div class="ring" style="width:${size}px;height:${size}px">
+      <svg viewBox="0 0 ${size} ${size}">
+        <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="currentColor" stroke-opacity=".14" stroke-width="${stroke}"/>
+        <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${col}" stroke-width="${stroke}" stroke-linecap="round"
+          stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" style="transition:stroke-dashoffset .9s var(--spring)"/>
+      </svg>
+      <b style="color:${col}">${value}</b>
+    </div>`;
+  }
+
+  function sparkline(values, w = 130, h = 30) {
+    const min = Math.min(...values), max = Math.max(...values), span = max - min || 1;
+    const pts = values.map((v, i) => [(i / (values.length - 1)) * w, h - 3 - ((v - min) / span) * (h - 8)]);
+    const line = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+    const area = `${line} L${w} ${h} L0 ${h} Z`;
+    const last = pts[pts.length - 1];
+    return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+      <path d="${area}" fill="color-mix(in oklab, var(--accent) 16%, transparent)"/>
+      <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+      <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.6" fill="var(--accent)"/>
+    </svg>`;
+  }
+
+  const vehicleIcon = (v) => (v === 'moto' ? icon('bike', 14) : icon('truck', 14));
+
+  /* =====================================================================
+     6 · Barra superior y pestañas
+     ===================================================================== */
+  const TABS = [
+    { id: 'home', icon: 'home', label: 'tab_home' },
+    { id: 'clients', icon: 'users', label: 'tab_clients' },
+    { id: 'bookings', icon: 'calendar', label: 'tab_bookings' },
+    { id: 'account', icon: 'user', label: 'tab_account' },
+  ];
+
+  function renderTabs() {
+    el.tabbar.innerHTML = `<div class="tabbar-inner" role="tablist">${TABS.map((tb) => `
+      <button class="tab" role="tab" type="button" data-tab="${tb.id}" aria-selected="${S.tab === tb.id && !S.push}">
+        <span class="tab-ind" aria-hidden="true"></span>
+        ${icon(tb.icon)}
+        <small>${t(tb.label)}</small>
+      </button>`).join('')}</div>`;
+    const showFab = !S.push && (S.tab === 'clients' || S.tab === 'bookings');
+    el.fab.classList.toggle('show', showFab);
+  }
+
+  function renderAppbar() {
+    el.appbar.className = 'appbar' + (el.scroll.scrollTop > 6 ? ' stuck' : '');
+    if (S.push) {
+      const titles = { leads: t('leads_title'), invoices: t('inv_title'), automations: t('auto_title') };
+      const title = titles[S.push] || L((MODULE_COPY[S.push] || {}).title) || '';
+      el.appbar.innerHTML = `<div class="appbar-row">
+        <button class="back-btn" type="button" data-pop>${icon('back', 18)}<span>${t('tab_home')}</span></button>
+        <p class="appbar-title" style="text-align:center">${esc(title)}</p>
+        <button class="icon-btn" type="button" data-sheet="notif" aria-label="${t('notif_title')}">${icon('bell')}${S.unread ? '<i class="badge-dot"></i>' : ''}</button>
+      </div>`;
+      return;
+    }
+    if (S.tab === 'home') {
+      el.appbar.innerHTML = `<div class="appbar-row">
+        <button class="avatar" type="button" data-tab="account" aria-label="${t('acc_title')}">MC</button>
+        <button class="greet" type="button" data-tab="account">
+          <small>${t('greet')}</small><strong>Sofía</strong>
+        </button>
+        <button class="icon-btn" type="button" data-refresh aria-label="Hub">${icon('refresh')}</button>
+        <button class="icon-btn" type="button" data-sheet="notif" aria-label="${t('notif_title')}">${icon('bell')}${S.unread ? '<i class="badge-dot"></i>' : ''}</button>
+      </div>`;
+      return;
+    }
+    const map = { clients: t('clients_title'), bookings: t('book_title'), account: t('acc_title') };
+    el.appbar.innerHTML = `<div class="appbar-row">
+      <p class="appbar-title">${esc(map[S.tab])}</p>
+      ${S.tab === 'account'
+        ? `<button class="icon-btn" type="button" data-sheet="more" aria-label="${t('more_title')}">${icon('layers')}</button>`
+        : `<button class="icon-btn" type="button" data-new aria-label="Nuevo">${icon('plus')}</button>`}
+      <button class="icon-btn" type="button" data-sheet="notif" aria-label="${t('notif_title')}">${icon('bell')}${S.unread ? '<i class="badge-dot"></i>' : ''}</button>
+    </div>`;
+  }
+
+  /* =====================================================================
+     7 · Pantallas
+     ===================================================================== */
+  function screenHome() {
+    const next = RESERVATIONS.find((r) => r.id === 'R-4821');
+    const d = daysTo(next.departure);
+    const seatsPct = Math.round((10 / 12) * 100);
+    return `
+      <div class="hero">
+        <div class="hero-top">
+          <div>
+            <p class="hero-eyebrow">${t('hero_eyebrow')}</p>
+            <h3>${esc(ROUTE.MONGOLIA)}</h3>
+            <p class="hero-meta">${longDate(next.departure)} · ${esc(next.leader)} · ${vehicleIcon('moto')} moto</p>
+          </div>
+          <div class="countdown">
+            <svg viewBox="0 0 66 66">
+              <circle cx="33" cy="33" r="29" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="5"/>
+              <circle cx="33" cy="33" r="29" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"
+                stroke-dasharray="182" stroke-dashoffset="${(182 * (1 - seatsPct / 100)).toFixed(0)}"/>
+            </svg>
+            <div><span>${d}</span><small>${t('days')}</small></div>
+          </div>
+        </div>
+        <div class="hero-foot">
+          <button class="pill-cta" type="button" data-res="R-4821">${t('hero_cta')} ${icon('chevron', 14)}</button>
+          <span class="hero-seats">10/12 ${t('hero_seats')}</span>
+        </div>
+      </div>
+
+      <div class="bento">
+        <div class="card kpi">
+          <span class="kpi-label">${t('kpi_leads')}</span>
+          <span class="kpi-value">12</span>
+          ${sparkline([24, 27, 31, 29, 34, 30, 36])}
+          <span class="kpi-foot trend-up">${icon('trend', 13)} ${t('kpi_leads_foot')}</span>
+        </div>
+        <div class="card kpi">
+          <span class="kpi-label">${t('kpi_occ')}</span>
+          <span class="kpi-value">92<small>%</small></span>
+          <div class="meter"><i style="width:92%"></i></div>
+          <span class="kpi-foot" style="color:var(--muted)">${t('kpi_occ_foot')}</span>
+        </div>
+        <div class="card kpi">
+          <span class="kpi-label">${t('kpi_pending')}</span>
+          <span class="kpi-value">${eur(4800)}</span>
+          <span class="kpi-foot trend-warn">${icon('clock', 13)} ${t('kpi_pending_foot')}</span>
+        </div>
+        <div class="card kpi">
+          <span class="kpi-label">${t('kpi_margin')}</span>
+          <span class="kpi-value">31<small>%</small></span>
+          <div class="meter"><i style="width:62%"></i></div>
+          <span class="kpi-foot trend-up">${icon('check', 13)} ${t('kpi_margin_foot')}</span>
+        </div>
+      </div>
+
+      <section class="stack-tight">
+        <div class="section-head">
+          <h2>${t('today')}</h2>
+          <button type="button" data-push="leads">${t('today_all')}</button>
+        </div>
+        <div class="card divided">
+          <button class="row tappable" type="button" data-client="C-012">
+            <span class="row-lead" style="background:color-mix(in oklab,var(--danger) var(--tint),transparent);color:var(--danger)">${icon('phone')}</span>
+            <span class="row-body"><span class="row-title">${t('pri_call')}</span><span class="row-sub clamp">${t('pri_call_sub')}</span></span>
+            ${icon('chevron', 16)}
+          </button>
+          <button class="row tappable" type="button" data-lead="L-1042">
+            <span class="row-lead" style="background:color-mix(in oklab,var(--accent) var(--tint),transparent);color:var(--accent)">${icon('flame')}</span>
+            <span class="row-body"><span class="row-title">${t('pri_lead')}</span><span class="row-sub clamp">${t('pri_lead_sub')}</span></span>
+            ${icon('chevron', 16)}
+          </button>
+          <button class="row tappable" type="button" data-res="R-4822">
+            <span class="row-lead" style="background:color-mix(in oklab,var(--warn) var(--tint),transparent);color:var(--warn)">${icon('doc')}</span>
+            <span class="row-body"><span class="row-title">${t('pri_docs')}</span><span class="row-sub clamp">${t('pri_docs_sub')}</span></span>
+            ${icon('chevron', 16)}
+          </button>
+        </div>
+      </section>
+
+      <section class="stack-tight">
+        <div class="section-head"><h2>${t('quick')}</h2></div>
+        <div class="quick-grid">
+          ${QUICK.map((q) => `<button class="quick" type="button" data-quick="${q.id}">
+            <span>${icon(q.icon)}</span><small>${q[S.lang]}</small></button>`).join('')}
+        </div>
+      </section>
+
+      <section class="stack-tight">
+        <div class="section-head"><h2>${t('eco')}</h2></div>
+        <div class="rail-scroll">
+          ${ECO.map((e) => `<button class="eco" type="button" data-eco="${e.id}">
+            <span class="eco-art" style="background:linear-gradient(140deg, ${e.from}, ${e.to})">${icon(e.icon, 26)}</span>
+            <span class="eco-body"><strong>${L(e.title)}</strong><small>${L(e.sub)}</small></span>
+          </button>`).join('')}
+        </div>
+      </section>
+
+      <p class="foot-note">${t('foot')}</p>`;
+  }
+
+  function screenLeads() {
+    const filters = [['all', 'f_all'], ['nuevo', 'f_new'], ['en_contacto', 'f_contact'], ['cualificado', 'f_qual']];
+    const list = LEADS.filter((l) => S.leadFilter === 'all' || l.status === S.leadFilter)
+      .slice().sort((a, b) => scoreOf(b) - scoreOf(a));
+    return `
+      <div class="screen-title"><h1>${t('leads_title')}</h1><p>${t('leads_sub')}</p></div>
+      <div class="filters">${filters.map(([id, key]) =>
+        `<button class="filter" type="button" data-leadfilter="${id}" aria-pressed="${S.leadFilter === id}">${t(key)}</button>`).join('')}</div>
+      <div class="stack-tight">
+        ${list.map((l) => {
+          const sc = scoreOf(l);
+          const st = LEAD_STATUS[l.status];
+          return `<button class="card row tappable" type="button" data-lead="${l.id}">
+            ${ring(sc)}
+            <span class="row-body">
+              <span class="row-title">${esc(l.name)}</span>
+              <span class="row-sub">${l.route ? esc(ROUTE[l.route]) : (S.lang === 'es' ? 'Ruta por definir' : 'Route to define')}</span>
+              <span style="display:flex;gap:6px;margin-top:3px">${chip(L(st), st.tone)}${chip(L(ORIGIN[l.origin]))}</span>
+            </span>
+            <span class="row-tail" style="flex-direction:row;align-items:center;gap:5px"><span class="row-sub">${L(l.when)}</span>${icon('chevron', 16)}</span>
+          </button>`;
+        }).join('')}
+      </div>
+      <div class="notice">${icon('shield')}<span>${S.lang === 'es'
+        ? '<b>Regla de oro:</b> el scoring prioriza, pero el primer mensaje siempre lo escribe una persona del equipo.'
+        : '<b>Golden rule:</b> scoring ranks the queue, but the first message is always written by a human.'}</span></div>`;
+  }
+
+  function screenClients() {
+    const filters = [['all', 'c_all'], ['vip', 'c_vip'], ['dormido', 'c_sleep'], ['en_riesgo', 'c_risk'], ['embajador', 'c_amb']];
+    const q = S.query.trim().toLowerCase();
+    const list = CLIENTS.filter((c) => (S.clientFilter === 'all' || c.segment === S.clientFilter))
+      .filter((c) => !q || c.name.toLowerCase().includes(q) || c.city.toLowerCase().includes(q) ||
+        (c.next && ROUTE[c.next].toLowerCase().includes(q)));
+    const queue = CLIENTS.filter((c) => c.month).sort((a, b) => b.priority - a.priority);
+    return `
+      <div class="screen-title"><h1>${t('clients_title')}</h1><p>${t('clients_sub')}</p></div>
+      <label class="search">${icon('search')}
+        <input type="search" id="clientSearch" placeholder="${t('search_clients')}" value="${esc(S.query)}" autocomplete="off">
+      </label>
+
+      <section class="stack-tight">
+        <div class="section-head"><h2>${t('c_month')}</h2><span class="chip chip-warn">${queue.length}</span></div>
+        <div class="card divided">
+          ${queue.map((c) => `<button class="row tappable" type="button" data-client="${c.id}">
+            ${ring(c.priority, 40, 4, 'var(--warn)')}
+            <span class="row-body"><span class="row-title">${esc(c.name)}</span><span class="row-sub clamp">${esc(L(c.note))}</span></span>
+            ${icon('chevron', 16)}
+          </button>`).join('')}
+        </div>
+      </section>
+
+      <div class="filters">${filters.map(([id, key]) =>
+        `<button class="filter" type="button" data-clientfilter="${id}" aria-pressed="${S.clientFilter === id}">${t(key)}</button>`).join('')}</div>
+
+      <div class="card divided">
+        ${list.length ? list.map((c) => {
+          const sg = SEGMENT[c.segment];
+          return `<button class="row tappable" type="button" data-client="${c.id}">
+            <span class="row-lead avatar" style="border-radius:14px">${initials(c.name)}</span>
+            <span class="row-body">
+              <span class="row-title">${esc(c.name)}</span>
+              <span class="row-sub">${esc(c.city)} · ${c.trips} ${tripsLabel(c.trips)}</span>
+              <span style="display:flex;gap:6px;margin-top:3px;flex-wrap:wrap">${chip(L(sg), sg.tone)}${c.due ? chip(eur(c.due), 'chip-warn') : ''}</span>
+            </span>
+            <span class="row-tail"><span class="num">${eur(c.ltv)}</span>${icon('chevron', 16)}</span>
+          </button>`;
+        }).join('') : `<p class="foot-note" style="padding:22px 12px">${S.lang === 'es' ? 'Sin resultados para esa búsqueda.' : 'No results for that search.'}</p>`}
+      </div>`;
+  }
+
+  function screenBookings() {
+    const filters = [['all', 'b_all'], ['open', 'b_open'], ['docs_pendientes', 'b_docs'], ['cerrado', 'b_closed']];
+    const list = RESERVATIONS.filter((r) => {
+      if (S.bookFilter === 'all') return true;
+      if (S.bookFilter === 'open') return r.status !== 'cerrado';
+      return r.status === S.bookFilter;
+    });
+    return `
+      <div class="screen-title"><h1>${t('book_title')}</h1><p>${t('book_sub')}</p></div>
+      <div class="filters">${filters.map(([id, key]) =>
+        `<button class="filter" type="button" data-bookfilter="${id}" aria-pressed="${S.bookFilter === id}">${t(key)}</button>`).join('')}</div>
+      <div class="stack">
+        ${list.map((r) => {
+          const st = RES_STATUS[r.status];
+          const dt = shortDate(r.departure);
+          const pct = Math.round((r.paid / r.total) * 100);
+          const d = daysTo(r.departure);
+          return `<button class="card res tappable" type="button" data-res="${r.id}">
+            <span class="res-top">
+              <span class="res-date"><b>${dt.day}</b><small>${dt.mon}</small></span>
+              <span class="res-main">
+                <strong>${esc(ROUTE[r.route])}</strong>
+                <span>${esc(r.client)} · ${r.pax} ${paxLabel(r.pax)} · ${esc(r.leader)}</span>
+                <span class="res-tags">${chip(L(st), st.tone)}${chip(r.vehicle === 'moto' ? 'Moto' : '4x4')}${d ? chip(`D-${d}`, 'chip-accent') : ''}</span>
+              </span>
+              ${icon('chevron', 16)}
+            </span>
+            <span class="res-pay">
+              <span class="res-pay-row"><span>${t('paid')} ${pct}%</span><span>${eur(r.paid)} / ${eur(r.total)}</span></span>
+              <span class="meter"><i style="width:${pct}%"></i></span>
+            </span>
+          </button>`;
+        }).join('')}
+      </div>`;
+  }
+
+  function screenAccount() {
+    const themeSeg = [['light', 'th_light'], ['dark', 'th_dark'], ['auto', 'th_auto']];
+    return `
+      <div class="card profile">
+        <span class="avatar">MC</span>
+        <strong>Sofía Navarro</strong>
+        <small>${S.lang === 'es' ? 'Fundador · Managing Director' : 'Founder · Managing Director'}</small>
+        <small>sofia@camponorte.demo</small>
+        <div class="profile-stats">
+          <div><b>41</b><span>${t('st_trips')}</span></div>
+          <div><b>36</b><span>${t('st_leads')}</span></div>
+          <div><b>Admin</b><span>${t('st_role')}</span></div>
+        </div>
+      </div>
+
+      <section class="stack-tight">
+        <p class="group-label">${t('g_account')}</p>
+        <div class="group">
+          <button class="setting tappable" type="button" data-toast="saved">
+            <span class="setting-ico" style="background:var(--accent)">${icon('user')}</span>
+            <span class="setting-label">${t('s_profile')}</span>${icon('chevron', 16)}
+          </button>
+          <button class="setting tappable" type="button" data-push="users">
+            <span class="setting-ico" style="background:#6366f1">${icon('users')}</span>
+            <span class="setting-label">${t('s_users')}</span><span class="setting-value">4</span>${icon('chevron', 16)}
+          </button>
+          <button class="setting tappable" type="button" data-sheet="notif">
+            <span class="setting-ico" style="background:var(--danger)">${icon('bell')}</span>
+            <span class="setting-label">${t('s_notif')}</span>
+            ${S.unread ? `<span class="chip chip-danger">${S.unread}</span>` : ''}${icon('chevron', 16)}
+          </button>
+          <div class="setting">
+            <span class="setting-ico" style="background:#0ea5e9">${icon('message')}</span>
+            <span class="setting-label">${t('s_sound')}</span>
+            <button class="switch" type="button" role="switch" aria-checked="${S.sound}" aria-pressed="${S.sound}" data-toggle="sound" aria-label="${t('s_sound')}"></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="stack-tight">
+        <p class="group-label">${t('g_look')}</p>
+        <div class="group">
+          <div class="setting stacked">
+            <span class="setting-ico" style="background:#334155">${icon('palette')}</span>
+            <span class="setting-label">${t('s_theme')}</span>
+            <span class="setting-control"><span class="seg">
+              ${themeSeg.map(([id, k]) => `<button type="button" data-set="theme" data-value="${id}" aria-pressed="${S.theme === id}">${t(k)}</button>`).join('')}
+            </span></span>
+          </div>
+          <div class="setting">
+            <span class="setting-ico" style="background:var(--accent-2)">${icon('sparkles')}</span>
+            <span class="setting-label">${t('s_accent')}</span>
+            <span class="swatches">
+              ${ACCENTS.map((a) => `<button class="swatch" type="button" style="background:${a.c}" data-set="accent" data-value="${a.id}" aria-pressed="${S.accent === a.id}" aria-label="${a[S.lang]}"></button>`).join('')}
+            </span>
+          </div>
+          <div class="setting stacked">
+            <span class="setting-ico" style="background:#0f766e">${icon('layers')}</span>
+            <span class="setting-label">${t('s_platform')}</span>
+            <span class="setting-control"><span class="seg">
+              <button type="button" data-set="platform" data-value="ios" aria-pressed="${S.platform === 'ios'}">iOS</button>
+              <button type="button" data-set="platform" data-value="android" aria-pressed="${S.platform === 'android'}">Android</button>
+            </span></span>
+          </div>
+          <div class="setting stacked">
+            <span class="setting-ico" style="background:#b45309">${icon('lang')}</span>
+            <span class="setting-label">${t('s_lang')}</span>
+            <span class="setting-control"><span class="seg">
+              <button type="button" data-set="lang" data-value="es" aria-pressed="${S.lang === 'es'}">Español</button>
+              <button type="button" data-set="lang" data-value="en" aria-pressed="${S.lang === 'en'}">English</button>
+            </span></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="stack-tight">
+        <p class="group-label">${t('g_modules')}</p>
+        <div class="group">
+          <button class="setting tappable" type="button" data-push="invoices">
+            <span class="setting-ico" style="background:#0f766e">${icon('file')}</span>
+            <span class="setting-label">${t('s_invoices')}</span><span class="setting-value">4</span>${icon('chevron', 16)}
+          </button>
+          <button class="setting tappable" type="button" data-push="automations">
+            <span class="setting-ico" style="background:#6366f1">${icon('workflow')}</span>
+            <span class="setting-label">${t('s_auto')}</span><span class="setting-value">3/4</span>${icon('chevron', 16)}
+          </button>
+          <button class="setting tappable" type="button" data-push="content">
+            <span class="setting-ico" style="background:#d946ef">${icon('sparkles')}</span>
+            <span class="setting-label">${t('s_content')}</span>${icon('chevron', 16)}
+          </button>
+          <button class="setting tappable" type="button" data-push="knowledge">
+            <span class="setting-ico" style="background:#0891b2">${icon('book')}</span>
+            <span class="setting-label">${t('s_know')}</span>${icon('chevron', 16)}
+          </button>
+          <button class="setting tappable" type="button" data-push="settings">
+            <span class="setting-ico" style="background:#475569">${icon('settings')}</span>
+            <span class="setting-label">${t('s_settings')}</span>${icon('chevron', 16)}
+          </button>
+        </div>
+      </section>
+
+      <section class="stack-tight">
+        <p class="group-label">${t('g_support')}</p>
+        <div class="group">
+          <button class="setting tappable" type="button" data-sheet="help">
+            <span class="setting-ico" style="background:#0284c7">${icon('help')}</span>
+            <span class="setting-label">${t('s_help')}</span>${icon('chevron', 16)}
+          </button>
+          <button class="setting tappable" type="button" data-sheet="legal">
+            <span class="setting-ico" style="background:#64748b">${icon('shield')}</span>
+            <span class="setting-label">${t('s_legal')}</span>${icon('chevron', 16)}
+          </button>
+          <button class="setting tappable danger" type="button" data-toast="copied">
+            <span class="setting-ico" style="background:var(--danger)">${icon('logout')}</span>
+            <span class="setting-label">${t('s_logout')}</span>
+          </button>
+        </div>
+      </section>
+
+      <p class="foot-note">${t('version')}</p>`;
+  }
+
+  function screenInvoices() {
+    const total = INVOICES.reduce((s, i) => s + i.total, 0);
+    return `
+      <div class="screen-title"><h1>${t('inv_title')}</h1><p>${t('inv_sub')}</p></div>
+      <div class="bento">
+        <div class="card kpi"><span class="kpi-label">${S.lang === 'es' ? 'Emitido' : 'Issued'}</span>
+          <span class="kpi-value" style="font-size:22px">${eur(total)}</span>
+          <span class="kpi-foot" style="color:var(--muted)">${INVOICES.length} ${S.lang === 'es' ? 'documentos' : 'documents'}</span></div>
+        <div class="card kpi"><span class="kpi-label">${S.lang === 'es' ? 'Aceptado AEAT' : 'AEAT accepted'}</span>
+          <span class="kpi-value">2<small>/4</small></span>
+          <div class="meter"><i style="width:50%"></i></div>
+          <span class="kpi-foot" style="color:var(--muted)">Veri*FACTU</span></div>
+      </div>
+      <div class="card divided">
+        ${INVOICES.map((inv) => {
+          const st = INV_STATUS[inv.status];
+          return `<button class="row tappable" type="button" data-toast="copied">
+            <span class="row-lead" style="background:color-mix(in oklab,var(--accent) var(--tint),transparent);color:var(--accent)">${icon('doc')}</span>
+            <span class="row-body">
+              <span class="row-title">${inv.number}</span>
+              <span class="row-sub">${esc(inv.client)} · ${esc(inv.trip)}</span>
+              <span style="display:flex;gap:6px;margin-top:3px">${chip(L(st), st.tone)}${chip('REAV 05')}</span>
+            </span>
+            <span class="row-tail"><span class="num">${eur(inv.total)}</span><span class="row-sub">${inv.date}</span></span>
+          </button>`;
+        }).join('')}
+      </div>
+      <div class="notice">${icon('shield')}<span>${S.lang === 'es'
+        ? '<b>REAV clave 05:</b> las facturas llevan la mención del régimen especial de agencias de viajes y su huella Veri*FACTU.'
+        : '<b>REAV key 05:</b> invoices carry the Spanish travel-agency VAT mention and their Veri*FACTU hash.'}</span></div>`;
+  }
+
+  function screenAutomations() {
+    return `
+      <div class="screen-title"><h1>${t('auto_title')}</h1><p>${t('auto_sub')}</p></div>
+      <div class="group">
+        ${AUTOMATIONS.map((a) => `<div class="setting">
+          <span class="setting-ico" style="background:${S.autos[a.id] ? 'var(--accent)' : 'var(--muted)'}">${icon('workflow')}</span>
+          <span class="setting-label" style="display:flex;flex-direction:column;gap:2px">
+            ${L(a.name)}<span class="row-sub" style="white-space:normal">${a.id} · ${L(a.sub)}</span>
+          </span>
+          <button class="switch" type="button" role="switch" aria-checked="${S.autos[a.id]}" aria-pressed="${S.autos[a.id]}" data-auto="${a.id}" aria-label="${L(a.name)}"></button>
+        </div>`).join('')}
+      </div>
+      <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:12px">
+        <div class="section-head"><h2>A-01 · ${S.lang === 'es' ? 'traza del último disparo' : 'last run trace'}</h2></div>
+        <div class="timeline">
+          ${[
+            { d: '09:12:04', b: S.lang === 'es' ? 'Formulario recibido' : 'Form received', s: 'elena.ruiz@example.com · UTM Instagram' },
+            { d: '09:12:06', b: S.lang === 'es' ? 'Ficha creada en el Hub' : 'Record created in the Hub', s: 'L-1038 · Argentina · La Puna' },
+            { d: '09:12:31', b: S.lang === 'es' ? 'Scoring IA' : 'AI scoring', s: '76 · ' + (S.lang === 'es' ? 'formulario completo + ruta clara' : 'complete form + clear route') },
+            { d: '09:12:44', b: S.lang === 'es' ? 'Aviso interno a Sofía' : 'Internal alert to Sofía', s: S.lang === 'es' ? 'Nada enviado al viajero' : 'Nothing sent to the traveller', last: true },
+          ].map((s) => `<div class="tl-item">
+            <span class="tl-mark"><i class="tl-dot"></i>${s.last ? '' : '<i class="tl-line"></i>'}</span>
+            <span class="tl-body"><span class="tl-day">${s.d}</span><b>${s.b}</b><small>${s.s}</small></span>
+          </div>`).join('')}
+        </div>
+      </div>`;
+  }
+
+  function screenModule(id) {
+    const copy = MODULE_COPY[id];
+    if (!copy) return `<div class="screen-title"><h1>${esc(id)}</h1></div>`;
+    return `
+      <div class="screen-title"><h1>${L(copy.title)}</h1><p>${L(copy.sub)}</p></div>
+      <div class="card kv">
+        ${copy.rows.map(([k, v]) => `<span class="kv-row"><span>${esc(L(k))}</span><span>${esc(L(v))}</span></span>`).join('')}
+      </div>
+      <div class="notice">${icon('help')}<span>${t('desktop_note')}</span></div>
+      <button class="btn btn-primary" type="button" data-toast="copied">${icon('presentation')} ${t('open_desktop')}</button>`;
+  }
+
+  const PUSH_SCREENS = { leads: screenLeads, invoices: screenInvoices, automations: screenAutomations };
+
+  function render(anim) {
+    if (anim) S.anim = anim;
+    renderAppbar();
+    renderTabs();
+    let html;
+    if (S.push) html = (PUSH_SCREENS[S.push] || (() => screenModule(S.push)))();
+    else html = { home: screenHome, clients: screenClients, bookings: screenBookings, account: screenAccount }[S.tab]();
+    el.screen.className = `scroll-inner ${S.anim}`;
+    el.screen.innerHTML = html;
+    const search = document.getElementById('clientSearch');
+    if (search) {
+      search.addEventListener('input', (e) => {
+        S.query = e.target.value;
+        const pos = e.target.selectionStart;
+        render('');
+        const again = document.getElementById('clientSearch');
+        if (again) { again.focus(); again.setSelectionRange(pos, pos); }
+      });
+    }
+  }
+
+  /* =====================================================================
+     8 · Hojas (bottom sheets)
+     ===================================================================== */
+  let sheetOpen = false;
+  function openSheet(title, html) {
+    el.sheetTitle.textContent = title;
+    el.sheetBody.innerHTML = html;
+    el.sheetHost.classList.add('open');
+    el.sheetHost.setAttribute('aria-hidden', 'false');
+    sheetOpen = true;
+  }
+  function closeSheet() {
+    el.sheetHost.classList.remove('open');
+    el.sheetHost.setAttribute('aria-hidden', 'true');
+    el.sheetHost.querySelector('.sheet').style.transform = '';
+    sheetOpen = false;
+  }
+
+  function sheetLead(id) {
+    const l = LEADS.find((x) => x.id === id);
+    if (!l) return;
+    const sc = scoreOf(l);
+    const st = LEAD_STATUS[l.status];
+    openSheet(t('sheet_lead'), `
+      <div class="card" style="padding:16px;display:flex;align-items:center;gap:14px">
+        ${ring(sc, 60, 5)}
+        <div style="min-width:0;display:flex;flex-direction:column;gap:4px">
+          <strong style="font-size:18px;letter-spacing:-.02em">${esc(l.name)}</strong>
+          <span class="row-sub">${l.id} · ${t('owner')}: ${esc(l.owner)}</span>
+          <span style="display:flex;gap:6px">${chip(L(st), st.tone)}${chip(L(ORIGIN[l.origin]))}</span>
+        </div>
+      </div>
+      <div class="card kv">
+        <span class="kv-row"><span>${t('route')}</span><span>${l.route ? esc(ROUTE[l.route]) : '—'}</span></span>
+        <span class="kv-row"><span>${t('vehicle')}</span><span>${l.vehicle ? (l.vehicle === 'moto' ? 'Moto' : '4x4') : '—'}</span></span>
+        <span class="kv-row"><span>${t('score')}</span><span>${sc}/100</span></span>
+      </div>
+      <div>
+        <p class="group-label">${t('why')}</p>
+        <div class="card reasons">
+          ${L(l.why).map((r) => `<span class="reason">${icon('check', 15)}${esc(r)}</span>`).join('')}
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary btn-wide" type="button" data-ai="${l.id}">${icon('sparkles')} ${t('ai_btn')}</button>
+        <button class="btn" type="button" data-toast="copied">${icon('phone')} ${t('call')}</button>
+        <button class="btn" type="button" data-toast="copied">${icon('message')} ${t('wa')}</button>
+      </div>
+      <p class="foot-note" style="text-align:left">${t('wa_note')}</p>`);
+  }
+
+  function sheetClient(id) {
+    const c = CLIENTS.find((x) => x.id === id);
+    if (!c) return;
+    const sg = SEGMENT[c.segment];
+    openSheet(t('sheet_client'), `
+      <div class="card" style="padding:16px;display:flex;align-items:center;gap:14px">
+        <span class="avatar" style="width:54px;height:54px;font-size:18px">${initials(c.name)}</span>
+        <div style="min-width:0;display:flex;flex-direction:column;gap:4px">
+          <strong style="font-size:18px;letter-spacing:-.02em">${esc(c.name)}</strong>
+          <span class="row-sub">${c.id} · ${esc(c.city)} · ${t('owner')}: ${esc(c.owner)}</span>
+          <span style="display:flex;gap:6px">${chip(L(sg), sg.tone)}${c.due ? chip(`${t('due')} ${eur(c.due)}`, 'chip-warn') : ''}</span>
+        </div>
+      </div>
+      <div class="card kv">
+        <span class="kv-row"><span>${t('ltv')}</span><span>${eur(c.ltv)}</span></span>
+        <span class="kv-row"><span>${t('trips')}</span><span>${c.trips}</span></span>
+        <span class="kv-row"><span>${t('nps')}</span><span>${c.nps}/10</span></span>
+        <span class="kv-row"><span>${t('next')}</span><span>${c.next ? esc(ROUTE[c.next]) : '—'}</span></span>
+      </div>
+      <div class="notice">${icon('alert')}<span>${esc(L(c.note))}</span></div>
+      <div>
+        <p class="group-label">${S.lang === 'es' ? 'Historial' : 'History'}</p>
+        <div class="card kv">
+          ${c.history.map((h) => `<span class="kv-row"><span>${esc(ROUTE[h.r])}</span><span>${h.d} · ${eur(h.a)}</span></span>`).join('')}
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" type="button" data-toast="copied">${icon('phone')} ${t('call')}</button>
+        <button class="btn" type="button" data-toast="copied">${icon('message')} ${t('wa')}</button>
+      </div>`);
+  }
+
+  function sheetRes(id) {
+    const r = RESERVATIONS.find((x) => x.id === id);
+    if (!r) return;
+    const st = RES_STATUS[r.status];
+    const pct = Math.round((r.paid / r.total) * 100);
+    openSheet(t('sheet_res'), `
+      <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px">
+        <strong style="font-size:18px;letter-spacing:-.02em">${esc(ROUTE[r.route])}</strong>
+        <span class="row-sub">${r.id} · ${S.lang === 'es' ? 'salida' : 'departs'} ${longDate(r.departure)} · D-${daysTo(r.departure)}</span>
+        <span style="display:flex;gap:6px;flex-wrap:wrap">${chip(L(st), st.tone)}${chip(r.vehicle === 'moto' ? 'Moto' : '4x4')}${chip(`${r.pax} ${paxLabel(r.pax)}`)}</span>
+      </div>
+      <div class="card kv">
+        <span class="kv-row"><span>${S.lang === 'es' ? 'Cliente' : 'Client'}</span><span>${esc(r.client)}</span></span>
+        <span class="kv-row"><span>${t('leader')}</span><span>${esc(r.leader)}</span></span>
+        <span class="kv-row"><span>${t('total')}</span><span>${eur(r.total)}</span></span>
+        <span class="kv-row"><span>${t('paid')}</span><span>${eur(r.paid)} · ${pct}%</span></span>
+        <span class="kv-row"><span>${t('due')}</span><span>${eur(r.total - r.paid)}</span></span>
+      </div>
+      <div>
+        <p class="group-label">${t('itinerary')}</p>
+        <div class="card" style="padding:14px 14px 0">
+          <div class="timeline">
+            ${r.itinerary.map((s, i) => `<div class="tl-item">
+              <span class="tl-mark"><i class="tl-dot"></i>${i === r.itinerary.length - 1 ? '' : '<i class="tl-line"></i>'}</span>
+              <span class="tl-body"><span class="tl-day">${s.day}</span><b>${esc(L(s.place))}</b><small>${esc(L(s.detail))}</small></span>
+            </div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="group-label">${t('logistics')}</p>
+        <div class="card divided">
+          ${r.contacts.map((c) => `<button class="row tappable" type="button" data-toast="copied">
+            <span class="row-lead" style="background:color-mix(in oklab,var(--accent) var(--tint),transparent);color:var(--accent)">${icon('phone')}</span>
+            <span class="row-body"><span class="row-title">${esc(c.name)}</span><span class="row-sub">${esc(L(c.role))} · ${esc(c.phone)}</span></span>
+            ${icon('chevron', 16)}
+          </button>`).join('')}
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" type="button" data-toast="copied">${icon('doc')} ${S.lang === 'es' ? 'Dossier' : 'Dossier'}</button>
+        <button class="btn" type="button" data-toast="copied">${icon('phone')} ${t('call')}</button>
+      </div>`);
+  }
+
+  function sheetNotifications() {
+    const body = S.unread
+      ? `<div class="card divided">
+          ${NOTIFICATIONS.map((n, i) => `<button class="row tappable" type="button" data-notif="${n.to}">
+            <span class="row-lead chip ${n.tone}" style="border-radius:13px;width:40px;height:40px;justify-content:center">${icon(n.icon, 18)}</span>
+            <span class="row-body"><span class="row-title">${esc(L(n.title))}</span><span class="row-sub clamp">${esc(L(n.sub))}</span></span>
+            <span class="row-tail"><span class="row-sub">${n.when}</span>${i < S.unread ? '<i style="width:8px;height:8px;border-radius:50%;background:var(--accent);display:block"></i>' : ''}</span>
+          </button>`).join('')}
+        </div>
+        <button class="btn btn-wide" type="button" data-markread>${icon('check')} ${t('notif_read')}</button>`
+      : `<div class="card" style="padding:30px 18px;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center">
+          <span class="row-lead chip chip-ok" style="width:46px;height:46px;border-radius:16px;justify-content:center">${icon('check', 22)}</span>
+          <strong>${t('notif_empty')}</strong>
+        </div>`;
+    openSheet(t('notif_title'), body);
+  }
+
+  function sheetMore() {
+    openSheet(t('more_title'), `
+      <div class="quick-grid" style="grid-template-columns:repeat(3,1fr)">
+        ${MODULES.map((m) => `<button class="quick" type="button" data-quick="${m.id}">
+          <span>${icon(m.icon)}</span><small>${m[S.lang]}</small></button>`).join('')}
+      </div>
+      <p class="foot-note" style="text-align:left">${t('desktop_note')}</p>`);
+  }
+
+  function sheetHelp() {
+    openSheet(t('s_help'), `
+      <div class="card kv">
+        <span class="kv-row"><span>${S.lang === 'es' ? 'Producto' : 'Product'}</span><span>Growth OS · Campo Norte</span></span>
+        <span class="kv-row"><span>${S.lang === 'es' ? 'Licencia' : 'License'}</span><span>${S.lang === 'es' ? 'Comercial de pago' : 'Paid commercial'}</span></span>
+        <span class="kv-row"><span>${S.lang === 'es' ? 'Uso' : 'Use'}</span><span>${S.lang === 'es' ? 'Solo equipo interno' : 'Internal team only'}</span></span>
+        <span class="kv-row"><span>Growth OS</span><span>Equipo demo</span></span>
+      </div>
+      <div class="notice">${icon('shield')}<span>${S.lang === 'es'
+        ? 'Datos de demo. En producción, claves de IA solo en servidor y Supabase Auth con RLS activo.'
+        : 'Demo data. In production, AI keys stay server-side and Supabase Auth runs with RLS on.'}</span></div>`);
+  }
+
+  function sheetLegal() {
+    openSheet(t('s_legal'), `
+      <div class="card kv">
+        <span class="kv-row"><span>${S.lang === 'es' ? 'Aviso legal' : 'Legal notice'}</span><span>/legal</span></span>
+        <span class="kv-row"><span>${S.lang === 'es' ? 'Privacidad' : 'Privacy'}</span><span>RGPD · art. 30</span></span>
+        <span class="kv-row"><span>Cookies</span><span>${S.lang === 'es' ? 'Solo técnicas' : 'Technical only'}</span></span>
+        <span class="kv-row"><span>${S.lang === 'es' ? 'Datos' : 'Data'}</span><span>${S.lang === 'es' ? 'UE · Supabase/Vercel' : 'EU · Supabase/Vercel'}</span></span>
+      </div>
+      <p class="foot-note" style="text-align:left">${S.lang === 'es'
+        ? 'Nada en esta demo habla con el viajero: los mensajes salientes los escribe y envía una persona del equipo.'
+        : 'Nothing in this demo talks to the traveller: outbound messages are written and sent by a person.'}</p>`);
+  }
+
+  /* =====================================================================
+     9 · Toast
+     ===================================================================== */
+  let toastTimer;
+  function toast(title, sub) {
+    el.toast.innerHTML = `${icon('check', 18)}<span>${esc(title)}${sub ? `<small>${esc(sub)}</small>` : ''}</span>`;
+    el.toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.toast.classList.remove('show'), 2600);
+  }
+
+  /* =====================================================================
+     10 · Preferencias y navegación
+     ===================================================================== */
+  function applyPrefs() {
+    const root = document.documentElement;
+    root.setAttribute('data-accent', S.accent);
+    root.setAttribute('data-platform', S.platform);
+    if (S.theme === 'auto') root.removeAttribute('data-theme');
+    else root.setAttribute('data-theme', S.theme);
+    document.querySelectorAll('.rail [data-set]').forEach((b) => {
+      b.setAttribute('aria-pressed', String(S[b.dataset.set] === b.dataset.value));
+    });
+  }
+
+  function buildRailSwatches() {
+    const box = document.querySelector('.rail .swatches');
+    box.innerHTML = ACCENTS.map((a) =>
+      `<button class="swatch" type="button" style="background:${a.c}" data-set="accent" data-value="${a.id}" aria-label="${a.es}"></button>`).join('');
+  }
+
+  function goTab(tab) {
+    S.push = null;
+    S.tab = tab;
+    render('anim-tab');
+    el.scroll.scrollTop = 0;
+  }
+  function push(id) {
+    S.push = id;
+    render('anim-push');
+    el.scroll.scrollTop = 0;
+  }
+  function pop() {
+    S.push = null;
+    render('anim-tab');
+    el.scroll.scrollTop = 0;
+  }
+
+  function handleQuick(id) {
+    closeSheet();
+    if (id === 'more') return setTimeout(sheetMore, 180);
+    if (id === 'clients' || id === 'bookings') return goTab(id);
+    push(id);
+  }
+
+  /* =====================================================================
+     11 · Eventos
+     ===================================================================== */
+  document.addEventListener('click', (ev) => {
+    const target = (sel) => ev.target.closest(sel);
+
+    const set = target('[data-set]');
+    if (set) {
+      const { set: key, value } = set.dataset;
+      S[key] = value;
+      applyPrefs();
+      render('');
+      if (key !== 'lang') toast(t('saved'));
+      return;
+    }
+
+    const tab = target('[data-tab]');
+    if (tab) { closeSheet(); goTab(tab.dataset.tab); return; }
+
+    if (target('[data-pop]')) { pop(); return; }
+
+    const pushBtn = target('[data-push]');
+    if (pushBtn) { closeSheet(); push(pushBtn.dataset.push); return; }
+
+    const quick = target('[data-quick]');
+    if (quick) { handleQuick(quick.dataset.quick); return; }
+
+    const sheet = target('[data-sheet]');
+    if (sheet) {
+      const map = { notif: sheetNotifications, more: sheetMore, help: sheetHelp, legal: sheetLegal };
+      (map[sheet.dataset.sheet] || (() => {}))();
+      return;
+    }
+
+    if (target('[data-close-sheet]')) { closeSheet(); return; }
+
+    const lead = target('[data-lead]');
+    if (lead) { closeSheet(); setTimeout(() => sheetLead(lead.dataset.lead), sheetOpen ? 160 : 0); return; }
+
+    const client = target('[data-client]');
+    if (client) { closeSheet(); setTimeout(() => sheetClient(client.dataset.client), sheetOpen ? 160 : 0); return; }
+
+    const res = target('[data-res]');
+    if (res) { closeSheet(); setTimeout(() => sheetRes(res.dataset.res), sheetOpen ? 160 : 0); return; }
+
+    const filterLead = target('[data-leadfilter]');
+    if (filterLead) { S.leadFilter = filterLead.dataset.leadfilter; render(''); return; }
+
+    const filterClient = target('[data-clientfilter]');
+    if (filterClient) { S.clientFilter = filterClient.dataset.clientfilter; render(''); return; }
+
+    const filterBook = target('[data-bookfilter]');
+    if (filterBook) { S.bookFilter = filterBook.dataset.bookfilter; render(''); return; }
+
+    const ai = target('[data-ai]');
+    if (ai) {
+      const btn = ai;
+      const id = btn.dataset.ai;
+      const lead0 = LEADS.find((x) => x.id === id);
+      btn.classList.add('loading');
+      btn.innerHTML = `${icon('refresh')} ${S.lang === 'es' ? 'Clasificando…' : 'Scoring…'}`;
+      setTimeout(() => {
+        const base = scoreOf(lead0);
+        S.scores[id] = Math.min(99, base + (base < 90 ? 4 : 1));
+        sheetLead(id);
+        render('');
+        toast(t('ai_done'), `${lead0.name} · ${S.scores[id]}/100`);
+      }, 1100);
+      return;
+    }
+
+    const toggle = target('[data-toggle]');
+    if (toggle) {
+      S[toggle.dataset.toggle] = !S[toggle.dataset.toggle];
+      render('');
+      toast(t('saved'));
+      return;
+    }
+
+    const auto = target('[data-auto]');
+    if (auto) {
+      S.autos[auto.dataset.auto] = !S.autos[auto.dataset.auto];
+      render('');
+      toast(t('saved'));
+      return;
+    }
+
+    if (target('[data-markread]')) {
+      S.unread = 0;
+      sheetNotifications();
+      renderAppbar();
+      render('');
+      toast(t('marked'), t('marked_sub'));
+      return;
+    }
+
+    const notif = target('[data-notif]');
+    if (notif) {
+      closeSheet();
+      const to = notif.dataset.notif;
+      if (to === 'leads' || to === 'invoices') push(to);
+      else goTab(to);
+      return;
+    }
+
+    const eco = target('[data-eco]');
+    if (eco) {
+      const id = eco.dataset.eco;
+      if (id === 'support') return sheetHelp();
+      if (id === 'settings') return push('settings');
+      toast(S.lang === 'es' ? 'Enlace externo' : 'External link',
+        S.lang === 'es' ? 'En la app real abre example.com y redes.' : 'In the real app this opens example.com and socials.');
+      return;
+    }
+
+    if (target('[data-refresh]')) { doRefresh(); return; }
+
+    const newBtn = target('[data-new]');
+    if (newBtn) {
+      toast(S.lang === 'es' ? 'Nuevo registro' : 'New record',
+        S.tab === 'bookings' ? (S.lang === 'es' ? 'Formulario de reserva' : 'Booking form')
+                             : (S.lang === 'es' ? 'Formulario de cliente' : 'Client form'));
+      return;
+    }
+
+    const toastBtn = target('[data-toast]');
+    if (toastBtn) { toast(t(toastBtn.dataset.toast)); return; }
+  });
+
+  document.getElementById('fab').addEventListener('click', () => {
+    toast(S.lang === 'es' ? 'Nuevo registro' : 'New record',
+      S.tab === 'bookings' ? (S.lang === 'es' ? 'Formulario de reserva' : 'Booking form')
+                           : (S.lang === 'es' ? 'Formulario de cliente' : 'Client form'));
+  });
+
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && sheetOpen) closeSheet(); });
+
+  /* --- sombra de la barra al hacer scroll --- */
+  el.scroll.addEventListener('scroll', () => {
+    el.appbar.classList.toggle('stuck', el.scroll.scrollTop > 6);
+  });
+
+  /* --- pull to refresh --- */
+  let ptrStart = null, ptrDist = 0;
+  el.scroll.addEventListener('pointerdown', (ev) => {
+    if (el.scroll.scrollTop <= 0 && !sheetOpen) { ptrStart = ev.clientY; ptrDist = 0; }
+  });
+  el.scroll.addEventListener('pointermove', (ev) => {
+    if (ptrStart === null) return;
+    ptrDist = ev.clientY - ptrStart;
+    if (ptrDist > 0) {
+      el.ptr.style.transition = 'none';
+      el.ptr.style.height = Math.min(72, ptrDist * .55) + 'px';
+      el.ptr.querySelector('svg').style.transform = `rotate(${Math.min(180, ptrDist)}deg)`;
+    }
+  });
+  function endPtr() {
+    if (ptrStart === null) return;
+    el.ptr.style.transition = '';
+    const trigger = ptrDist > 70;
+    ptrStart = null;
+    if (trigger) doRefresh();
+    else el.ptr.style.height = '0px';
+  }
+  el.scroll.addEventListener('pointerup', endPtr);
+  el.scroll.addEventListener('pointercancel', endPtr);
+  el.scroll.addEventListener('pointerleave', endPtr);
+
+  function doRefresh() {
+    el.ptr.style.height = '44px';
+    el.ptr.querySelector('svg').style.transform = '';
+    el.ptr.classList.add('spin');
+    setTimeout(() => {
+      el.ptr.classList.remove('spin');
+      el.ptr.style.height = '0px';
+      toast(t('refreshed'), t('refreshed_sub'));
+    }, 1000);
+  }
+
+  /* --- arrastrar la hoja para cerrarla --- */
+  const grab = document.getElementById('sheetGrab');
+  const sheetEl = el.sheetHost.querySelector('.sheet');
+  let dragY = null;
+  grab.addEventListener('pointerdown', (ev) => { dragY = ev.clientY; grab.setPointerCapture(ev.pointerId); sheetEl.style.transition = 'none'; });
+  grab.addEventListener('pointermove', (ev) => {
+    if (dragY === null) return;
+    const dy = Math.max(0, ev.clientY - dragY);
+    sheetEl.style.transform = `translateY(${dy}px)`;
+  });
+  function endDrag(ev) {
+    if (dragY === null) return;
+    const dy = Math.max(0, ev.clientY - dragY);
+    dragY = null;
+    sheetEl.style.transition = '';
+    if (dy > 90) closeSheet();
+    else sheetEl.style.transform = '';
+  }
+  grab.addEventListener('pointerup', endDrag);
+  grab.addEventListener('pointercancel', endDrag);
+
+  /* --- reloj del sistema --- */
+  function clock() {
+    const now = new Date();
+    document.getElementById('sysTime').textContent =
+      now.toLocaleTimeString(S.lang === 'es' ? 'es-ES' : 'en-GB', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  /* =====================================================================
+     12 · Arranque
+     ===================================================================== */
+  buildRailSwatches();
+  applyPrefs();
+  render('anim-tab');
+  clock();
+  setInterval(clock, 20000);
+})();

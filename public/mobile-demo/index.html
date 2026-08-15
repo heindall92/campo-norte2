@@ -1,0 +1,1233 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<title>Campo Norte · Growth OS — demo móvil</title>
+<link rel="icon" href="/favicon.svg">
+</head>
+<body>
+<style>
+/* ============================================================
+   Campo Norte · Growth OS — demo de la vista móvil
+   Tokens alineados con src/index.css (accent azul eléctrico,
+   glass, radios grandes) + capa mobile-first iOS / Android.
+   ============================================================ */
+
+:root {
+  /* --- paleta clara --- */
+  --l-ground: #e6ecf3;
+  --l-ground-2: #d7e0ea;
+  --l-surface: #ffffff;
+  --l-surface-2: #f1f5f9;
+  --l-sunk: #e7edf4;
+  --l-ink: #0e1626;
+  --l-ink-2: #33425c;
+  --l-muted: #5b6b85;
+  --l-line: rgba(14, 22, 38, 0.10);
+  --l-line-strong: rgba(14, 22, 38, 0.18);
+  --l-ok: #0e7c5a;
+  --l-warn: #b45309;
+  --l-danger: #be2f28;
+  --l-shadow: 0 1px 2px rgba(9, 18, 33, .06), 0 10px 30px rgba(9, 18, 33, .08);
+  --l-shadow-lg: 0 24px 60px rgba(9, 18, 33, .18);
+  --l-tint: 12%;
+
+  /* --- paleta oscura --- */
+  --d-ground: #070c16;
+  --d-ground-2: #0d1626;
+  --d-surface: #111a2b;
+  --d-surface-2: #16223a;
+  --d-sunk: #0b1322;
+  --d-ink: #e9f0fb;
+  --d-ink-2: #c3d0e4;
+  --d-muted: #8b9cb8;
+  --d-line: rgba(160, 182, 214, 0.16);
+  --d-line-strong: rgba(160, 182, 214, 0.30);
+  --d-ok: #34d399;
+  --d-warn: #fbbf24;
+  --d-danger: #ff8a80;
+  --d-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 12px 34px rgba(0, 0, 0, .45);
+  --d-shadow-lg: 0 28px 70px rgba(0, 0, 0, .65);
+  --d-tint: 22%;
+
+  /* --- acentos (base clara; el oscuro se aclara por color-mix) --- */
+  --accent-base: #2563eb;
+  --accent2-base: #0ea5e9;
+
+  --r-xs: 10px;
+  --r-sm: 14px;
+  --r-md: 20px;
+  --r-lg: 26px;
+  --r-xl: 32px;
+
+  --ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text",
+        "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;
+  --display: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+
+  --spring: cubic-bezier(.22, 1.2, .36, 1);
+  --ease: cubic-bezier(.32, .72, 0, 1);
+}
+
+:root[data-accent="magma"]  { --accent-base: #d4442c; --accent2-base: #f59e0b; }
+:root[data-accent="dune"]   { --accent-base: #a16207; --accent2-base: #ca8a04; }
+:root[data-accent="basalt"] { --accent-base: #0f766e; --accent2-base: #14b8a6; }
+:root[data-accent="violet"] { --accent-base: #6d28d9; --accent2-base: #a855f7; }
+
+/* --- asignación de tokens por tema --- */
+:root {
+  --ground: var(--l-ground); --ground-2: var(--l-ground-2);
+  --surface: var(--l-surface); --surface-2: var(--l-surface-2); --sunk: var(--l-sunk);
+  --ink: var(--l-ink); --ink-2: var(--l-ink-2); --muted: var(--l-muted);
+  --line: var(--l-line); --line-strong: var(--l-line-strong);
+  --ok: var(--l-ok); --warn: var(--l-warn); --danger: var(--l-danger);
+  --shadow: var(--l-shadow); --shadow-lg: var(--l-shadow-lg); --tint: var(--l-tint);
+  --accent: var(--accent-base); --accent-2: var(--accent2-base);
+  --on-accent: #fff;
+  --scrim: rgba(9, 16, 30, .42);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: var(--d-ground); --ground-2: var(--d-ground-2);
+    --surface: var(--d-surface); --surface-2: var(--d-surface-2); --sunk: var(--d-sunk);
+    --ink: var(--d-ink); --ink-2: var(--d-ink-2); --muted: var(--d-muted);
+    --line: var(--d-line); --line-strong: var(--d-line-strong);
+    --ok: var(--d-ok); --warn: var(--d-warn); --danger: var(--d-danger);
+    --shadow: var(--d-shadow); --shadow-lg: var(--d-shadow-lg); --tint: var(--d-tint);
+    --accent: color-mix(in oklab, var(--accent-base) 66%, white);
+    --accent-2: color-mix(in oklab, var(--accent2-base) 74%, white);
+    --on-accent: #08111f;
+    --scrim: rgba(2, 6, 14, .62);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground: var(--d-ground); --ground-2: var(--d-ground-2);
+  --surface: var(--d-surface); --surface-2: var(--d-surface-2); --sunk: var(--d-sunk);
+  --ink: var(--d-ink); --ink-2: var(--d-ink-2); --muted: var(--d-muted);
+  --line: var(--d-line); --line-strong: var(--d-line-strong);
+  --ok: var(--d-ok); --warn: var(--d-warn); --danger: var(--d-danger);
+  --shadow: var(--d-shadow); --shadow-lg: var(--d-shadow-lg); --tint: var(--d-tint);
+  --accent: color-mix(in oklab, var(--accent-base) 66%, white);
+  --accent-2: color-mix(in oklab, var(--accent2-base) 74%, white);
+  --on-accent: #08111f;
+  --scrim: rgba(2, 6, 14, .62);
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --ground: var(--l-ground); --ground-2: var(--l-ground-2);
+  --surface: var(--l-surface); --surface-2: var(--l-surface-2); --sunk: var(--l-sunk);
+  --ink: var(--l-ink); --ink-2: var(--l-ink-2); --muted: var(--l-muted);
+  --line: var(--l-line); --line-strong: var(--l-line-strong);
+  --ok: var(--l-ok); --warn: var(--l-warn); --danger: var(--l-danger);
+  --shadow: var(--l-shadow); --shadow-lg: var(--l-shadow-lg); --tint: var(--l-tint);
+  --accent: var(--accent-base); --accent-2: var(--accent2-base);
+  --on-accent: #fff;
+  --scrim: rgba(9, 16, 30, .42);
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--ui);
+  color: var(--ink);
+  background: var(--ground);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+::-webkit-scrollbar { width: 0; height: 0; }
+
+/* ============================ ESCENARIO ============================ */
+
+.stage {
+  position: relative;
+  min-height: 100dvh;
+  padding: clamp(24px, 4vw, 56px) clamp(16px, 4vw, 48px) 64px;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(24px, 3vw, 40px);
+  isolation: isolate;
+}
+
+.stage-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(60% 45% at 8% -5%, color-mix(in oklab, var(--accent) 26%, transparent), transparent 70%),
+    radial-gradient(50% 40% at 100% 0%, color-mix(in oklab, var(--accent-2) 22%, transparent), transparent 65%),
+    linear-gradient(165deg, var(--ground), var(--ground-2));
+}
+/* curvas de nivel: el mundo de las rutas 4x4 / moto */
+.stage-bg::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background-image: repeating-radial-gradient(
+    ellipse 62% 44% at 22% 78%,
+    color-mix(in oklab, var(--ink) 30%, transparent) 0 1px,
+    transparent 1px 34px);
+  opacity: .10;
+  transform: rotate(-9deg);
+}
+
+.stage-head { max-width: 62ch; display: flex; flex-direction: column; gap: 10px; }
+.kicker {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.stage-head h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(30px, 4.4vw, 46px);
+  line-height: 1.03;
+  letter-spacing: -.02em;
+  text-wrap: balance;
+}
+.lede { margin: 0; color: var(--ink-2); font-size: 15.5px; line-height: 1.55; max-width: 58ch; }
+.lede b { color: var(--ink); font-weight: 650; }
+
+.stage-main {
+  display: flex;
+  gap: clamp(24px, 4vw, 64px);
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+/* --------- carril de herramientas (fuera del teléfono) --------- */
+.rail {
+  width: 264px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+  border-radius: var(--r-lg);
+  background: color-mix(in oklab, var(--surface) 72%, transparent);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 32px;
+}
+.rail-group { display: flex; flex-direction: column; gap: 8px; }
+.rail-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.seg {
+  display: flex;
+  padding: 3px;
+  gap: 3px;
+  background: var(--sunk);
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}
+.seg button {
+  flex: 1;
+  padding: 7px 8px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  transition: color .18s, background .18s, box-shadow .18s;
+}
+.seg button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(9, 18, 33, .16);
+}
+.swatches { display: flex; gap: 9px; }
+.swatch {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  box-shadow: inset 0 0 0 2px var(--surface);
+  transition: transform .2s var(--spring);
+}
+.swatch[aria-pressed="true"] { border-color: var(--ink); transform: scale(1.06); }
+.rail-note { font-size: 12px; line-height: 1.5; color: var(--muted); margin: 0; }
+.rail-note code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  background: var(--sunk);
+  padding: 1px 5px;
+  border-radius: 6px;
+}
+
+/* --------- notas de diseño (columna derecha, sólo escritorio ancho) --------- */
+.notes { width: 300px; display: none; flex-direction: column; gap: 14px; position: sticky; top: 32px; }
+.note {
+  display: flex;
+  gap: 12px;
+  padding: 15px 16px;
+  border-radius: var(--r-md);
+  background: color-mix(in oklab, var(--surface) 62%, transparent);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(16px);
+}
+.note-mark {
+  flex: none;
+  width: 26px; height: 26px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklab, var(--accent) var(--tint), transparent);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.note-body { display: flex; flex-direction: column; gap: 4px; }
+.note-body b { font-size: 13.5px; font-weight: 650; letter-spacing: -.005em; }
+.note-body span { font-size: 12.5px; line-height: 1.5; color: var(--ink-2); }
+@media (min-width: 1240px) { .notes { display: flex; } }
+
+/* ============================ TELÉFONO ============================ */
+
+.device { position: relative; }
+
+.frame {
+  position: relative;
+  width: 390px;
+  height: 844px;
+  border-radius: 54px;
+  background: var(--ground);
+  overflow: hidden;
+  box-shadow:
+    0 0 0 11px color-mix(in oklab, #0b1020 92%, var(--accent)),
+    0 0 0 12.5px rgba(255, 255, 255, .10),
+    var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  isolation: isolate;
+}
+[data-platform="android"] .frame { border-radius: 38px; box-shadow: 0 0 0 9px #0b1020, 0 0 0 10.5px rgba(255,255,255,.08), var(--shadow-lg); }
+
+/* --- barra de estado del sistema --- */
+.sysbar {
+  position: relative;
+  z-index: 6;
+  height: 52px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 26px;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: .01em;
+  color: var(--ink);
+  background: var(--ground);
+}
+[data-platform="android"] .sysbar { height: 34px; padding: 0 18px; font-size: 12.5px; font-weight: 600; }
+.sysbar .sys-icons { display: flex; align-items: center; gap: 6px; }
+.island {
+  position: absolute;
+  left: 50%;
+  top: 11px;
+  transform: translateX(-50%);
+  width: 116px;
+  height: 32px;
+  border-radius: 999px;
+  background: #05070d;
+}
+[data-platform="android"] .island {
+  width: 11px; height: 11px; border-radius: 50%;
+  left: auto; right: 18px; top: 11px; transform: none;
+}
+
+/* --- lienzo de la app --- */
+.app {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--ground);
+}
+
+.appbar {
+  position: relative;
+  z-index: 5;
+  flex: none;
+  padding: 4px 18px 12px;
+  background: color-mix(in oklab, var(--ground) 78%, transparent);
+  backdrop-filter: blur(22px) saturate(1.4);
+  border-bottom: 1px solid transparent;
+  transition: border-color .2s, background .2s;
+}
+.appbar.stuck { border-bottom-color: var(--line); }
+.appbar-row { display: flex; align-items: center; gap: 12px; min-height: 46px; }
+.appbar-title {
+  font-family: var(--display);
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -.015em;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(7px);
+  transition: opacity .22s var(--ease), transform .28s var(--ease);
+}
+/* patrón nativo: el título compacto sólo aparece al desplazar (el grande vive en el contenido) */
+.appbar.stuck .appbar-title,
+.appbar.always .appbar-title { opacity: 1; transform: none; }
+[data-platform="android"] .appbar-title { font-family: var(--ui); font-weight: 600; font-size: 20px; letter-spacing: -.005em; }
+
+.avatar {
+  width: 42px; height: 42px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(140deg, var(--accent), var(--accent-2));
+  box-shadow: 0 4px 14px color-mix(in oklab, var(--accent) 40%, transparent);
+}
+.greet { display: flex; flex-direction: column; gap: 1px; min-width: 0; text-align: left; }
+.greet small { font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.greet strong { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+
+.icon-btn {
+  width: 40px; height: 40px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklab, var(--surface) 80%, transparent);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  position: relative;
+  transition: transform .16s var(--spring), background .2s;
+}
+.icon-btn:active { transform: scale(.9); }
+.icon-btn svg { width: 19px; height: 19px; }
+.badge-dot {
+  position: absolute;
+  top: 7px; right: 8px;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 0 2px var(--ground);
+}
+.back-btn { display: flex; align-items: center; gap: 3px; padding: 6px 10px 6px 4px; border-radius: 999px; color: var(--accent); font-size: 15px; font-weight: 600; }
+.back-btn svg { width: 18px; height: 18px; }
+
+/* --- área de scroll --- */
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+.scroll-inner { padding: 4px 16px 130px; display: flex; flex-direction: column; gap: 18px; }
+
+.ptr {
+  height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--accent);
+  transition: height .3s var(--ease);
+}
+.ptr svg { width: 20px; height: 20px; }
+.ptr.spin svg { animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================ COMPONENTES ============================ */
+
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.section-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+.section-head button { font-size: 13px; font-weight: 600; color: var(--accent); }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+.stack-tight { display: flex; flex-direction: column; gap: 8px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+}
+[data-platform="android"] .card { border-radius: var(--r-md); }
+
+.tappable { display: block; width: 100%; text-align: left; transition: transform .18s var(--spring), box-shadow .18s; }
+.tappable:active { transform: scale(.983); }
+[data-platform="android"] .tappable:active { transform: none; background: color-mix(in oklab, var(--accent) 8%, var(--surface)); }
+
+/* --- héroe: próxima salida --- */
+.hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-xl);
+  padding: 20px;
+  color: #fff;
+  background: linear-gradient(145deg, var(--accent-base), color-mix(in oklab, var(--accent2-base) 80%, #062b52));
+  box-shadow: 0 18px 44px color-mix(in oklab, var(--accent-base) 34%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: -40% -10% auto auto;
+  width: 340px; height: 340px;
+  background-image: repeating-radial-gradient(circle at 70% 30%, rgba(255,255,255,.34) 0 1px, transparent 1px 17px);
+  opacity: .5;
+  pointer-events: none;
+}
+.hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; position: relative; }
+.hero-eyebrow {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  opacity: .84;
+  margin: 0 0 6px;
+}
+.hero h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 23px;
+  line-height: 1.12;
+  letter-spacing: -.02em;
+  text-wrap: balance;
+}
+.hero-meta { margin: 7px 0 0; font-size: 13px; opacity: .9; }
+.countdown {
+  flex: none;
+  width: 66px; height: 66px;
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+.countdown svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.countdown span { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.countdown small { display: block; font-size: 9px; font-weight: 600; opacity: .8; letter-spacing: .06em; text-align: center; }
+.hero-foot { display: flex; align-items: center; gap: 10px; position: relative; flex-wrap: wrap; }
+.pill-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 15px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--accent-base);
+  font-size: 13px;
+  font-weight: 700;
+  transition: transform .18s var(--spring);
+}
+.pill-cta:active { transform: scale(.94); }
+.pill-cta svg { width: 14px; height: 14px; }
+.hero-seats { font-size: 12.5px; font-weight: 600; opacity: .92; font-variant-numeric: tabular-nums; }
+
+/* --- bento de indicadores --- */
+.bento { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.kpi { padding: 14px; display: flex; flex-direction: column; gap: 6px; min-height: 106px; }
+.kpi-label { font-size: 11px; font-weight: 650; color: var(--muted); letter-spacing: .01em; }
+.kpi-value {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+.kpi-value small { font-size: 14px; font-weight: 600; color: var(--muted); }
+.kpi-foot { margin-top: auto; display: flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; }
+.spark { width: 100%; height: 30px; margin-top: auto; display: block; }
+.trend-up { color: var(--ok); }
+.trend-warn { color: var(--warn); }
+
+.meter { height: 6px; border-radius: 999px; background: var(--sunk); overflow: hidden; margin-top: auto; }
+.meter i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+
+/* --- chips de estado --- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .005em;
+  white-space: nowrap;
+  background: color-mix(in oklab, var(--ink) 7%, transparent);
+  color: var(--ink-2);
+}
+.chip-accent { background: color-mix(in oklab, var(--accent) var(--tint), transparent); color: var(--accent); }
+.chip-ok { background: color-mix(in oklab, var(--ok) var(--tint), transparent); color: var(--ok); }
+.chip-warn { background: color-mix(in oklab, var(--warn) var(--tint), transparent); color: var(--warn); }
+.chip-danger { background: color-mix(in oklab, var(--danger) var(--tint), transparent); color: var(--danger); }
+.chip i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* --- lista de prioridad / filas --- */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
+  width: 100%;
+  text-align: left;
+}
+.row-lead { flex: none; width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; }
+.row-lead svg { width: 18px; height: 18px; }
+.row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.row-title { font-size: 14.5px; font-weight: 650; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-sub { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-sub.clamp {
+  white-space: normal;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.row-tail { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.row-tail .num { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.chev { width: 16px; height: 16px; color: color-mix(in oklab, var(--muted) 70%, transparent); flex: none; }
+
+.divided > * + * { border-top: 1px solid var(--line); }
+
+/* --- accesos rápidos --- */
+.quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
+.quick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 12px 4px 10px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  transition: transform .18s var(--spring);
+}
+.quick:active { transform: scale(.94); }
+.quick span {
+  width: 38px; height: 38px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklab, var(--accent) var(--tint), transparent);
+  color: var(--accent);
+}
+.quick span svg { width: 19px; height: 19px; }
+.quick small { font-size: 10.5px; font-weight: 650; text-align: center; line-height: 1.15; }
+
+/* --- carrusel ecosistema --- */
+.rail-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 2px 16px 4px;
+  margin: 0 -16px;
+}
+.eco {
+  flex: none;
+  width: 176px;
+  scroll-snap-align: start;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: left;
+  transition: transform .18s var(--spring);
+}
+.eco:active { transform: scale(.97); }
+.eco-art {
+  height: 92px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+.eco-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(115deg, rgba(255,255,255,.20) 0 1px, transparent 1px 13px);
+  opacity: .55;
+}
+.eco-art svg { width: 26px; height: 26px; position: relative; z-index: 1; filter: drop-shadow(0 2px 6px rgba(0,0,0,.32)); }
+.eco-body { padding: 11px 13px 13px; display: flex; flex-direction: column; gap: 3px; }
+.eco-body strong { font-size: 13.5px; font-weight: 650; }
+.eco-body small { font-size: 11.5px; color: var(--muted); line-height: 1.35; }
+
+/* --- pantalla con título grande (iOS) --- */
+.screen-title { display: flex; flex-direction: column; gap: 4px; padding-top: 2px; }
+.screen-title h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 33px;
+  font-weight: 600;
+  letter-spacing: -.03em;
+  line-height: 1.03;
+}
+[data-platform="android"] .screen-title h1 { font-family: var(--ui); font-size: 29px; font-weight: 700; letter-spacing: -.02em; }
+.screen-title p { margin: 0; font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+
+/* --- filtros scroll horizontal --- */
+.filters { display: flex; gap: 8px; overflow-x: auto; padding: 2px 16px; margin: 0 -16px; }
+.filter {
+  flex: none;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 650;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  transition: background .2s, color .2s, border-color .2s;
+}
+.filter[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+[data-platform="android"] .filter { border-radius: 10px; }
+
+/* --- buscador --- */
+.search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 14px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  box-shadow: var(--shadow);
+}
+[data-platform="android"] .search { border-radius: 16px; }
+.search svg { width: 17px; height: 17px; flex: none; }
+.search input {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14.5px;
+  color: var(--ink);
+  flex: 1;
+  min-width: 0;
+  outline: none;
+}
+.search input::placeholder { color: var(--muted); }
+
+/* --- anillo de score --- */
+.ring { position: relative; width: 44px; height: 44px; flex: none; display: grid; place-items: center; }
+.ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.ring b { font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+
+/* --- tarjeta de reserva --- */
+.res { padding: 15px; display: flex; flex-direction: column; gap: 12px; }
+.res-top { display: flex; align-items: flex-start; gap: 12px; }
+.res-date {
+  flex: none;
+  width: 48px;
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--accent) var(--tint), transparent);
+  color: var(--accent);
+  text-align: center;
+  padding: 7px 0 8px;
+}
+.res-date b { display: block; font-size: 18px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.res-date small { display: block; font-size: 10px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; margin-top: 3px; }
+.res-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.res-main strong { font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
+.res-main span { font-size: 12.5px; color: var(--muted); }
+.res-pay { display: flex; flex-direction: column; gap: 6px; }
+.res-pay-row { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
+.res-pay-row span:last-child { font-variant-numeric: tabular-nums; }
+.res-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* --- listas agrupadas estilo ajustes --- */
+.group { border-radius: var(--r-lg); overflow: hidden; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.group-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0 6px 6px;
+}
+.setting { display: flex; align-items: center; gap: 12px; padding: 13px 14px; width: 100%; text-align: left; }
+.setting + .setting { border-top: 1px solid var(--line); }
+.setting-ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: #fff; flex: none; }
+.setting-ico svg { width: 16px; height: 16px; }
+.setting-label { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; }
+.setting-label .row-sub { font-weight: 500; font-size: 12px; }
+.setting.stacked { flex-wrap: wrap; row-gap: 10px; }
+.setting-control { flex: 1 1 100%; margin-left: 42px; }
+.setting-control .seg { width: 100%; }
+.setting-value { font-size: 13.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.setting.danger .setting-label { color: var(--danger); }
+
+/* interruptor tipo iOS / Material */
+.switch {
+  width: 51px; height: 31px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--line-strong);
+  position: relative;
+  transition: background .22s var(--ease);
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 27px; height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .28);
+  transition: transform .26s var(--spring);
+}
+.switch[aria-pressed="true"] { background: var(--accent); }
+.switch[aria-pressed="true"]::after { transform: translateX(20px); }
+[data-platform="android"] .switch { width: 46px; height: 26px; }
+[data-platform="android"] .switch::after { width: 18px; height: 18px; top: 4px; left: 5px; }
+[data-platform="android"] .switch[aria-pressed="true"]::after { transform: translateX(19px); }
+
+/* --- perfil --- */
+.profile { padding: 20px 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.profile .avatar { width: 74px; height: 74px; font-size: 24px; }
+.profile strong { font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+.profile small { font-size: 13px; color: var(--muted); }
+.profile-stats { display: flex; width: 100%; margin-top: 6px; }
+.profile-stats div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.profile-stats div + div { border-left: 1px solid var(--line); }
+.profile-stats b { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.profile-stats span { font-size: 10.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+
+/* --- avisos --- */
+.notice {
+  display: flex;
+  gap: 10px;
+  padding: 13px 14px;
+  border-radius: var(--r-md);
+  background: color-mix(in oklab, var(--accent) 8%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--accent) 24%, transparent);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.notice svg { width: 17px; height: 17px; flex: none; color: var(--accent); margin-top: 1px; }
+.notice b { color: var(--ink); }
+
+.foot-note { text-align: center; font-size: 11.5px; color: var(--muted); line-height: 1.5; padding: 4px 12px 0; }
+
+/* --- timeline itinerario --- */
+.timeline { display: flex; flex-direction: column; }
+.tl-item { display: flex; gap: 12px; }
+.tl-mark { flex: none; width: 22px; display: flex; flex-direction: column; align-items: center; }
+.tl-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin-top: 5px; flex: none; }
+.tl-line { flex: 1; width: 2px; background: var(--line-strong); margin: 4px 0 0; }
+.tl-body { padding-bottom: 16px; display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.tl-body b { font-size: 13.5px; font-weight: 650; }
+.tl-body small { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.tl-day { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+
+/* ============================ NAVEGACIÓN ============================ */
+
+.tabbar {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 7;
+  padding: 0 14px 22px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.tabbar-inner {
+  pointer-events: auto;
+  display: flex;
+  width: 100%;
+  max-width: 340px;
+  padding: 7px;
+  gap: 2px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--surface) 82%, transparent);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(24px) saturate(1.5);
+  box-shadow: 0 12px 34px rgba(9, 18, 33, .22);
+}
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 2px 3px;
+  color: var(--muted);
+  border-radius: 999px;
+  position: relative;
+  transition: color .2s;
+}
+.tab svg { width: 21px; height: 21px; }
+.tab small { font-size: 9.5px; font-weight: 650; letter-spacing: .01em; }
+.tab[aria-selected="true"] { color: var(--accent); }
+.tab-ind {
+  position: absolute;
+  top: 0; left: 50%;
+  width: 40px; height: 30px;
+  transform: translateX(-50%) scale(.6);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  opacity: 0;
+  transition: opacity .22s, transform .34s var(--spring);
+}
+.tab[aria-selected="true"] .tab-ind { opacity: 1; transform: translateX(-50%) scale(1); }
+
+/* Material 3: barra completa, indicador pastilla, sin flotar */
+[data-platform="android"] .tabbar { padding: 0; }
+[data-platform="android"] .tabbar-inner {
+  max-width: none;
+  border-radius: 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: color-mix(in oklab, var(--surface) 94%, var(--accent));
+  padding: 9px 6px 16px;
+  box-shadow: none;
+}
+[data-platform="android"] .tab small { font-size: 10.5px; }
+[data-platform="android"] .tab-ind { width: 58px; height: 30px; border-radius: 999px; background: color-mix(in oklab, var(--accent) 20%, transparent); }
+
+/* FAB Material (solo Android) */
+.fab {
+  position: absolute;
+  right: 18px;
+  bottom: 96px;
+  z-index: 7;
+  width: 56px; height: 56px;
+  border-radius: 18px;
+  display: none;
+  place-items: center;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 8px 22px color-mix(in oklab, var(--accent) 46%, transparent);
+  transition: transform .2s var(--spring);
+}
+.fab svg { width: 24px; height: 24px; }
+.fab:active { transform: scale(.92); }
+[data-platform="android"] .fab.show { display: grid; }
+
+/* barra de gestos */
+.gesture { flex: none; height: 22px; display: grid; place-items: center; background: var(--ground); position: relative; z-index: 6; }
+.gesture i { width: 134px; height: 5px; border-radius: 999px; background: color-mix(in oklab, var(--ink) 42%, transparent); }
+[data-platform="android"] .gesture i { width: 108px; height: 3px; }
+
+/* ============================ SHEETS / TOAST ============================ */
+
+.sheet-host { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity .3s var(--ease);
+}
+.sheet-host.open { pointer-events: auto; }
+.sheet-host.open .scrim { opacity: 1; }
+.sheet {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  max-height: 86%;
+  display: flex;
+  flex-direction: column;
+  background: var(--ground);
+  border-top-left-radius: 30px;
+  border-top-right-radius: 30px;
+  box-shadow: 0 -18px 50px rgba(3, 8, 18, .35);
+  transform: translateY(101%);
+  transition: transform .42s var(--spring);
+}
+[data-platform="android"] .sheet { border-top-left-radius: 26px; border-top-right-radius: 26px; }
+.sheet-host.open .sheet { transform: translateY(0); }
+.sheet-grab { padding: 9px 0 5px; display: grid; place-items: center; cursor: grab; touch-action: none; }
+.sheet-grab i { width: 38px; height: 5px; border-radius: 999px; background: var(--line-strong); }
+.sheet-head { display: flex; align-items: center; gap: 10px; padding: 2px 18px 10px; }
+.sheet-head h3 { margin: 0; flex: 1; font-family: var(--display); font-size: 19px; font-weight: 600; letter-spacing: -.02em; }
+[data-platform="android"] .sheet-head h3 { font-family: var(--ui); font-weight: 650; font-size: 18px; }
+.sheet-body { overflow-y: auto; padding: 0 16px 26px; display: flex; flex-direction: column; gap: 14px; }
+
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 13px 14px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 650;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  transition: transform .16s var(--spring), opacity .2s;
+}
+.btn:active { transform: scale(.96); }
+.btn svg { width: 17px; height: 17px; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); box-shadow: 0 8px 20px color-mix(in oklab, var(--accent) 34%, transparent); }
+.btn-wide { grid-column: 1 / -1; }
+.btn[disabled] { opacity: .55; cursor: not-allowed; }
+.btn.loading { pointer-events: none; }
+.btn.loading svg { animation: spin .9s linear infinite; }
+
+.kv { display: flex; flex-direction: column; }
+.kv-row { display: flex; justify-content: space-between; gap: 14px; padding: 11px 14px; font-size: 13.5px; }
+.kv-row + .kv-row { border-top: 1px solid var(--line); }
+.kv-row span:first-child { color: var(--muted); }
+.kv-row span:last-child { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+
+.reasons { display: flex; flex-direction: column; gap: 8px; padding: 14px; }
+.reason { display: flex; gap: 9px; font-size: 13px; line-height: 1.4; color: var(--ink-2); }
+.reason svg { width: 15px; height: 15px; flex: none; color: var(--accent); margin-top: 2px; }
+
+/* toast estilo isla dinámica */
+.toast-host { position: absolute; top: 0; left: 0; right: 0; z-index: 30; display: grid; place-items: center; padding-top: 12px; pointer-events: none; }
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 88%;
+  padding: 11px 18px 11px 14px;
+  border-radius: 999px;
+  background: #05070d;
+  color: #f4f8ff;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .45);
+  transform: translateY(-140%) scale(.86);
+  opacity: 0;
+  transition: transform .5s var(--spring), opacity .3s;
+}
+.toast.show { transform: translateY(0) scale(1); opacity: 1; }
+/* Android: snackbar Material anclado abajo, sobre la barra de navegación */
+[data-platform="android"] .toast-host { top: auto; bottom: 96px; padding: 0 14px; }
+[data-platform="android"] .toast {
+  width: 100%;
+  max-width: none;
+  border-radius: 12px;
+  transform: translateY(140%) scale(1);
+}
+[data-platform="android"] .toast.show { transform: translateY(0); }
+.toast svg { width: 18px; height: 18px; flex: none; color: #4ade80; }
+.toast span { min-width: 0; }
+.toast small { display: block; font-weight: 500; opacity: .72; font-size: 11.5px; }
+
+/* transiciones de pantalla */
+@keyframes screen-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes push-in { from { opacity: .4; transform: translateX(26px); } to { opacity: 1; transform: none; } }
+.anim-tab { animation: screen-in .34s var(--ease); }
+.anim-push { animation: push-in .34s var(--ease); }
+[data-platform="android"] .anim-push { animation: screen-in .3s var(--ease); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  .scroll { scroll-behavior: auto; }
+}
+
+/* ============================ RESPONSIVE ============================ */
+
+@media (max-width: 900px) {
+  .stage { padding: 0; gap: 0; }
+  .stage-head, .rail { display: none; }
+  .stage-main { display: block; }
+  .device { width: 100%; }
+  .frame {
+    width: 100%;
+    /* `min-height` evita el colapso cuando la página vive en un iframe que se
+       dimensiona por la altura de su contenido: ahí `dvh` se retroalimenta y
+       tendería a cero. En un teléfono real manda el alto de la ventana. */
+    height: 100dvh;
+    min-height: 680px;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .sysbar { height: max(30px, env(safe-area-inset-top)); padding: 0 20px; font-size: 12px; }
+  .island { display: none; }
+  .gesture { height: max(10px, env(safe-area-inset-bottom)); }
+  .gesture i { display: none; }
+  .tabbar { padding-bottom: 12px; }
+}
+</style>
+
+<div class="stage">
+  <div class="stage-bg" aria-hidden="true"></div>
+
+  <header class="stage-head">
+    <p class="kicker">Campo Norte · Growth OS</p>
+    <h1>La app de campo: el CRM que cabe en un bolsillo</h1>
+    <p class="lede">
+      Demo interactiva de la vista móvil. Mismos tokens que el CRM de escritorio
+      (azul eléctrico, glass, radios grandes) llevados a patrones nativos:
+      <b>títulos grandes y barra flotante en iOS</b>, <b>barra Material 3 y FAB en Android</b>,
+      hojas arrastrables, pull-to-refresh y tema claro/oscuro. Datos semilla del repo · nada se envía al viajero.
+    </p>
+  </header>
+
+  <div class="stage-main">
+    <aside class="rail">
+      <div class="rail-group">
+        <p class="rail-label">Plataforma</p>
+        <div class="seg" role="group" aria-label="Plataforma">
+          <button type="button" data-set="platform" data-value="ios">iOS</button>
+          <button type="button" data-set="platform" data-value="android">Android</button>
+        </div>
+      </div>
+      <div class="rail-group">
+        <p class="rail-label">Apariencia</p>
+        <div class="seg" role="group" aria-label="Tema">
+          <button type="button" data-set="theme" data-value="light">Claro</button>
+          <button type="button" data-set="theme" data-value="dark">Oscuro</button>
+          <button type="button" data-set="theme" data-value="auto">Auto</button>
+        </div>
+      </div>
+      <div class="rail-group">
+        <p class="rail-label">Acento</p>
+        <div class="swatches" role="group" aria-label="Color de acento"></div>
+      </div>
+      <div class="rail-group">
+        <p class="rail-label">Idioma</p>
+        <div class="seg" role="group" aria-label="Idioma">
+          <button type="button" data-set="lang" data-value="es">Español</button>
+          <button type="button" data-set="lang" data-value="en">English</button>
+        </div>
+      </div>
+      <p class="rail-note">
+        Arrastra hacia abajo en <code>Inicio</code> para recargar el Hub y desliza las hojas
+        por el tirador para cerrarlas. En pantalla pequeña el marco desaparece y la app ocupa todo.
+      </p>
+    </aside>
+
+    <div class="device" id="device">
+      <div class="frame">
+        <div class="sysbar">
+          <span id="sysTime">9:41</span>
+          <div class="island" aria-hidden="true"></div>
+          <span class="sys-icons" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M2 17h3v4H2zm5-3h3v7H7zm5-4h3v11h-3zm5-5h3v16h-3z"/></svg>
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 18.5a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2zm0-4.6c1.6 0 3 .6 4.1 1.7l-1.6 1.6a3.5 3.5 0 0 0-5 0l-1.6-1.6A5.8 5.8 0 0 1 12 13.9zm0-4.7c2.8 0 5.4 1.1 7.4 3l-1.6 1.6A8 8 0 0 0 12 11.3c-2.2 0-4.2.8-5.8 2.2L4.6 12a10.4 10.4 0 0 1 7.4-2.8z"/></svg>
+            <svg viewBox="0 0 26 24" width="17" height="15" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1.5" y="7.5" width="19" height="10" rx="3"/><rect x="3.5" y="9.5" width="13" height="6" rx="1.6" fill="currentColor" stroke="none"/><path d="M22.5 11v3" stroke-linecap="round"/></svg>
+          </span>
+        </div>
+
+        <div class="app">
+          <div class="appbar" id="appbar"></div>
+          <div class="scroll" id="scroll">
+            <div class="ptr" id="ptr" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 4v12m0 0 5-5m-5 5-5-5"/></svg>
+            </div>
+            <div class="scroll-inner" id="screen"></div>
+          </div>
+          <button class="fab" id="fab" type="button" aria-label="Nuevo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <nav class="tabbar" id="tabbar" aria-label="Navegación principal"></nav>
+        </div>
+
+        <div class="gesture"><i></i></div>
+
+        <div class="sheet-host" id="sheetHost" aria-hidden="true">
+          <div class="scrim" data-close-sheet></div>
+          <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+            <div class="sheet-grab" id="sheetGrab"><i></i></div>
+            <div class="sheet-head">
+              <h3 id="sheetTitle"></h3>
+              <button class="icon-btn" type="button" data-close-sheet aria-label="Cerrar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg>
+              </button>
+            </div>
+            <div class="sheet-body" id="sheetBody"></div>
+          </div>
+        </div>
+
+        <div class="toast-host"><div class="toast" id="toast" role="status" aria-live="polite"></div></div>
+      </div>
+    </div>
+
+    <aside class="notes" aria-label="Decisiones de diseño">
+      <div class="note">
+        <span class="note-mark">44</span>
+        <span class="note-body">
+          <b>Zonas de toque de pulgar</b>
+          <span>Todo lo accionable ocupa 44 pt (iOS) / 48 dp (Android) mínimos y vive en el tercio inferior:
+          se opera con una mano, con guantes y en movimiento.</span>
+        </span>
+      </div>
+      <div class="note">
+        <span class="note-mark">◐</span>
+        <span class="note-body">
+          <b>Un patrón por plataforma</b>
+          <span>iOS: título grande que colapsa al desplazar, barra flotante de cristal, hoja con tirador.
+          Android: barra Material 3 anclada con pastilla activa, FAB para crear y esquinas más contenidas.</span>
+        </span>
+      </div>
+      <div class="note">
+        <span class="note-mark">▤</span>
+        <span class="note-body">
+          <b>Resumen antes que detalle</b>
+          <span>Rejilla bento: la próxima salida manda, luego cuatro números y la cola de hoy.
+          El estado se lee por forma y color (chip, anillo, barra), no sólo por cifra.</span>
+        </span>
+      </div>
+      <div class="note">
+        <span class="note-mark">⇅</span>
+        <span class="note-body">
+          <b>Gestos, no menús</b>
+          <span>Arrastrar para recargar el Hub, tirador para cerrar hojas, filtros deslizables
+          y navegación apilada con vuelta atrás. Menos taps para las tareas de campo.</span>
+        </span>
+      </div>
+      <div class="note">
+        <span class="note-mark">✳</span>
+        <span class="note-body">
+          <b>Tema y acento vivos</b>
+          <span>Claro, oscuro y automático con la misma jerarquía de contraste, y cinco acentos
+          heredados de las preferencias del CRM de escritorio.</span>
+        </span>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script src="./app.js" defer></script>
+</body>
+</html>

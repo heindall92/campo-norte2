@@ -1,0 +1,62 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Brainstorm / visual companion (local)
+.superpowers/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Media fuente (pesada); el login usa public/media/login-home.mp4 comprimido
+Hero Login.mp4
+Home-Page-v4.mov
+*.mov
+Propuesta Empresarial CAMPONORTE Equipo demo.pptx
+
+# PNG fuente de diapositivas (~20 MB); el CRM sirve public/deck/slides/*.jpg
+/slides/
+
+# --- Secretos ---
+.env
+.env.*
+!.env.example
+
+# --- Material confidencial de Campo Norte (NDA) ---
+# Documentación que nos entregó el cliente. Nunca debe entrar al repositorio,
+# ni siquiera siendo privado. Se mantiene en local, fuera de git.
+/CAMPONORTE_BusinessCase_Evolve*.pdf
+/CAMPONORTE_Presentacion_Corporativa*.pdf
+/CAMPONORTE_Growth_Builder_Job_Description*.pdf
+/CAMPONORTE_NDA*.pdf
+
+# --- Material de trabajo propio, pesado o duplicado ---
+# El deck servido por la app vive en public/deck/. Esto son las fuentes.
+/Propuesta*.pdf
+/Propuesta*.docx
+/Propuesta_Entrevista*.docx
+/propuesta*.pptx
+/*.zip
+/hero login*.mp4
+/Hero Login*.mp4
+
+# Capturas y specs con rutas locales de la máquina de desarrollo
+/docs/superpowers/specs/assets/c__Users_*

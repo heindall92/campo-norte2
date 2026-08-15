@@ -1,0 +1,117 @@
+import { codesEqual } from "./location";
+import type { FleetKind, PickLine, PickWave, StockMovement, WmsSnapshot } from "./types";
+
+export function nextOpenLine(wave: PickWave): PickLine | null {
+  return (
+    wave.lines.find((l) => l.status === "en_curso") ??
+    wave.lines.find((l) => l.status === "pendiente") ??
+    null
+  );
+}
+
+export type ConfirmPickInput = {
+  slotCode: string;
+  sscc: string;
+  qty: number;
+};
+
+export type ConfirmPickError =
+  | "wave_missing"
+  | "line_missing"
+  | "line_not_open"
+  | "wrong_slot"
+  | "wrong_sscc"
+  | "invalid_qty"
+  | "pallet_missing";
+
+export type ConfirmPickResult =
+  | { ok: true; snap: WmsSnapshot }
+  | { ok: false; error: ConfirmPickError };
+
+/** Recogepedidos en cara de picking; retráctil doble stand-up para reposición desde reserva. */
+export function recommendedFleetKind(kind: PickWave["kind"]): FleetKind {
+  return kind === "reposicion" ? "retractil_doble" : "recogepedidos";
+}
+
+export function confirmPick(
+  snap: WmsSnapshot,
+  waveId: string,
+  lineId: string,
+  input: ConfirmPickInput,
+  at = "2026-08-15T10:00:00.000Z",
+): ConfirmPickResult {
+  const wave = snap.pickWaves.find((w) => w.id === waveId);
+  if (!wave) return { ok: false, error: "wave_missing" };
+
+  const line = wave.lines.find((l) => l.id === lineId);
+  if (!line) return { ok: false, error: "line_missing" };
+  if (line.status !== "pendiente" && line.status !== "en_curso") {
+    return { ok: false, error: "line_not_open" };
+  }
+
+  const slot = snap.slots.find((s) => s.id === line.slotId);
+  if (!slot || !codesEqual(slot.code, input.slotCode)) {
+    return { ok: false, error: "wrong_slot" };
+  }
+
+  const pallet = line.palletId ? snap.pallets.find((p) => p.id === line.palletId) : null;
+  if (!pallet) return { ok: false, error: "pallet_missing" };
+  if (input.sscc.trim() !== pallet.sscc) return { ok: false, error: "wrong_sscc" };
+  if (!Number.isFinite(input.qty) || input.qty < 1 || input.qty > line.qty) {
+    return { ok: false, error: "invalid_qty" };
+  }
+
+  const nextLines = wave.lines.map((l) => {
+    if (l.id === line.id) return { ...l, status: "picada" as const, qtyPicked: input.qty };
+    if (l.status === "pendiente" && l.sequence === line.sequence + 1) {
+      return { ...l, status: "en_curso" as const };
+    }
+    return l;
+  });
+  const allDone = nextLines.every((l) => l.status === "picada" || l.status === "omitida");
+  const nextWave: PickWave = {
+    ...wave,
+    status: allDone ? "cerrada" : "en_curso",
+    lines: nextLines,
+  };
+
+  const remaining = pallet.qty - input.qty;
+  const nextPallets = snap.pallets.map((p) =>
+    p.id === pallet.id
+      ? {
+          ...p,
+          qty: Math.max(0, remaining),
+          status: remaining <= 0 ? ("picking" as const) : p.status,
+        }
+      : p,
+  );
+
+  const movement: StockMovement = {
+    id: `mv-pick-${line.id}`,
+    at,
+    type: wave.kind === "reposicion" ? "traslado" : "salida",
+    skuId: line.skuId,
+    palletId: pallet.id,
+    fromSlotId: slot.id,
+    toSlotId: null,
+    qty: input.qty,
+    operatorId: wave.operatorId,
+    fleetId: wave.fleetId,
+    note: `${nextWave.code} · ${slot.code}`,
+  };
+
+  const nextOperators = snap.operators.map((o) =>
+    o.id === wave.operatorId ? { ...o, movesToday: o.movesToday + 1 } : o,
+  );
+
+  return {
+    ok: true,
+    snap: {
+      ...snap,
+      pickWaves: snap.pickWaves.map((w) => (w.id === nextWave.id ? nextWave : w)),
+      pallets: nextPallets,
+      movements: [movement, ...snap.movements],
+      operators: nextOperators,
+    },
+  };
+}

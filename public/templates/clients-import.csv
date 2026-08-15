@@ -1,0 +1,2 @@
+id;name;email;phone;city;country;dni;segment;status;ltv;owner;notes
+C-2001;Ana Ejemplo;ana@ejemplo.com;+34 600 000 001;Madrid;España;12345678A;activo;al_dia;0;Laura;Importado desde Excel
