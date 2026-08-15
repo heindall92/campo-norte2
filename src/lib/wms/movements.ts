@@ -1,5 +1,6 @@
+import { closeAsnIfLocated } from "./catalog";
 import { codesEqual } from "./location";
-import type { Pallet, Slot, StockMovement, WmsSnapshot } from "./types";
+import type { Pallet, Slot, StockMovement, WarehouseZone, WmsSnapshot } from "./types";
 
 export type LiveMoveError =
   | "pallet_missing"
@@ -98,6 +99,66 @@ function relocate(
     note: input.note ?? `${from.code} → ${to.code}`,
   };
   return { ok: true, snap: appendMove(snap, movement, nextSlots, nextPallets) };
+}
+
+/** Zona preferida según categoría del SKU. Categorías de usuario caen en seco. */
+export function zoneForCategory(category: string): WarehouseZone {
+  if (category === "frescos" || category === "perecederos") return "fresco";
+  if (category === "congelados") return "congelado";
+  return "seco";
+}
+
+/**
+ * Primer hueco libre del centro que encaja con la zona del SKU.
+ * No inventa ocupación: solo huecos `libre` sin palet, fuera de muelle.
+ */
+export function suggestPutawaySlot(snap: WmsSnapshot, pallet: Pallet): Slot | null {
+  const sku = snap.skus.find((s) => s.id === pallet.skuId);
+  const preferred = sku ? zoneForCategory(sku.category) : "seco";
+  const free = snap.slots.filter(
+    (s) =>
+      s.siteId === pallet.siteId &&
+      s.status === "libre" &&
+      !s.palletId &&
+      s.zone !== "muelle" &&
+      s.zone !== "crossdock",
+  );
+  const ranked = [...free].sort((a, b) => {
+    const zoneA = a.zone === preferred ? 0 : 1;
+    const zoneB = b.zone === preferred ? 0 : 1;
+    if (zoneA !== zoneB) return zoneA - zoneB;
+    if (a.pickFace !== b.pickFace) return a.pickFace ? 1 : -1;
+    return a.code.localeCompare(b.code);
+  });
+  return ranked[0] ?? null;
+}
+
+/** Ubica un palet de muelle y cierra el ASN si ya no queda ninguno suyo en muelle. */
+export function putawayReceivedPallet(
+  snap: WmsSnapshot,
+  palletId: string,
+  toSlotCode: string,
+  operatorId: string | null,
+  fleetId: string | null = null,
+  at?: string,
+): LiveMoveResult {
+  const pallet = snap.pallets.find((p) => p.id === palletId);
+  if (!pallet) return { ok: false, error: "pallet_missing" };
+  const from = pallet.slotId ? snap.slots.find((s) => s.id === pallet.slotId) : undefined;
+  if (!from) return { ok: false, error: "wrong_from" };
+  const input: TransferInput = {
+    sscc: pallet.sscc,
+    fromSlotCode: from.code,
+    toSlotCode,
+    operatorId,
+    fleetId,
+  };
+  const moved = at ? confirmPutaway(snap, input, at) : confirmPutaway(snap, input);
+  if (!moved.ok) return moved;
+  if (!pallet.asnId) return moved;
+  const closed = closeAsnIfLocated(moved.snap, pallet.asnId);
+  if (!closed.ok) return moved;
+  return { ok: true, snap: closed.snap };
 }
 
 /** Putaway: palet en muelle → hueco de almacén. */

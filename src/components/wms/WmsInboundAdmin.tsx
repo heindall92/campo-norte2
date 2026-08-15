@@ -1,7 +1,16 @@
 import { Badge, Card } from "@/components/CrmChrome";
 import type { Lang } from "@/lib/i18n";
-import { createAsn, deleteAsn, receiveAsnPallet, updateAsn, type InboundAsn } from "@/lib/wms";
-import { Plus, Trash2 } from "lucide-react";
+import {
+  closeAsnIfLocated,
+  createAsn,
+  deleteAsn,
+  putawayReceivedPallet,
+  receiveAsnPallet,
+  suggestPutawaySlot,
+  updateAsn,
+  type InboundAsn,
+} from "@/lib/wms";
+import { ArrowDownToLine, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useWmsLive } from "./useWmsLive";
 
@@ -40,8 +49,8 @@ export function WmsInboundPanel({ lang }: { lang: Lang }) {
         </h2>
         <p className="mt-1 text-sm text-[var(--ink-muted)]">
           {lang === "es"
-            ? "Crear, editar estado de muelle y cerrar la entrada. No se fabrica mercancía al crear el ASN."
-            : "Create, edit dock status and close inbound. Creating an ASN does not invent goods."}
+            ? "Crear ASN, recepcionar palets en muelle y ubicarlos en la zona del SKU. El ASN se cierra cuando no queda ninguno en muelle."
+            : "Create ASN, receive pallets on dock and put them away in the SKU zone. The ASN closes when none remain on dock."}
         </p>
       </header>
 
@@ -231,6 +240,69 @@ export function WmsInboundPanel({ lang }: { lang: Lang }) {
                   </div>
                 </form>
               )}
+              {(() => {
+                const dockPals = snap.pallets.filter((p) => p.asnId === asn.id && p.status === "muelle");
+                if (dockPals.length === 0) {
+                  if (asn.status === "ubicando" && asn.palletsDone >= asn.palletsExpected) {
+                    return (
+                      <button
+                        type="button"
+                        className="mt-3 rounded-full bg-[var(--accent)] px-3 py-1.5 text-[11px] font-semibold text-white"
+                        onClick={() => {
+                          const result = closeAsnIfLocated(snap, asn.id);
+                          if (result.ok) commit(result.snap);
+                        }}
+                      >
+                        {lang === "es" ? "Cerrar ASN" : "Close ASN"}
+                      </button>
+                    );
+                  }
+                  return null;
+                }
+                return (
+                  <ul className="mt-3 space-y-2">
+                    {dockPals.map((pal) => {
+                      const sku = snap.skus.find((s) => s.id === pal.skuId);
+                      const dest = suggestPutawaySlot(snap, pal);
+                      return (
+                        <li
+                          key={pal.id}
+                          className="flex items-center justify-between gap-2 rounded-xl border border-[var(--glass-border)] px-2 py-1.5 text-xs"
+                        >
+                          <span className="min-w-0">
+                            <span className="font-mono font-semibold">{pal.sscc.slice(-8)}</span>
+                            <span className="mt-0.5 block truncate text-[var(--ink-muted)]">
+                              {sku?.name} · {pal.qty} → {dest?.code ?? "—"}
+                            </span>
+                          </span>
+                          <button
+                            type="button"
+                            disabled={!dest}
+                            className="inline-flex items-center gap-1 rounded-full bg-[var(--accent)] px-2 py-1 text-[11px] font-semibold text-white disabled:opacity-40"
+                            onClick={() => {
+                              if (!dest) return;
+                              const result = putawayReceivedPallet(snap, pal.id, dest.code, null);
+                              if (!result.ok) {
+                                setRecvMsg(
+                                  lang === "es"
+                                    ? "No se pudo ubicar: destino ocupado o palet no está en muelle"
+                                    : "Could not put away: dest busy or pallet not on dock",
+                                );
+                                return;
+                              }
+                              commit(result.snap);
+                              setRecvMsg(null);
+                            }}
+                          >
+                            <ArrowDownToLine className="h-3 w-3" />
+                            {lang === "es" ? "Ubicar" : "Putaway"}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                );
+              })()}
               {recvMsg && <p className="mt-2 text-xs font-semibold text-[var(--danger)]">{recvMsg}</p>}
             </Card>
           );

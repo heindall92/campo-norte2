@@ -11,7 +11,7 @@ Este repositorio (`campo-norte2`) publica el ecosistema SaaS WMS. La base CRM/WM
 
 ---
 
-## Fases 2–8 (esta rama)
+## Fases 2–11 (esta rama)
 
 Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, movimientos en vivo, inventario cíclico, alertas, economía unitaria, planificación de turnos, onboarding, carriers, pistola RF y **operación diaria** (CRUD, prioridades, fichaje).
 
@@ -23,11 +23,11 @@ Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, mov
 | Stock | SKU / categorías / ABC / mínimos · **alta y edición** |
 | Pasillos / huecos | Digital twin + **búsqueda** de producto/SSCC |
 | Picar mercancía | Jornada (entrada/salida + horas) · ticket → hueco → SSCC · omitir / faltante |
-| Movimientos | Putaway de muelle y traslados RF; reposición reserva → picking con retráctil doble |
-| Inventario cíclico | Cola por caducidad / ABC A / conteo viejo |
+| Movimientos | Putaway por zona del SKU · jornada de planta · reposición retráctil doble |
+| Inventario cíclico | Cola por caducidad / ABC A · jornada · desvío firmado por operario |
 | Palets | SSCC, lote, caducidad, hueco · **alta / edición** |
 | Flota eléctrica | Torito, montacargas, retráctil; batería **solo reporte real** |
-| Recepción | ASN crear / editar / **recepcionar palet en muelle** |
+| Recepción | ASN crear / recepcionar / **ubicar y cerrar** cuando no queda palet en muelle |
 | Expedición | Pedido diario · itinerario de muelle · abrir ola · tracking manual |
 | Operarios | Cupo 25/25/25 (plazas vacantes) · CRUD · PIN / fichaje |
 | Centros | Alta de hub: ciudad y layout que escriba el usuario |
@@ -65,14 +65,15 @@ Cómo probar fase 2:
 3. **Picar mercancía** → ola `WAVE-A-0815-01` → Autocompletar demo → Confirmar picado.
 4. Ola `WAVE-REP-A-0815` usa **Crown RR 5700 Stand-up** (retráctil doble) para reponer desde reserva.
 5. Cambia a **Huelva** en la torre y en pasillos (pasillo F fresco / G congelado).
-6. **Movimientos** → Autocompletar putaway → Confirmar. Luego **Bajar** una reposición de pick face.
-7. **Inventario cíclico** → Autocompletar demo → Confirmar conteo.
-8. Torre de control: lista de alertas (batería Still EXU-S, cut-off Alcalá, caducidad).
-9. **Operarios** → cobertura mañana/tarde/noche. **Cubrir huecos** mueve excedente (picker noche + carretillero tarde). Lo que queda es contratar.
-10. **Costes** o **Tesorería** → P&L 3PL del hub (€/palet y contribución).
-11. **Centros** → escribe ciudad y pasillos reales (sin presets). Luego **Pasillos / huecos**.
-12. **Expedición** → elige carrier; el tracking se escribe a mano (vacío hasta entonces).
-13. **Pistola RF** → escanea el hueco y el SSCC de la cola; si no coinciden, no confirma.
+6. **Recepción** → Recepcionar un palet (SKU y lote reales) → **Ubicar** al hueco de su zona. El ASN se cierra al ubicar el último.
+7. **Movimientos** → lista de muelle o «Usar sugerencia de zona». Jorge debe fichar. Luego **Bajar** una reposición de pick face.
+8. **Inventario cíclico** → rellenar hueco y SSCC reales → Confirmar conteo (firma el operario).
+9. Torre de control: lista de alertas (batería Still EXU-S, cut-off Alcalá, caducidad).
+10. **Operarios** → cobertura mañana/tarde/noche. **Cubrir huecos** mueve excedente (picker noche + carretillero tarde). Lo que queda es contratar.
+11. **Costes** o **Tesorería** → P&L 3PL del hub (€/palet y contribución).
+12. **Centros** → escribe ciudad y pasillos reales (sin presets). Luego **Pasillos / huecos**.
+13. **Expedición** → elige carrier; el tracking se escribe a mano (vacío hasta entonces).
+14. **Pistola RF** → escanea el hueco y el SSCC de la cola; si no coinciden, no confirma.
 
 ---
 

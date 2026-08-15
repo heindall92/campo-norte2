@@ -75,7 +75,7 @@ export function planCycleCounts(
 export function confirmCycleCount(
   snap: WmsSnapshot,
   task: CycleCountTask,
-  input: { slotCode: string; sscc: string; qty: number },
+  input: { slotCode: string; sscc: string; qty: number; operatorId?: string | null },
   at = "2026-08-15T11:20:00.000Z",
 ): CycleCountResult {
   const slot = snap.slots.find((s) => s.id === task.slotId) as Slot | undefined;
@@ -107,7 +107,7 @@ export function confirmCycleCount(
           fromSlotId: slot.id,
           toSlotId: slot.id,
           qty: variance,
-          operatorId: null,
+          operatorId: input.operatorId ?? null,
           fleetId: null,
           note: variance === 0 ? `Conteo OK ${slot.code}` : `Merma/ajuste ${variance} · ${slot.code}`,
         },

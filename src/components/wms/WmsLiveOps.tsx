@@ -1,31 +1,26 @@
 import { Badge, Card } from "@/components/CrmChrome";
+import { useAuth } from "@/lib/auth";
 import type { Lang } from "@/lib/i18n";
 import {
   FLEET_KIND_LABEL,
   applyReplenishment,
+  assertCanPick,
   confirmCycleCount,
   confirmPutaway,
   confirmTransfer,
-  loadWmsSnapshot,
+  operatorForAppUser,
   planCycleCounts,
   proposeReplenishments,
-  saveWmsSnapshot,
+  putawayReceivedPallet,
+  suggestPutawaySlot,
   type CycleCountError,
   type LiveMoveError,
-  type WmsSnapshot,
 } from "@/lib/wms";
 import { cn } from "@/lib/utils";
 import { ArrowDownToLine, ArrowLeftRight, Check, Forklift, ScanBarcode } from "lucide-react";
 import { useMemo, useState } from "react";
-
-function useWmsLive(): [WmsSnapshot, (next: WmsSnapshot) => void] {
-  const [snap, setSnap] = useState(() => loadWmsSnapshot());
-  function update(next: WmsSnapshot) {
-    saveWmsSnapshot(next);
-    setSnap(next);
-  }
-  return [snap, update];
-}
+import { WmsJornadaCard } from "./WmsJornadaCard";
+import { useWmsLive } from "./useWmsLive";
 
 const MOVE_ERR: Record<LiveMoveError, { es: string; en: string }> = {
   pallet_missing: { es: "SSCC no encontrado", en: "SSCC not found" },
@@ -46,34 +41,62 @@ const COUNT_ERR: Record<CycleCountError, { es: string; en: string }> = {
 };
 
 export function WmsMovementsPanel({ lang }: { lang: Lang }) {
-  const [snap, setSnap] = useWmsLive();
+  const { user } = useAuth();
+  const { snap, commit } = useWmsLive();
+  const matched = operatorForAppUser(snap, user);
+  const isFloor = user?.role === "guide";
   const [mode, setMode] = useState<"putaway" | "traslado">("putaway");
   const [sscc, setSscc] = useState("");
   const [fromCode, setFromCode] = useState("");
   const [toCode, setToCode] = useState("");
+  const [pickPin, setPickPin] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
 
-  const dockPal = snap.pallets.find((p) => p.status === "muelle");
-  const dockSlot = dockPal?.slotId ? snap.slots.find((s) => s.id === dockPal.slotId) : null;
+  const dockPals = snap.pallets.filter((p) => p.status === "muelle");
   const proposals = useMemo(() => proposeReplenishments(snap), [snap]);
   const doubleReach = snap.fleet.find((f) => f.kind === "retractil_doble" && f.status === "operativa");
+  const operatorId = matched?.id ?? null;
+
+  function gateFloor(): boolean {
+    if (!isFloor || !matched) return true;
+    const gate = assertCanPick(snap, matched.id, pickPin || null, true);
+    if (gate.ok) return true;
+    setOkMsg(null);
+    setFeedback(
+      gate.error === "not_clocked"
+        ? lang === "es"
+          ? "Ficha la entrada antes de mover"
+          : "Clock in before moving"
+        : lang === "es"
+          ? "PIN incorrecto o pendiente"
+          : "PIN missing or wrong",
+    );
+    return false;
+  }
 
   function runMove() {
+    if (!gateFloor()) return;
     const input = {
       sscc,
       fromSlotCode: fromCode,
       toSlotCode: toCode,
-      operatorId: mode === "putaway" ? "op-04" : "op-02",
-      fleetId: doubleReach?.id ?? "fl-07",
+      operatorId,
+      fleetId: doubleReach?.id ?? null,
     };
-    const result = mode === "putaway" ? confirmPutaway(snap, input) : confirmTransfer(snap, input);
+    const pallet = snap.pallets.find((p) => p.sscc === sscc.trim());
+    const result =
+      mode === "putaway" && pallet
+        ? putawayReceivedPallet(snap, pallet.id, toCode, operatorId, doubleReach?.id ?? null)
+        : mode === "putaway"
+          ? confirmPutaway(snap, input)
+          : confirmTransfer(snap, input);
     if (!result.ok) {
       setOkMsg(null);
       setFeedback(MOVE_ERR[result.error][lang]);
       return;
     }
-    setSnap(result.snap);
+    commit(result.snap);
     setFeedback(null);
     setOkMsg(lang === "es" ? `Movimiento OK · ${fromCode} → ${toCode}` : `Move OK · ${fromCode} → ${toCode}`);
     setSscc("");
@@ -89,10 +112,20 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
         </h2>
         <p className="mt-1 max-w-2xl text-sm text-[var(--ink-muted)]">
           {lang === "es"
-            ? "RF de planta: putaway de muelle y traslados hueco a hueco. La reposición reserva → picking usa retráctil doble stand-up."
-            : "Floor RF: dock putaway and slot-to-slot transfers. Reserve → pick face uses stand-up double reach."}
+            ? "Putaway de muelle y traslados hueco a hueco. El destino se sugiere por zona del SKU; planta necesita haber fichado."
+            : "Dock putaway and slot-to-slot transfers. Destination follows the SKU zone; floor staff must clock in."}
         </p>
       </header>
+
+      {matched && <WmsJornadaCard lang={lang} snap={snap} operatorId={matched.id} onChange={commit} />}
+      {isFloor && matched?.fingerprintEnrolled && (
+        <input
+          value={pickPin}
+          onChange={(e) => setPickPin(e.target.value)}
+          placeholder={lang === "es" ? "PIN de planta" : "Floor PIN"}
+          className="max-w-xs rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+        />
+      )}
 
       <div className="flex flex-wrap gap-2">
         <button
@@ -116,6 +149,59 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
           {lang === "es" ? "Traslado" : "Transfer"}
         </button>
       </div>
+
+      {mode === "putaway" && dockPals.length > 0 && (
+        <Card title={lang === "es" ? "Palets en muelle" : "Dock pallets"} subtitle={`${dockPals.length}`}>
+          <ul className="space-y-2">
+            {dockPals.slice(0, 8).map((pal) => {
+              const from = pal.slotId ? snap.slots.find((s) => s.id === pal.slotId) : null;
+              const dest = suggestPutawaySlot(snap, pal);
+              const sku = snap.skus.find((s) => s.id === pal.skuId);
+              return (
+                <li
+                  key={pal.id}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-[var(--glass-border)] px-3 py-2 text-sm"
+                >
+                  <span className="min-w-0">
+                    <span className="font-mono text-xs font-semibold">{pal.sscc.slice(-10)}</span>
+                    <span className="mt-0.5 block truncate text-[var(--ink-muted)]">
+                      {sku?.name} · {from?.code} → {dest?.code ?? "—"}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    disabled={!dest}
+                    className="inline-flex items-center gap-1 rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+                    onClick={() => {
+                      if (!dest || !gateFloor()) return;
+                      const result = putawayReceivedPallet(
+                        snap,
+                        pal.id,
+                        dest.code,
+                        operatorId,
+                        doubleReach?.id ?? null,
+                      );
+                      if (!result.ok) {
+                        setFeedback(MOVE_ERR[result.error][lang]);
+                        return;
+                      }
+                      commit(result.snap);
+                      setOkMsg(
+                        lang === "es"
+                          ? `Ubicado ${from?.code} → ${dest.code}`
+                          : `Put away ${from?.code} → ${dest.code}`,
+                      );
+                    }}
+                  >
+                    <ArrowDownToLine className="h-3.5 w-3.5" />
+                    {lang === "es" ? "Ubicar" : "Putaway"}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
 
       <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
         <Card title={lang === "es" ? "Confirmar con escáner" : "Confirm with scanner"}>
@@ -162,21 +248,21 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
               <Check className="h-4 w-4" />
               {lang === "es" ? "Confirmar movimiento" : "Confirm move"}
             </button>
-            {mode === "putaway" && dockPal && dockSlot && (
+            {mode === "putaway" && dockPals[0] && (
               <button
                 type="button"
                 onClick={() => {
-                  const dest = snap.slots.find(
-                    (s) => s.siteId === dockPal.siteId && s.aisle === "A" && s.status === "libre" && !s.pickFace,
-                  );
-                  setSscc(dockPal.sscc);
-                  setFromCode(dockSlot.code);
+                  const pal = dockPals[0]!;
+                  const from = pal.slotId ? snap.slots.find((s) => s.id === pal.slotId) : null;
+                  const dest = suggestPutawaySlot(snap, pal);
+                  setSscc(pal.sscc);
+                  setFromCode(from?.code ?? "");
                   setToCode(dest?.code ?? "");
                 }}
                 className="inline-flex items-center gap-2 rounded-full border border-[var(--glass-border)] px-4 py-2.5 text-sm font-semibold"
               >
                 <ScanBarcode className="h-4 w-4" />
-                {lang === "es" ? "Autocompletar putaway" : "Autofill putaway"}
+                {lang === "es" ? "Usar sugerencia de zona" : "Use zone suggestion"}
               </button>
             )}
           </div>
@@ -210,17 +296,18 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
                     <button
                       type="button"
                       onClick={() => {
+                        if (!gateFloor()) return;
                         const result = applyReplenishment(
                           snap,
                           p,
-                          doubleReach?.id ?? "fl-07",
-                          "op-02",
+                          doubleReach?.id ?? null,
+                          operatorId,
                         );
                         if (!result.ok) {
                           setFeedback(MOVE_ERR[result.error][lang]);
                           return;
                         }
-                        setSnap(result.snap);
+                        commit(result.snap);
                         setOkMsg(
                           lang === "es"
                             ? `Reposición OK con retráctil doble`
@@ -265,7 +352,11 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
 }
 
 export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
-  const [snap, setSnap] = useWmsLive();
+  const { user } = useAuth();
+  const { snap, commit } = useWmsLive();
+  const matched = operatorForAppUser(snap, user);
+  const isFloor = user?.role === "guide";
+  const [pickPin, setPickPin] = useState("");
   const [siteId, setSiteId] = useState(snap.sites[0]?.id ?? "");
   const tasks = useMemo(
     () => planCycleCounts(snap, { siteId, limit: 10 }),
@@ -291,13 +382,34 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
 
   function confirm() {
     if (!task) return;
-    const result = confirmCycleCount(snap, task, { slotCode: scanSlot, sscc: scanSscc, qty });
+    if (isFloor && matched) {
+      const gate = assertCanPick(snap, matched.id, pickPin || null, true);
+      if (!gate.ok) {
+        setOkMsg(null);
+        setFeedback(
+          gate.error === "not_clocked"
+            ? lang === "es"
+              ? "Ficha la entrada antes de contar"
+              : "Clock in before counting"
+            : lang === "es"
+              ? "PIN incorrecto o pendiente"
+              : "PIN missing or wrong",
+        );
+        return;
+      }
+    }
+    const result = confirmCycleCount(snap, task, {
+      slotCode: scanSlot,
+      sscc: scanSscc,
+      qty,
+      operatorId: matched?.id ?? null,
+    });
     if (!result.ok) {
       setOkMsg(null);
       setFeedback(COUNT_ERR[result.error][lang]);
       return;
     }
-    setSnap(result.snap);
+    commit(result.snap);
     setFeedback(null);
     setOkMsg(
       result.variance === 0
@@ -321,8 +433,8 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
           </h2>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
             {lang === "es"
-              ? "Prioridad: caducidad, ABC A y huecos sin conteo reciente. Escanea hueco y SSCC."
-              : "Priority: expiry, ABC A and stale slots. Scan slot and SSCC."}
+              ? "Prioridad: caducidad, ABC A y huecos sin conteo reciente. Planta necesita haber fichado; el desvío se firma con el operario."
+              : "Priority: expiry, ABC A and stale slots. Floor staff must clock in; variance is signed by the operator."}
           </p>
         </div>
         <select
@@ -337,6 +449,16 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
           ))}
         </select>
       </header>
+
+      {matched && <WmsJornadaCard lang={lang} snap={snap} operatorId={matched.id} onChange={commit} />}
+      {isFloor && matched?.fingerprintEnrolled && (
+        <input
+          value={pickPin}
+          onChange={(e) => setPickPin(e.target.value)}
+          placeholder={lang === "es" ? "PIN de planta" : "Floor PIN"}
+          className="max-w-xs rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+        />
+      )}
 
       <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
         <Card title={lang === "es" ? "Cola de conteo" : "Count queue"}>
@@ -431,7 +553,7 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
                 }}
                 className="rounded-full border border-[var(--glass-border)] px-4 py-2.5 text-sm font-semibold"
               >
-                {lang === "es" ? "Autocompletar demo" : "Autofill demo"}
+                {lang === "es" ? "Rellenar hueco y SSCC reales" : "Fill real slot and SSCC"}
               </button>
             </div>
           </Card>

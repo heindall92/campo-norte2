@@ -109,7 +109,11 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
       return;
     }
     persist(result.snap);
-    const nextQueue = buildRfQueue(result.snap, siteId);
+    const nextQueue = buildRfQueue(
+      result.snap,
+      siteId,
+      isFloor ? matched?.id ?? operatorId : operatorId || null,
+    );
     const next = nextQueue[0] ?? null;
     setTaskId(next?.id ?? "");
     setSession(next ? startRfSession(next) : null);

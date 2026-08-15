@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-15 · Cloud Agent · WMS fase 10: planta unificada (ASN, RF, móvil)
+**Última actualización:** 2026-08-15 · Cloud Agent · WMS fase 11: putaway por zona y conteo con jornada
 
 ---
 
@@ -163,7 +163,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–10 hechas en esta rama: operación diaria, jornada, olas desde pedidos, recepción real de ASN, RF con fichaje, inicio móvil WMS y asignación de picker.
+Fases 8–11 hechas en esta rama: operación diaria, jornada, olas, recepción ASN, RF, móvil, putaway por zona del SKU y conteo firmado por operario.
 
 Siguiente: terminal ZKTeco físico y APIs de flota cuando existan. Tablas WMS en Postgres cuando haya stock real.
 

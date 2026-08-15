@@ -106,6 +106,7 @@ describe("fase 9 · jornada y olas", () => {
     expect(pal?.status).toBe("muelle");
     expect(pal?.skuId).toBe("sku-aceite");
     expect(pal?.qty).toBe(48);
+    expect(pal?.asnId).toBe(asn.id);
   });
 
   it("ordena el itinerario de muelle por ventana y prioridad", () => {

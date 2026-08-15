@@ -209,6 +209,7 @@ function buildPallets(slots: Slot[]): Pallet[] {
       siteId: slot.siteId,
       receivedAt: `2026-08-${String((i % 12) + 1).padStart(2, "0")}T0${(i % 8) + 1}:15:00.000Z`,
       supplier: ["Aceites del Sur", "Lácteos Guadalquivir", "Bebidas Atlánticas", "Hogar Andalucía"][i % 4]!,
+      asnId: null,
     };
     slot.palletId = id;
     pallets.push(pallet);
@@ -937,6 +938,7 @@ function seedDockAndPickFaceGap(slots: Slot[], pallets: Pallet[]): void {
       siteId: SITE_SEV.id,
       receivedAt: "2026-08-15T08:40:00.000Z",
       supplier: "Aceites del Sur",
+      asnId: null,
     });
     dock.palletId = id;
     dock.status = "ocupado";

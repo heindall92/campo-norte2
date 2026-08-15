@@ -157,6 +157,8 @@ export interface Pallet {
   siteId: string;
   receivedAt: string;
   supplier: string;
+  /** ASN del que se descargó. null en semilla o alta manual. */
+  asnId: string | null;
 }
 
 export interface FleetUnit {

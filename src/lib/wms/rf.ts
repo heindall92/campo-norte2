@@ -2,8 +2,9 @@ import { parseSlotCode, formatSlotCode, codesEqual } from "./location";
 import { confirmPick, nextOpenLine } from "./picking";
 import {
   applyReplenishment,
-  confirmPutaway,
   proposeReplenishments,
+  putawayReceivedPallet,
+  suggestPutawaySlot,
   type LiveMoveError,
 } from "./movements";
 import { confirmCycleCount, planCycleCounts, type CycleCountError, type CycleCountTask } from "./cycle-count";
@@ -102,9 +103,7 @@ export function buildRfQueue(snap: WmsSnapshot, siteId?: string, operatorId?: st
     if (pallet.status !== "muelle") continue;
     if (siteId && pallet.siteId !== siteId) continue;
     const from = pallet.slotId ? snap.slots.find((s) => s.id === pallet.slotId) : null;
-    const to = snap.slots.find(
-      (s) => s.siteId === pallet.siteId && s.status === "libre" && s.zone !== "muelle" && !s.palletId,
-    );
+    const to = suggestPutawaySlot(snap, pallet);
     if (!from || !to) continue;
     tasks.push({
       id: `put-${pallet.id}`,
@@ -243,13 +242,9 @@ export function confirmRfTask(
   }
 
   if (task.kind === "putaway") {
-    return confirmPutaway(snap, {
-      sscc: session.sscc,
-      fromSlotCode: session.fromCode,
-      toSlotCode: session.toCode,
-      operatorId,
-      fleetId: fleet?.id ?? null,
-    });
+    const pallet = snap.pallets.find((p) => p.sscc === session.sscc);
+    if (!pallet) return { ok: false, error: "pallet_missing" };
+    return putawayReceivedPallet(snap, pallet.id, session.toCode, operatorId, fleet?.id ?? null);
   }
 
   if (task.kind === "replenish") {
@@ -264,6 +259,7 @@ export function confirmRfTask(
       slotCode: session.fromCode,
       sscc: session.sscc,
       qty: session.qty,
+      operatorId,
     });
     if (!result.ok) return result;
     return { ok: true, snap: result.snap };

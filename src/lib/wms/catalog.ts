@@ -143,6 +143,7 @@ export function createPallet(
     slotId: string | null;
     supplier: string;
     sscc?: string;
+    asnId?: string | null;
   },
 ): CatalogResult {
   if (!snap.skus.some((s) => s.id === input.skuId)) return { ok: false, error: "sku_missing" };
@@ -165,6 +166,7 @@ export function createPallet(
     siteId: input.siteId,
     receivedAt: new Date().toISOString(),
     supplier: input.supplier.trim() || "—",
+    asnId: input.asnId ?? null,
   };
   return {
     ok: true,
@@ -295,6 +297,7 @@ export function receiveAsnPallet(
     siteId: asn.siteId,
     slotId: dock.id,
     supplier: asn.supplier,
+    asnId: asn.id,
   });
   if (!created.ok) return created;
   const done = asn.palletsDone + 1;
@@ -302,6 +305,17 @@ export function receiveAsnPallet(
     palletsDone: done,
     status: done >= asn.palletsExpected ? "ubicando" : "descargando",
   });
+}
+
+/** Cierra el ASN solo si ya se descargó lo previsto y no queda palet suyo en muelle. */
+export function closeAsnIfLocated(snap: WmsSnapshot, asnId: string): CatalogResult {
+  const asn = snap.inbound.find((a) => a.id === asnId);
+  if (!asn) return { ok: false, error: "asn_missing" };
+  if (asn.status === "cerrado") return { ok: true, snap };
+  if (asn.palletsDone < asn.palletsExpected) return { ok: true, snap };
+  const stillDock = snap.pallets.some((p) => p.asnId === asnId && p.status === "muelle");
+  if (stillDock) return { ok: true, snap };
+  return updateAsn(snap, asnId, { status: "cerrado" });
 }
 
 export function createOperator(
