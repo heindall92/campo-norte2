@@ -11,7 +11,7 @@ Este repositorio (`campo-norte2`) publica el ecosistema SaaS WMS. La base CRM/WM
 
 ---
 
-## Fases 2–15 (esta rama)
+## Fases 2–18 (esta rama)
 
 Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, movimientos en vivo, inventario cíclico, alertas, economía unitaria, planificación de turnos, onboarding, carriers, pistola RF y **operación diaria** (CRUD, prioridades, fichaje).
 
@@ -77,7 +77,8 @@ Cómo probar fase 2:
 15. **Torre** → cierre de jornada: solo horas de fichaje. **Movimientos / Palets** → traslado Sevilla ↔ Huelva a un hueco libre.
 16. **Expedición / Operarios** → el patrón o un técnico asigna el súper con el código `OP-1903`. **Pistola** → entrar con ese código; el ticket dice súper, pasillo, hueco y cantidad. El rastro del pasillo solo avanza al marcar. Palet / caja / carro → flejar → pegar etiqueta → dejar en el muelle que indica la pantalla.
 17. **Picar / Pistola / Movimientos / Torre** → **Declarar merma** si se cae o se rompe. Luego se puede coger otra caja; el hueco ya no miente. Carta de porte no está modelada.
-18. **Pistola / Picar** → **Oír ticket** (auriculares): pasillo, hueco, cajas o unidades del contenedor. **Pasillos** → guía 8–37 (droguería, leche 28, agua 31–32…). El twin sigue en A/B/C.
+18. **Pistola / Picar** → auriculares: pasillo, hueco, cajas o unidades del contenedor. **Pasillos** → guía 8–37 (droguería, leche 28, cerveza 29, agua 31–32…). El twin sigue en A/B/C.
+19. Al **confirmar picado** el aparato dicta el siguiente ticket. Si no queda línea: fleja, escribe la etiqueta y deja en el pasillo de muelle. **Repetir** o quitar auriculares. El resto en el hueco es el stock del palet.
 
 ---
 

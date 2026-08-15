@@ -11,6 +11,8 @@ import {
   nextFloorTicket,
   nextOpenLine,
   operatorForAppUser,
+  remainingOnPallet,
+  voiceCueAfterMark,
   orderFulfillment,
   packPickedLines,
   peekWmsFocus,
@@ -19,8 +21,10 @@ import {
   splitWaveByOrder,
   stageOrderToDock,
   waveOrderCodes,
+  type CloseCueInput,
   type ConfirmPickError,
   type PickGateError,
+  type PickPack,
   type PickWave,
   type Slot,
 } from "@/lib/wms";
@@ -40,7 +44,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { WmsMermaCard } from "./WmsFloorBoard";
+import { WmsLoadUnitCard, WmsMermaCard } from "./WmsFloorBoard";
 import { WmsJornadaCard } from "./WmsJornadaCard";
 import { WmsAisleGuideCard, WmsVoiceHeadset } from "./WmsVoiceHeadset";
 import { useWmsLive } from "./useWmsLive";
@@ -390,6 +394,8 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
   const [pickPin, setPickPin] = useState("");
   const [shortageQty, setShortageQty] = useState(0);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [closeCue, setCloseCue] = useState<CloseCueInput | null>(null);
+  const [lastRemaining, setLastRemaining] = useState<number | null>(null);
 
   const done = wave?.lines.filter((l) => l.status === "picada").length ?? 0;
   const total = wave?.lines.length ?? 0;
@@ -404,9 +410,30 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
     return true;
   }
 
+  function speakAfterMark(nextSnap: typeof snap, last: CloseCueInput & { palletId?: string | null; pickPack?: PickPack }) {
+    const operatorId = wave?.operatorId ?? matched?.id ?? "";
+    if (!operatorId) return;
+    const cue = voiceCueAfterMark(nextSnap, operatorId, last, lang);
+    setLastRemaining(cue.remaining);
+    setCloseCue(cue.kind === "close" ? { storeName: last.storeName, orderCode: last.orderCode, dockAisle: last.dockAisle } : null);
+  }
+
+  function lineCloseCue(): (CloseCueInput & { palletId?: string | null; pickPack?: PickPack }) | null {
+    if (!line) return null;
+    const order = snap.outbound.find((o) => o.code === line.orderCode);
+    return {
+      storeName: order?.customer ?? line.orderCode,
+      orderCode: line.orderCode,
+      dockAisle: order?.dock ?? "",
+      palletId: line.palletId,
+      pickPack: line.pickPack ?? "caja",
+    };
+  }
+
   function applyConfirm() {
     if (!wave || !line) return;
     if (!gateFloor()) return;
+    const last = lineCloseCue();
     const result = confirmPick(snap, wave.id, line.id, {
       slotCode: scanSlot,
       sscc: scanSscc,
@@ -423,6 +450,7 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
     const nextWave = result.snap.pickWaves.find((w) => w.id === wave.id);
     const nxt = nextWave ? nextOpenLine(nextWave) : null;
     setQty(nxt?.qty ?? 0);
+    if (last) speakAfterMark(result.snap, last);
   }
 
   if (!wave) {
@@ -629,6 +657,7 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                             qty: line.qty,
                             pickPack: line.pickPack ?? "caja",
                           }}
+                          remaining={remainingOnPallet(snap, line.palletId)}
                         />
                       </div>
                     </>
@@ -732,6 +761,8 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                       const nextWave = result.snap.pickWaves.find((w) => w.id === wave.id);
                       const nxt = nextWave ? nextOpenLine(nextWave) : null;
                       setQty(nxt?.qty ?? 0);
+                      const last = lineCloseCue();
+                      if (last) speakAfterMark(result.snap, last);
                     }}
                     className="inline-flex items-center gap-2 rounded-full border border-[var(--glass-border)] px-4 py-2.5 text-sm font-semibold text-[var(--ink)]"
                   >
@@ -763,6 +794,8 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                       const nextWave = result.snap.pickWaves.find((w) => w.id === wave.id);
                       const nxt = nextWave ? nextOpenLine(nextWave) : null;
                       setQty(nxt?.qty ?? 0);
+                      const last = lineCloseCue();
+                      if (last) speakAfterMark(result.snap, last);
                     }}
                     className="inline-flex items-center gap-2 rounded-full border border-[var(--glass-border)] px-4 py-2.5 text-sm font-semibold text-[var(--warn-ink)]"
                   >
@@ -780,10 +813,30 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
             </>
           ) : (
             <Card title={lang === "es" ? "Ola completada" : "Wave complete"}>
+              {(() => {
+                const fallback =
+                  closeCue ??
+                  (() => {
+                    const code = wave.lines[0]?.orderCode;
+                    const order = code ? snap.outbound.find((o) => o.code === code) : undefined;
+                    if (!order) return null;
+                    return { storeName: order.customer, orderCode: order.code, dockAisle: order.dock };
+                  })();
+                return fallback ? (
+                  <div className="mb-3">
+                    <WmsVoiceHeadset
+                      lang={lang}
+                      close={fallback}
+                      remaining={lastRemaining}
+                      autoSpeak={Boolean(closeCue)}
+                    />
+                  </div>
+                ) : null;
+              })()}
               <p className="mb-3 text-sm text-[var(--ink-muted)]">
                 {lang === "es"
-                  ? "Todas las líneas cerradas. Embala cajas sueltas, carga palets enteros y expede solo lo picado."
-                  : "All lines closed. Pack loose cases, stage full pallets and ship only what was picked."}
+                  ? "Todas las líneas cerradas. Fleja, escribe la etiqueta y deja la unidad en el pasillo de muelle. Embala cajas sueltas y expede solo lo picado."
+                  : "All lines closed. Strap, write the label and leave the unit on the dock aisle. Pack loose cases and ship only what was picked."}
               </p>
               <div className="flex flex-wrap gap-2">
                 {[...new Set(wave.lines.map((l) => l.orderCode))].map((code) => {
@@ -867,6 +920,7 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
               </div>
             </Card>
           )}
+          {!line && <WmsLoadUnitCard lang={lang} />}
         </div>
       </div>
     </div>

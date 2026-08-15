@@ -3,73 +3,124 @@ import type { Lang } from "@/lib/i18n";
 import {
   AISLE_GUIDE,
   aisleRangeLabel,
+  buildClosePrompt,
   buildVoicePrompt,
   familyForSku,
+  loadHeadsetOn,
+  remainderLabel,
+  saveHeadsetOn,
   speakVoicePrompt,
   stopVoicePrompt,
+  type CloseCueInput,
   type FloorTicket,
+  type PickPack,
 } from "@/lib/wms";
-import { Headphones, MapPinned, Volume2, VolumeX } from "lucide-react";
-import { useEffect } from "react";
+import { Headphones, MapPinned, Repeat, Volume2, VolumeX } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useWmsLive } from "./useWmsLive";
 
 export function WmsVoiceHeadset({
   lang,
   ticket,
+  close,
+  remaining,
+  pickPack,
+  autoSpeak = true,
 }: {
   lang: Lang;
-  ticket: Pick<FloorTicket, "storeName" | "aisle" | "slotCode" | "skuName" | "skuId" | "qty" | "pickPack">;
+  ticket?: Pick<FloorTicket, "storeName" | "aisle" | "slotCode" | "skuName" | "skuId" | "qty" | "pickPack">;
+  close?: CloseCueInput;
+  remaining?: number | null;
+  pickPack?: PickPack;
+  autoSpeak?: boolean;
 }) {
-  const voice = buildVoicePrompt(ticket, lang);
-  const family = familyForSku(ticket.skuId);
+  const [headsetOn, setHeadsetOn] = useState(loadHeadsetOn);
+  const voice = useMemo(() => {
+    if (ticket) return { kind: "ticket" as const, ...buildVoicePrompt(ticket, lang) };
+    if (close) return { kind: "close" as const, ...buildClosePrompt(close, lang) };
+    return null;
+  }, [ticket, close, lang]);
+  const family = ticket ? familyForSku(ticket.skuId) : null;
+  const pack = pickPack ?? ticket?.pickPack ?? "caja";
+  const left = remainderLabel(remaining, pack, lang);
 
   useEffect(() => () => stopVoicePrompt(), []);
+
+  useEffect(() => {
+    if (!autoSpeak || !headsetOn || !voice) return;
+    speakVoicePrompt(voice.text, lang);
+  }, [autoSpeak, headsetOn, voice?.text, lang]);
+
+  if (!voice) return null;
+  const spoken = voice;
+
+  function toggleHeadset() {
+    const next = !headsetOn;
+    setHeadsetOn(next);
+    saveHeadsetOn(next);
+    if (!next) stopVoicePrompt();
+    else speakVoicePrompt(spoken.text, lang);
+  }
 
   return (
     <Card
       title={lang === "es" ? "Auriculares" : "Headset"}
       subtitle={
         lang === "es"
-          ? "El aparato dicta pasillo, hueco y cantidad. Cajas enteras o unidades del contenedor."
-          : "The device speaks aisle, slot and qty. Whole cases or units from the container."
+          ? "El aparato dicta el ticket. Al marcar, el siguiente; al terminar el súper, fleje, etiqueta y muelle."
+          : "The device speaks the ticket. After a mark, the next one; when the store is done, strap, label and dock."
       }
     >
       <p className="mb-3 flex items-start gap-2 text-sm text-[var(--ink)]">
         <Headphones className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]" />
-        {voice.text}
+        {spoken.text}
       </p>
       <div className="mb-3 flex flex-wrap gap-2">
-        <Badge tone={voice.pickPack === "contenedor" ? "warn" : "brand"}>
-          {voice.pickPack === "contenedor"
-            ? lang === "es"
-              ? "Del contenedor"
-              : "From container"
-            : lang === "es"
-              ? "Cajas"
-              : "Cases"}
-        </Badge>
+        {spoken.kind === "ticket" ? (
+          <Badge tone={pack === "contenedor" ? "warn" : "brand"}>
+            {pack === "contenedor"
+              ? lang === "es"
+                ? "Del contenedor"
+                : "From container"
+              : lang === "es"
+                ? "Cajas"
+                : "Cases"}
+          </Badge>
+        ) : (
+          <Badge tone="warn">{lang === "es" ? "Cierre de muelle" : "Dock close"}</Badge>
+        )}
         {family && (
           <Badge tone="neutral">
             {family.familyEs} · {aisleRangeLabel(family)}
           </Badge>
         )}
+        {left && <Badge tone="neutral">{left}</Badge>}
+        <Badge tone={headsetOn ? "good" : "neutral"}>
+          {headsetOn ? (lang === "es" ? "Dictando" : "Speaking") : lang === "es" ? "Silencio" : "Muted"}
+        </Badge>
       </div>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white"
-          onClick={() => speakVoicePrompt(voice.text, lang)}
+          onClick={() => speakVoicePrompt(spoken.text, lang)}
         >
-          <Volume2 className="h-4 w-4" />
-          {lang === "es" ? "Oír ticket" : "Hear ticket"}
+          <Repeat className="h-4 w-4" />
+          {lang === "es" ? "Repetir" : "Repeat"}
         </button>
         <button
           type="button"
           className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] px-3 py-2 text-sm font-semibold"
-          onClick={() => stopVoicePrompt()}
+          onClick={toggleHeadset}
         >
-          <VolumeX className="h-4 w-4" />
-          {lang === "es" ? "Silencio" : "Stop"}
+          {headsetOn ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          {headsetOn
+            ? lang === "es"
+              ? "Quitar auriculares"
+              : "Headset off"
+            : lang === "es"
+              ? "Poner auriculares"
+              : "Headset on"}
         </button>
       </div>
     </Card>

@@ -114,7 +114,15 @@
 - Guía de planta 8–37 (droguería, leche 28, cerveza 29, agua 31–32…) tal como la relató el operario
 - El twin digital sigue en letras A/B/C; no se inventan SKU de vino, cerveza ni especias
 
+## Fase 18 — Ciclo de voz de planta (esta entrega)
+- Al marcar, los auriculares dictan solos el siguiente ticket (pasillo, hueco, cajas o unidades del contenedor)
+- Si no queda línea, dicen: fleja, escribe la etiqueta y deja en el pasillo de muelle del súper
+- El resto en el hueco sale del palet real; no se inventa el desglose de cajas pequeñas
+- Preferencia de auriculares on/off en el aparato (local); no es telemetría
+
 ## Siguiente
+- Layout numérico 8–37 en el snapshot solo si se confirma sustituir A/B/C
+- SKU de cerveza, vino, papel o especias solo si los escriben
 - Agente pyzk en la LAN cuando haya terminal físico
 - Telemetría real de flota (ISM / I_Site / InfoLink) cuando exista contrato
 - Tablas WMS en Postgres / RLS cuando haya stock real en el Hub

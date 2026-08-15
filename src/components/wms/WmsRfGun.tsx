@@ -9,7 +9,10 @@ import {
   nextFloorTicket,
   operatorByCode,
   operatorForAppUser,
+  remainingOnPallet,
+  voiceCueAfterMark,
   startRfSession,
+  type CloseCueInput,
   type RfScanError,
   type RfSession,
   type RfStep,
@@ -57,6 +60,7 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
   const [scan, setScan] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
+  const [closeCue, setCloseCue] = useState<CloseCueInput | null>(null);
 
   useEffect(() => {
     if (session) return;
@@ -124,6 +128,18 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
     setSession(next ? startRfSession(next) : null);
     setOkMsg(lang === "es" ? "Movimiento registrado" : "Move recorded");
     setFeedback(null);
+    const opId = operatorId || matched?.id || "";
+    if (floorTicket && opId) {
+      const last: CloseCueInput & { palletId?: string | null; pickPack?: typeof floorTicket.pickPack } = {
+        storeName: floorTicket.storeName,
+        orderCode: floorTicket.orderCode,
+        dockAisle: floorTicket.dockAisle,
+        palletId: floorTicket.line.palletId,
+        pickPack: floorTicket.pickPack,
+      };
+      const cue = voiceCueAfterMark(result.snap, opId, last, lang);
+      setCloseCue(cue.kind === "close" ? last : null);
+    }
   }
 
   const floorTicket = operatorId ? nextFloorTicket(snap, operatorId) : null;
@@ -326,7 +342,14 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
           )}
         </Card>
       </div>
-      {task?.kind === "pick" && floorTicket && <WmsVoiceHeadset lang={lang} ticket={floorTicket} />}
+      {task?.kind === "pick" && floorTicket && (
+        <WmsVoiceHeadset
+          lang={lang}
+          ticket={floorTicket}
+          remaining={remainingOnPallet(snap, floorTicket.line.palletId)}
+        />
+      )}
+      {!floorTicket && closeCue && <WmsVoiceHeadset lang={lang} close={closeCue} />}
       {task?.kind === "pick" && (
         <WmsMermaCard
           lang={lang}
