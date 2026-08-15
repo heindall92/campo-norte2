@@ -76,6 +76,7 @@ Cómo probar fase 2:
 14. **Pistola RF** → escanea el hueco y el SSCC de la cola; si no coinciden, no confirma.
 15. **Torre** → cierre de jornada: solo horas de fichaje. **Movimientos / Palets** → traslado Sevilla ↔ Huelva a un hueco libre.
 16. **Expedición / Operarios** → el patrón o un técnico asigna el súper con el código `OP-1903`. **Pistola** → entrar con ese código; el ticket dice súper, pasillo, hueco y cantidad. El rastro del pasillo solo avanza al marcar. Palet / caja / carro → flejar → pegar etiqueta → dejar en el muelle que indica la pantalla.
+17. **Picar / Pistola / Movimientos / Torre** → **Declarar merma** si se cae o se rompe. Luego se puede coger otra caja; el hueco ya no miente. Carta de porte no está modelada.
 
 ---
 

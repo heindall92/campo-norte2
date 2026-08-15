@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ArrowDownToLine, ArrowLeftRight, Check, Forklift, ScanBarcode } from "lucide-react";
 import { useMemo, useState } from "react";
+import { WmsMermaCard } from "./WmsFloorBoard";
 import { WmsJornadaCard } from "./WmsJornadaCard";
 import { useWmsLive } from "./useWmsLive";
 
@@ -125,6 +126,7 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
       </header>
 
       {matched && <WmsJornadaCard lang={lang} snap={snap} operatorId={matched.id} onChange={commit} />}
+      <WmsMermaCard lang={lang} operatorId={operatorId} />
       {isFloor && matched?.fingerprintEnrolled && (
         <input
           value={pickPin}

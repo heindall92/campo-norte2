@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-15 · Cloud Agent · WMS fase 15: asignación de súper por código y rastro de pasillo
+**Última actualización:** 2026-08-15 · Cloud Agent · WMS fase 16: merma/rotura declarada
 
 ---
 
@@ -163,9 +163,9 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–15 hechas. La 15 cubre lo que el operario sí conoce: el patrón/técnico asigna el súper al código de operario; el ticket manda pasillo, hueco y cantidad; el sistema rastrea el pasillo según van marcando artículos; al completar palet/caja/carro se fleja, se pega la etiqueta escrita y se deja en el pasillo de muelle de la pantalla.
+Fases 8–16 hechas. La 16 ataja el hueco de planta: si se cae una caja y se coge otra sin decirlo, el almacén queda con un faltante invisible. Ahora la merma se declara, baja el stock y queda en torre. Carta de porte y oficina de recepción siguen sin modelar: no están descritas.
 
-No se inventan carta de porte, oficina de recepción ni GPS. Siguiente: terminal ZKTeco y APIs de flota cuando existan.
+Siguiente: terminal ZKTeco y APIs de flota cuando existan.
 
 ### Plan B — repo público (fecha límite 2026-08-22)
 

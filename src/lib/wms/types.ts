@@ -35,6 +35,28 @@ export type OperatorRoleFloor = "carretillero" | "picker" | "recepcion" | "exped
 
 export type MovementType = "entrada" | "salida" | "traslado" | "ajuste" | "inventario";
 
+/** Motivo de merma que escribe planta. No se inventa. */
+export type MermaReason = "caida" | "rota" | "otra";
+
+/**
+ * Rotura o caída declarada. Si no se declara y se coge otra caja,
+ * el hueco queda con un faltante invisible.
+ */
+export interface MermaEvent {
+  id: string;
+  at: string;
+  siteId: string;
+  skuId: string;
+  palletId: string;
+  fromSlotId: string | null;
+  qty: number;
+  reason: MermaReason;
+  note: string;
+  operatorId: string | null;
+  /** Hueco del área de merma si lo escriben. null = declarado y aún sin ubicar. */
+  mermaSlotId: string | null;
+}
+
 /** Línea de picado para operario (escáner de pasillo). */
 export type PickLineStatus = "pendiente" | "en_curso" | "picada" | "faltante" | "omitida";
 
@@ -341,6 +363,7 @@ export interface WmsSnapshot {
   pickWaves: PickWave[];
   loadUnits: LoadUnit[];
   superAssignments: SuperAssignment[];
+  mermaEvents: MermaEvent[];
 }
 
 export const CATEGORY_LABEL: Record<CategoryCode, { es: string; en: string }> = {

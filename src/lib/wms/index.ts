@@ -22,6 +22,7 @@ export * from "./jornada";
 export * from "./waves";
 export * from "./outbound";
 export * from "./floor";
+export * from "./merma";
 
 import { buildWmsSeed } from "./seed";
 import { normalizeWmsSnapshot, snapshotLooksUsable } from "./normalize";

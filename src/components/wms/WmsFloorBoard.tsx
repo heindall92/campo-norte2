@@ -3,16 +3,21 @@ import { useAuth } from "@/lib/auth";
 import type { Lang } from "@/lib/i18n";
 import {
   LOAD_KIND_LABEL,
+  MERMA_REASON_LABEL,
   aisleTraces,
   assignSuperToOperator,
+  declareMerma,
   labelLoadUnit,
+  mermaToday,
   openLoadUnit,
   placeLoadUnitOnDock,
   strapLoadUnit,
   type FloorError,
   type LoadUnitKind,
+  type MermaError,
+  type MermaReason,
 } from "@/lib/wms";
-import { Footprints, MapPin, Tag, UserRound } from "lucide-react";
+import { Footprints, MapPin, PackageX, Tag, UserRound } from "lucide-react";
 import { useState } from "react";
 import { useWmsLive } from "./useWmsLive";
 
@@ -304,13 +309,161 @@ export function WmsLoadUnitCard({ lang }: { lang: Lang }) {
   );
 }
 
+const MERMA_ERR: Record<MermaError, { es: string; en: string }> = {
+  pallet_missing: { es: "SSCC no encontrado", en: "SSCC not found" },
+  wrong_from: { es: "Ese palet no está en ese hueco", en: "Pallet is not in that slot" },
+  invalid_qty: { es: "No hay tantas unidades en el palet", en: "Not that many units on the pallet" },
+  merma_slot: { es: "El hueco de merma tiene que existir; no se inventa el área", en: "The merma slot must exist; the area is not invented" },
+  already_shipped: { es: "Ese palet ya salió", en: "That pallet already shipped" },
+};
+
+export function WmsMermaCard({
+  lang,
+  siteId,
+  preset,
+  operatorId,
+}: {
+  lang: Lang;
+  siteId?: string;
+  preset?: { sscc?: string; fromSlotCode?: string };
+  operatorId?: string | null;
+}) {
+  const { snap, commit } = useWmsLive();
+  const [sscc, setSscc] = useState(preset?.sscc ?? "");
+  const [fromCode, setFromCode] = useState(preset?.fromSlotCode ?? "");
+  const [qty, setQty] = useState(1);
+  const [reason, setReason] = useState<MermaReason>("caida");
+  const [note, setNote] = useState("");
+  const [mermaSlot, setMermaSlot] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const rows = mermaToday(snap, siteId);
+
+  return (
+    <Card
+      title={lang === "es" ? "Merma / rotura declarada" : "Declared shrink / breakage"}
+      subtitle={
+        lang === "es"
+          ? "Si se cae una caja y se coge otra sin declarar, el hueco queda con un faltante que nadie ve."
+          : "If a case is dropped and another is taken undeclared, the slot keeps a shortage nobody sees."
+      }
+    >
+      <form
+        className="mb-3 grid gap-2 md:grid-cols-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const result = declareMerma(snap, {
+            sscc: sscc || preset?.sscc || "",
+            fromSlotCode: fromCode || preset?.fromSlotCode || "",
+            qty,
+            reason,
+            note,
+            operatorId: operatorId ?? null,
+            mermaSlotCode: mermaSlot || null,
+          });
+          if (!result.ok) {
+            setMsg(MERMA_ERR[result.error][lang]);
+            return;
+          }
+          commit(result.snap);
+          setNote("");
+          setMsg(null);
+        }}
+      >
+        <input
+          required
+          value={sscc || preset?.sscc || ""}
+          onChange={(e) => setSscc(e.target.value)}
+          placeholder="SSCC"
+          className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+        />
+        <input
+          required
+          value={fromCode || preset?.fromSlotCode || ""}
+          onChange={(e) => setFromCode(e.target.value)}
+          placeholder={lang === "es" ? "Hueco origen" : "From slot"}
+          className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+        />
+        <input
+          type="number"
+          min={1}
+          value={qty}
+          onChange={(e) => setQty(Number(e.target.value))}
+          className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+        />
+        <select
+          value={reason}
+          onChange={(e) => setReason(e.target.value as MermaReason)}
+          className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+        >
+          {(Object.keys(MERMA_REASON_LABEL) as MermaReason[]).map((r) => (
+            <option key={r} value={r}>
+              {MERMA_REASON_LABEL[r][lang]}
+            </option>
+          ))}
+        </select>
+        <input
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder={lang === "es" ? "Nota (caja al suelo…)" : "Note (case on the floor…)"}
+          className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+        />
+        <input
+          value={mermaSlot}
+          onChange={(e) => setMermaSlot(e.target.value)}
+          placeholder={lang === "es" ? "Hueco área merma (si existe)" : "Merma-area slot (if it exists)"}
+          className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+        />
+        <button
+          type="submit"
+          className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white md:col-span-3"
+        >
+          <PackageX className="h-4 w-4" />
+          {lang === "es" ? "Declarar merma" : "Declare shrink"}
+        </button>
+      </form>
+      {msg && <p className="mb-2 text-xs font-semibold text-[var(--danger)]">{msg}</p>}
+      {rows.length === 0 ? (
+        <p className="text-sm text-[var(--ink-muted)]">
+          {lang === "es" ? "Hoy no hay merma declarada en este centro." : "No declared shrink at this site today."}
+        </p>
+      ) : (
+        <ul className="space-y-2 text-sm">
+          {rows.map((e) => {
+            const sku = snap.skus.find((s) => s.id === e.skuId);
+            const from = e.fromSlotId ? snap.slots.find((s) => s.id === e.fromSlotId) : null;
+            const dest = e.mermaSlotId ? snap.slots.find((s) => s.id === e.mermaSlotId) : null;
+            const op = e.operatorId ? snap.operators.find((o) => o.id === e.operatorId) : null;
+            return (
+              <li
+                key={e.id}
+                className="flex items-start justify-between gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2"
+              >
+                <span>
+                  <span className="font-medium">{sku?.name ?? e.skuId}</span>
+                  <span className="mt-0.5 block text-xs text-[var(--ink-muted)]">
+                    {MERMA_REASON_LABEL[e.reason][lang]} · {from?.code} →{" "}
+                    {dest?.code ?? (lang === "es" ? "sin ubicar" : "not put away")}
+                    {e.note ? ` · ${e.note}` : ""}
+                    {op ? ` · ${op.code}` : ""}
+                  </span>
+                </span>
+                <span className="font-mono text-xs font-semibold">−{e.qty}</span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
 export function WmsFloorHint({ lang }: { lang: Lang }) {
   return (
     <p className="inline-flex items-start gap-2 text-xs text-[var(--ink-muted)]">
       <Footprints className="mt-0.5 h-3.5 w-3.5 shrink-0" />
       {lang === "es"
-        ? "No modelamos carta de porte ni la oficina de recepción: eso no está descrito. Aquí está el pasillo, el súper y el muelle que ve el operario."
-        : "We do not model the consignment note or inbound office: that was not described. This is the aisle, store and dock the operator sees."}
+        ? "Carta de porte: los jefes la mencionan; no sabemos en qué consiste y no se finge. Recepción de oficina, igual. Merma sí: hay que declararla o el hueco miente."
+        : "Consignment note: bosses mention it; we do not know what it is and will not fake it. Inbound office, same. Shrink yes: declare it or the slot lies."}
     </p>
   );
 }

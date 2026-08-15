@@ -102,6 +102,12 @@
 - Unidad de carga: palet / caja / carro → fleje → etiqueta escrita → dejar en el pasillo de muelle del pedido
 - No se modelan carta de porte ni la oficina de recepción: no están descritas
 
+## Fase 16 — Merma declarada (esta entrega)
+- Si se cae o se rompe una caja, hay que declararlo: baja el stock del palet
+- Coger otra para el súper sin declarar deja un faltante invisible; el sistema ya no lo permite tapar
+- El área de merma solo se apunta si el hueco existe; no se inventa un pasillo
+- Carta de porte: los jefes la mencionan; no está modelada porque no sabemos en qué consiste
+
 ## Siguiente
 - Agente pyzk en la LAN cuando haya terminal físico
 - Telemetría real de flota (ISM / I_Site / InfoLink) cuando exista contrato

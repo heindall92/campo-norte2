@@ -920,6 +920,7 @@ export function buildWmsSeed(): WmsSnapshot {
     pickWaves,
     loadUnits: [],
     superAssignments: [],
+    mermaEvents: [],
   };
 }
 

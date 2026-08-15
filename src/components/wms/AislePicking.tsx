@@ -40,6 +40,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { WmsMermaCard } from "./WmsFloorBoard";
 import { WmsJornadaCard } from "./WmsJornadaCard";
 import { useWmsLive } from "./useWmsLive";
 
@@ -754,6 +755,12 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                   </button>
                 </div>
               </Card>
+              <WmsMermaCard
+                lang={lang}
+                siteId={wave.siteId}
+                operatorId={matched?.id ?? wave.operatorId}
+                preset={{ sscc: pallet.sscc, fromSlotCode: slot.code }}
+              />
             </>
           ) : (
             <Card title={lang === "es" ? "Ola completada" : "Wave complete"}>

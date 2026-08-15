@@ -57,7 +57,7 @@ export function confirmPick(
   const pallet = line.palletId ? snap.pallets.find((p) => p.id === line.palletId) : null;
   if (!pallet) return { ok: false, error: "pallet_missing" };
   if (input.sscc.trim() !== pallet.sscc) return { ok: false, error: "wrong_sscc" };
-  if (!Number.isFinite(input.qty) || input.qty < 1 || input.qty > line.qty) {
+  if (!Number.isFinite(input.qty) || input.qty < 1 || input.qty > line.qty || input.qty > pallet.qty) {
     return { ok: false, error: "invalid_qty" };
   }
 

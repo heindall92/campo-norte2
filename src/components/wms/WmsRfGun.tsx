@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Check, MapPin, Package, ScanLine, UserRound, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { WmsMermaCard } from "./WmsFloorBoard";
 import { WmsJornadaCard } from "./WmsJornadaCard";
 import { useWmsLive } from "./useWmsLive";
 
@@ -322,6 +323,14 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
           )}
         </Card>
       </div>
+      {task?.kind === "pick" && (
+        <WmsMermaCard
+          lang={lang}
+          siteId={siteId}
+          operatorId={operatorId || matched?.id || null}
+          preset={{ sscc: task.sscc, fromSlotCode: task.fromCode }}
+        />
+      )}
     </div>
   );
 }
