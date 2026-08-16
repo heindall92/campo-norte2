@@ -159,6 +159,8 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | **Phase 0 — arquitectura objetivo** | `docs/TARGET_ARCHITECTURE.md` |
 | **Phase 0 — plan SQL** | `docs/DATABASE_PLAN.md` |
 | **Phase 0 — plan de migración** | `docs/MIGRATION_PLAN.md` |
+| **Phase 0 — índice arquitectura** | `docs/ARCHITECTURE.md` |
+| **Phase 0 — roadmap brief 0–14** | `docs/ROADMAP.md` |
 | **Aurora playbook futuros** | `docs/AURORA-CONOCIMIENTO.md` |
 
 ---
@@ -169,14 +171,13 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 Fases 8–20 hechas en esta rama. Phase 0 (2026-08-16): auditoría completa, **sin implementar** persistencia, reservas ni los briefs 15–27.
 
-Leer y revisar:
+Leer y revisar (índice: `docs/ARCHITECTURE.md` y `docs/ROADMAP.md`):
 
-- `docs/ARCHITECTURE_AUDIT.md`
-- `docs/TARGET_ARCHITECTURE.md`
-- `docs/DATABASE_PLAN.md`
-- `docs/MIGRATION_PLAN.md`
+- Auditoría: `ARCHITECTURE_AUDIT.md`, `TARGET_ARCHITECTURE.md`, `DATABASE_PLAN.md`, `MIGRATION_PLAN.md`
+- Producto: `INVENTORY.md`, `ORDER_FLOW.md`, `RECEIVING.md`, `PICKING.md`, `SHIPPING.md`, `API.md`, `DEPLOYMENT.md`, `TESTING.md`
+- Brief 39–44 documentado (semilla coherente, logs, migrations, phases 0–14). **Sin código nuevo.**
 
-**Parar.** No abrir oleada 1 (provider / ledger / holds / receiving / yard…) hasta que el dueño elija el orden.
+**Parar.** No abrir Phase 1 del brief (ni oleada de provider/ledger) hasta que el dueño elija.
 
 ### Plan B — repo público (fecha límite 2026-08-22)
 

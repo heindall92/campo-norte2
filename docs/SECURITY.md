@@ -1,3 +1,18 @@
+# Seguridad — Campo Norte
+
+WMS y CRM. La auditoría CRM (hallazgos 1–6) sigue debajo. Decisiones WMS:
+
+- Roles de menú: `admin` Dirección, `ops` Almacén, `booking` Office, `guide` Planta, `pending` sin acceso.
+- Stock hoy en el navegador: **cualquiera con la demo ve el snapshot local**. No hay RLS de almacén.
+- Cuando exista `wms_ledgers`, el aislamiento es `org_id` + `wms_is_org_member` (un tenant: Campo Norte).
+- Service role nunca en `VITE_*`. Demo se apaga con Supabase configurado o `VITE_STRICT_AUTH`.
+- Mutaciones futuras: `operationId` + `wms_audit`. Phase 11 del brief; no implementado.
+- IA no escribe huecos ni expediciones.
+
+Pendiente WMS (no es olvido de la auditoría CRM): ledger, RLS stock, tests de políticas WMS, trazas de picking.
+
+---
+
 # Auditoría de seguridad — Campo Norte Growth OS
 
 > Revisión interna del entorno de demostración antes de exponerlo.

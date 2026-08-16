@@ -47,7 +47,9 @@ docs(wms): …
 - `docs/DATABASE_PLAN.md`
 - `docs/MIGRATION_PLAN.md` (este archivo)
 
-**DoD:** el dueño ha leído y ha dicho qué oleada abrir. Sin eso, no se pica dominio nuevo.
+**DoD docs (ampliado 2026-08-16):** índice de producto en `docs/ARCHITECTURE.md` y satélites (`DATABASE`, `INVENTORY`, `ORDER_FLOW`, `RECEIVING`, `PICKING`, `SHIPPING`, `API`, `DEPLOYMENT`, `TESTING`, `ROADMAP`). Brief 39–44 (semilla coherente, observabilidad, migrations `YYYYMMDDHHMMSS_`, phases 0–14, gate typecheck/lint/test/build) queda **documentado**, no implementado.
+
+**DoD código:** el dueño ha leído y ha dicho qué oleada / phase brief abrir. Sin eso, no se pica dominio nuevo.
 
 ---
 

@@ -6,7 +6,8 @@
 > Fecha: 2026-08-16 · Rama: `cursor/wms-fase14-cierre-muelle-7cfa`
 >
 > Complementa: `docs/ESTADO.md`, `docs/WMS-ROADMAP.md`, `docs/FUERA-DE-NUCLEO.md`.
-> Planes derivados: `docs/TARGET_ARCHITECTURE.md`, `docs/DATABASE_PLAN.md`, `docs/MIGRATION_PLAN.md`.
+> Índice de producto: `docs/ARCHITECTURE.md`. Roadmap brief 0–14: `docs/ROADMAP.md`.
+> Planes: `docs/TARGET_ARCHITECTURE.md`, `docs/DATABASE_PLAN.md`, `docs/MIGRATION_PLAN.md`.
 
 ---
 
