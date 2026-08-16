@@ -45,6 +45,7 @@ export * from "./tenant";
 export * from "./persist";
 export * from "./receiving";
 export * from "./replenishment";
+export * from "./packing";
 
 import { buildWmsSeed } from "./seed";
 import { normalizeWmsSnapshot, snapshotLooksUsable } from "./normalize";

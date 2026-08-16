@@ -63,6 +63,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useState } from "react";
 import { WmsAssignSuperCard, WmsAisleTraceCard, WmsFloorHint, WmsLoadUnitCard, WmsMermaCard, WmsSlotFixCard } from "./WmsFloorBoard";
+import { WmsPackCard } from "./WmsPackAdmin";
 import { WmsCopilot } from "./WmsCopilot";
 import { WmsModeBadge } from "./WmsModeBadge";
 import { WmsOpsMetrics } from "./WmsOpsMetrics";
@@ -457,6 +458,7 @@ const OUT_ERR: Record<string, { es: string; en: string }> = {
   not_packed: { es: "Embala las cajas sueltas antes de expedir", en: "Pack loose cases before shipping" },
   invalid_qty: { es: "No se puede embalar más de lo picado", en: "Cannot pack more than picked" },
   line_missing: { es: "Línea no encontrada", en: "Line missing" },
+  sscc_taken: { es: "Ese SSCC ya está en el registro", en: "That SSCC is already in the registry" },
 };
 
 export function WmsOutboundPanel({ lang }: { lang: Lang }) {
@@ -495,8 +497,8 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
         </h2>
         <p className="mt-1 text-sm text-[var(--ink-muted)]">
           {lang === "es"
-            ? "Pedido → ola → embalar cajas sueltas → cargar palets → expedir. El manifiesto solo lista lo picado; el tracking lo escribes tú."
-            : "Order → wave → pack loose cases → load pallets → ship. The manifest lists only what was picked; you type tracking."}
+            ? "Pedido → ola → embalar cajas sueltas → bulto SSCC → cargar palets → expedir. El manifiesto y la etiqueta de packing no fabrican tracking."
+            : "Order → wave → pack loose cases → SSCC package → load pallets → ship. Manifest and packing label do not invent tracking."}
         </p>
       </header>
       <Card title={lang === "es" ? "Pedido diario" : "Daily order"}>
@@ -578,6 +580,7 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
       </Card>
       <WmsAssignSuperCard lang={lang} />
       <WmsLoadUnitCard lang={lang} />
+      <WmsPackCard lang={lang} />
       <WmsMermaCard lang={lang} />
       <WmsSlotFixCard lang={lang} />
       <WmsFloorHint lang={lang} />

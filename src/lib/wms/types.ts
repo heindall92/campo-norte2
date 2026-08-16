@@ -144,6 +144,11 @@ export interface WmsOrg {
   rlsMode: "snapshot" | "postgres";
   /** Si es true, applyInventoryTx admite buckets o available < 0. Por defecto no. */
   allowNegativeInventory?: boolean;
+  /**
+   * Prefijo escrito para generar SSCC interno de packing.
+   * null = hay que escribir el SSCC. No es GCP GS1: no se fabrica un número de 18 dígitos.
+   */
+  ssccPrefix: string | null;
 }
 
 export interface Carrier {
@@ -384,6 +389,33 @@ export interface LoadUnit {
   createdAt: string;
 }
 
+/** Estación de packing escrita. Vacío en semilla: no se inventan mesas. */
+export interface PackStation {
+  id: string;
+  warehouseId: string;
+  code: string;
+  name: string;
+  createdAt: string;
+}
+
+/**
+ * Bulto de packing asociado a un pedido.
+ * Peso y dims null hasta que se escriben. SSCC único en el registro del org.
+ */
+export interface PackPackage {
+  id: string;
+  orderId: string;
+  stationId: string | null;
+  sscc: string;
+  weightKg: number | null;
+  dimLengthCm: number | null;
+  dimWidthCm: number | null;
+  dimHeightCm: number | null;
+  lineIds: string[];
+  createdAt: string;
+  createdBy: string | null;
+}
+
 /** El patrón o un técnico asigna un súper (pedido) al código del operario. */
 export interface SuperAssignment {
   id: string;
@@ -463,6 +495,10 @@ export interface WmsSnapshot {
   movements: StockMovement[];
   pickWaves: PickWave[];
   loadUnits: LoadUnit[];
+  /** Estaciones de packing. Vacío en semilla. */
+  packStations: PackStation[];
+  /** Bultos de packing. Vacío en semilla. */
+  packPackages: PackPackage[];
   superAssignments: SuperAssignment[];
   mermaEvents: MermaEvent[];
   slotFixes: SlotFix[];

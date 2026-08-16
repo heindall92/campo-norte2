@@ -1,4 +1,5 @@
 import { applyTxToSnapshot, findBalance, ledgerLocationForPallet, locationOfPallet } from "./inventory-core";
+import { isSsccTaken } from "./packing";
 import type { OutboundOrder, Pallet, PickLine, Slot, WmsSnapshot } from "./types";
 
 export type OutboundOpError =
@@ -10,7 +11,8 @@ export type OutboundOpError =
   | "dock_full"
   | "not_packed"
   | "invalid_qty"
-  | "line_missing";
+  | "line_missing"
+  | "sscc_taken";
 
 export type OutboundOpResult =
   | { ok: true; snap: WmsSnapshot }
@@ -298,6 +300,7 @@ export function packPickLine(
     return { ok: false, error: "invalid_qty" };
   }
   const sscc = qty < 1 ? null : cartonSscc === undefined ? line.cartonSscc : cleanCartonSscc(cartonSscc);
+  if (sscc && isSsccTaken(snap, sscc, { lineId: line.id })) return { ok: false, error: "sscc_taken" };
   const physical: WmsSnapshot = {
     ...snap,
     pickWaves: snap.pickWaves.map((w) =>

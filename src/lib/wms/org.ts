@@ -7,6 +7,7 @@ export const CAMPO_NORTE_ORG: WmsOrg = {
   billingCurrency: "EUR",
   rlsMode: "snapshot",
   allowNegativeInventory: false,
+  ssccPrefix: null,
 };
 
 /** Filtra el snapshot al tenant. En demo hay un org; el contrato es el de RLS. */
@@ -57,6 +58,11 @@ export function scopeSnapshotToOrg(snap: WmsSnapshot, orgId: string): WmsSnapsho
       return pal ? siteIds.has(pal.siteId) : false;
     }),
     replenishTasks: (snap.replenishTasks ?? []).filter((t) => siteIds.has(t.warehouseId)),
+    packStations: (snap.packStations ?? []).filter((s) => siteIds.has(s.warehouseId)),
+    packPackages: (snap.packPackages ?? []).filter((p) => {
+      const order = snap.outbound.find((o) => o.id === p.orderId);
+      return order ? siteIds.has(order.siteId) : false;
+    }),
     memberships: (snap.memberships ?? []).filter((m) => m.organizationId === orgId),
     carriers: snap.carriers.filter((c) => c.orgId === orgId),
     movements: snap.movements.filter((m) => {
@@ -126,6 +132,11 @@ export function scopeSnapshotToWarehouse(snap: WmsSnapshot, siteId: string): Wms
       return pal ? siteIds.has(pal.siteId) : false;
     }),
     replenishTasks: (scoped.replenishTasks ?? []).filter((t) => siteIds.has(t.warehouseId)),
+    packStations: (scoped.packStations ?? []).filter((s) => siteIds.has(s.warehouseId)),
+    packPackages: (scoped.packPackages ?? []).filter((p) => {
+      const order = scoped.outbound.find((o) => o.id === p.orderId);
+      return order ? siteIds.has(order.siteId) : false;
+    }),
   };
 }
 

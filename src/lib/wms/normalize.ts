@@ -58,11 +58,14 @@ export function normalizeWmsSnapshot(snap: WmsSnapshot): WmsSnapshot {
     slottingRules: Array.isArray(snap.slottingRules) ? snap.slottingRules : [],
     slottingRecommendations: Array.isArray(snap.slottingRecommendations) ? snap.slottingRecommendations : [],
     replenishTasks: Array.isArray(snap.replenishTasks) ? snap.replenishTasks : [],
+    packStations: Array.isArray(snap.packStations) ? snap.packStations : [],
+    packPackages: Array.isArray(snap.packPackages) ? snap.packPackages : [],
     countSessions: Array.isArray(snap.countSessions) ? snap.countSessions : [],
     countLines: Array.isArray(snap.countLines) ? snap.countLines : [],
     org: {
       ...snap.org,
       allowNegativeInventory: snap.org.allowNegativeInventory === true,
+      ssccPrefix: snap.org.ssccPrefix?.trim() ? snap.org.ssccPrefix.trim() : null,
     },
     ledgerRevision: typeof snap.ledgerRevision === "number" ? snap.ledgerRevision : 0,
     memberships: Array.isArray(snap.memberships) && snap.memberships.length
