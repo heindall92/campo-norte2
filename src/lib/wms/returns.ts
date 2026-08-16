@@ -1,3 +1,4 @@
+import { applyTxToSnapshot } from "./inventory-core";
 import type { WmsSnapshot } from "./types";
 
 export type ReturnError =
@@ -43,32 +44,46 @@ export function returnShippedPallet(
   if (slot.palletId) return { ok: false, error: "slot_occupied" };
 
   const at = input.at ?? "2026-08-15T12:00:00.000Z";
-  return {
-    ok: true,
-    snap: {
-      ...snap,
-      slots: snap.slots.map((s) =>
-        s.id === slot.id ? { ...s, palletId: pallet.id, status: "ocupado" as const } : s,
-      ),
-      pallets: snap.pallets.map((p) =>
-        p.id === pallet.id ? { ...p, status: "en_ubicacion" as const, slotId: slot.id } : p,
-      ),
-      movements: [
-        {
-          id: `mv-ret-${pallet.id}-${at}`,
-          at,
-          type: "entrada",
-          skuId: pallet.skuId,
-          palletId: pallet.id,
-          fromSlotId: null,
-          toSlotId: slot.id,
-          qty: pallet.qty,
-          operatorId: input.operatorId ?? null,
-          fleetId: null,
-          note: `Devolución ${order.code}`,
-        },
-        ...snap.movements,
-      ],
-    },
+  const physical: WmsSnapshot = {
+    ...snap,
+    slots: snap.slots.map((s) =>
+      s.id === slot.id ? { ...s, palletId: pallet.id, status: "ocupado" as const } : s,
+    ),
+    pallets: snap.pallets.map((p) =>
+      p.id === pallet.id ? { ...p, status: "en_ubicacion" as const, slotId: slot.id } : p,
+    ),
+    movements: [
+      {
+        id: `mv-ret-${pallet.id}-${at}`,
+        at,
+        type: "entrada",
+        skuId: pallet.skuId,
+        palletId: pallet.id,
+        fromSlotId: null,
+        toSlotId: slot.id,
+        qty: pallet.qty,
+        operatorId: input.operatorId ?? null,
+        fleetId: null,
+        note: `Devolución ${order.code}`,
+      },
+      ...snap.movements,
+    ],
   };
+  if (pallet.qty < 1) return { ok: true, snap: physical };
+  const led = applyTxToSnapshot(physical, {
+    type: "RETURN",
+    skuId: pallet.skuId,
+    lot: pallet.lot || null,
+    toLocationId: slot.id,
+    qty: pallet.qty,
+    reason: `return ${order.code}`,
+    refType: "order",
+    refId: order.id,
+    palletId: pallet.id,
+    actorId: input.operatorId ?? null,
+    at,
+    id: `itx-RET-${pallet.id}-${at}`,
+  });
+  if (!led.ok) return { ok: false, error: "slot_blocked" };
+  return { ok: true, snap: led.snap };
 }

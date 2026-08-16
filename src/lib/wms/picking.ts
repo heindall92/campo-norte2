@@ -1,3 +1,4 @@
+import { applyTxToSnapshot, locationOfPallet } from "./inventory-core";
 import { codesEqual } from "./location";
 import type { FleetKind, PickLine, PickWave, StockMovement, WmsSnapshot } from "./types";
 
@@ -117,17 +118,40 @@ export function confirmPick(
     o.id === wave.operatorId ? { ...o, movesToday: o.movesToday + 1 } : o,
   );
 
-  return {
-    ok: true,
-    snap: {
-      ...snap,
-      pickWaves: snap.pickWaves.map((w) => (w.id === nextWave.id ? nextWave : w)),
-      slots: nextSlots,
-      pallets: nextPallets,
-      movements: [movement, ...snap.movements],
-      operators: nextOperators,
-    },
+  const physical: WmsSnapshot = {
+    ...snap,
+    pickWaves: snap.pickWaves.map((w) => (w.id === nextWave.id ? nextWave : w)),
+    slots: nextSlots,
+    pallets: nextPallets,
+    movements: [movement, ...snap.movements],
+    operators: nextOperators,
+    reservations: (snap.reservations ?? []).map((r) =>
+      r.status === "hold" && r.palletId === pallet.id && (r.lineId === line.id || r.orderCode === line.orderCode)
+        ? { ...r, status: "consumed" as const, revision: r.revision + 1 }
+        : r,
+    ),
+    inventoryReservations: (snap.inventoryReservations ?? []).map((r) =>
+      r.status === "open" && r.palletId === pallet.id && (r.lineId === line.id || r.orderCode === line.orderCode)
+        ? { ...r, status: "consumed" as const, revision: r.revision + 1 }
+        : r,
+    ),
   };
+  const led = applyTxToSnapshot(physical, {
+    type: "PICK",
+    skuId: line.skuId,
+    lot: pallet.lot || null,
+    fromLocationId: locationOfPallet(pallet),
+    qty: input.qty,
+    reason: nextWave.code,
+    refType: "pick_line",
+    refId: line.id,
+    palletId: pallet.id,
+    actorId: wave.operatorId,
+    at,
+    id: `itx-PICK-${line.id}-${at}`,
+  });
+  if (!led.ok) return { ok: false, error: "invalid_qty" };
+  return { ok: true, snap: led.snap };
 }
 
 function closeLine(

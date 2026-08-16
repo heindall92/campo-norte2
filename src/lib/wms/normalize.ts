@@ -1,3 +1,4 @@
+import { hydrateInventoryIfMissing } from "./inventory-core";
 import { ensureShiftRoster, normalizeOperator, ROSTER_PRIMARY_SITE } from "./roster";
 import { SYSTEM_CATEGORIES, type FleetUnit, type Pallet, type PickWave, type WmsSnapshot } from "./types";
 
@@ -29,7 +30,7 @@ function normalizeWave(wave: PickWave): PickWave {
 
 /** Completa campos de v7→v8 sin inventar telemetría ni identidades. */
 export function normalizeWmsSnapshot(snap: WmsSnapshot): WmsSnapshot {
-  return {
+  const base: WmsSnapshot = {
     ...snap,
     categories: snap.categories?.length ? snap.categories : SYSTEM_CATEGORIES,
     chargers: Array.isArray(snap.chargers) ? snap.chargers : [],
@@ -51,7 +52,12 @@ export function normalizeWmsSnapshot(snap: WmsSnapshot): WmsSnapshot {
     slotFixes: Array.isArray(snap.slotFixes) ? snap.slotFixes : [],
     auditLogs: Array.isArray(snap.auditLogs) ? snap.auditLogs : [],
     reservations: Array.isArray(snap.reservations) ? snap.reservations : [],
+    org: {
+      ...snap.org,
+      allowNegativeInventory: snap.org.allowNegativeInventory === true,
+    },
   };
+  return hydrateInventoryIfMissing(base);
 }
 
 export function snapshotLooksUsable(parsed: Partial<WmsSnapshot> | null | undefined): parsed is WmsSnapshot {

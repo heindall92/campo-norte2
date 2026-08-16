@@ -6,6 +6,7 @@ export const CAMPO_NORTE_ORG: WmsOrg = {
   plan: "WMS OS · multi-hub",
   billingCurrency: "EUR",
   rlsMode: "snapshot",
+  allowNegativeInventory: false,
 };
 
 /** Filtra el snapshot al tenant. En demo hay un org; el contrato es el de RLS. */
@@ -28,6 +29,15 @@ export function scopeSnapshotToOrg(snap: WmsSnapshot, orgId: string): WmsSnapsho
     pickWaves: snap.pickWaves.filter((w) => siteIds.has(w.siteId)),
     auditLogs: (snap.auditLogs ?? []).filter((a) => !a.warehouseId || siteIds.has(a.warehouseId)),
     reservations: (snap.reservations ?? []).filter((r) => siteIds.has(r.warehouseId)),
+    products: (snap.products ?? []).filter((p) => p.orgId === orgId),
+    productUoms: (snap.productUoms ?? []).filter((u) => u.orgId === orgId),
+    lots: (snap.lots ?? []).filter((l) => l.orgId === orgId),
+    serialNumbers: (snap.serialNumbers ?? []).filter((s) => s.orgId === orgId),
+    inventoryBalances: (snap.inventoryBalances ?? []).filter((b) => b.orgId === orgId),
+    inventoryReservations: (snap.inventoryReservations ?? []).filter((r) => r.orgId === orgId),
+    inventoryTransactions: (snap.inventoryTransactions ?? []).filter((t) => t.orgId === orgId),
+    inventoryAdjustments: (snap.inventoryAdjustments ?? []).filter((a) => a.orgId === orgId),
+    inventoryCounts: (snap.inventoryCounts ?? []).filter((c) => c.orgId === orgId),
     carriers: snap.carriers.filter((c) => c.orgId === orgId),
     movements: snap.movements.filter((m) => {
       const slotId = m.toSlotId ?? m.fromSlotId;
@@ -65,5 +75,23 @@ export function scopeSnapshotToWarehouse(snap: WmsSnapshot, siteId: string): Wms
     pickWaves: scoped.pickWaves.filter((w) => siteIds.has(w.siteId)),
     auditLogs: scoped.auditLogs.filter((a) => !a.warehouseId || siteIds.has(a.warehouseId)),
     reservations: scoped.reservations.filter((r) => siteIds.has(r.warehouseId)),
+    inventoryBalances: scoped.inventoryBalances.filter((b) => locationInSites(b.locationId, siteIds, scoped.slots)),
+    inventoryReservations: scoped.inventoryReservations.filter((r) =>
+      locationInSites(r.locationId, siteIds, scoped.slots),
+    ),
+    inventoryTransactions: scoped.inventoryTransactions.filter((t) => {
+      const loc = t.fromLocationId ?? t.toLocationId;
+      return !loc || locationInSites(loc, siteIds, scoped.slots);
+    }),
+    inventoryAdjustments: scoped.inventoryAdjustments.filter((a) =>
+      locationInSites(a.locationId, siteIds, scoped.slots),
+    ),
+    inventoryCounts: scoped.inventoryCounts.filter((c) => locationInSites(c.locationId, siteIds, scoped.slots)),
   };
+}
+
+function locationInSites(locationId: string, siteIds: Set<string>, slots: WmsSnapshot["slots"]): boolean {
+  if (locationId.startsWith("SITE:")) return siteIds.has(locationId.slice(5));
+  const slot = slots.find((s) => s.id === locationId);
+  return !slot || siteIds.has(slot.siteId);
 }

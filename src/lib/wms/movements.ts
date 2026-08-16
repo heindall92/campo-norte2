@@ -1,6 +1,7 @@
 import { closeAsnIfLocated } from "./catalog";
+import { applyTxToSnapshot, locationOfPallet } from "./inventory-core";
 import { codesEqual } from "./location";
-import type { Pallet, Slot, StockMovement, WarehouseZone, WmsSnapshot } from "./types";
+import type { InventoryTxType, Pallet, Slot, StockMovement, WarehouseZone, WmsSnapshot } from "./types";
 
 export type LiveMoveError =
   | "pallet_missing"
@@ -13,7 +14,8 @@ export type LiveMoveError =
   | "not_on_dock"
   | "same_site"
   | "pallet_shipped"
-  | "pallet_in_wave";
+  | "pallet_in_wave"
+  | "stock_negative";
 
 export type LiveMoveResult =
   | { ok: true; snap: WmsSnapshot }
@@ -26,6 +28,7 @@ export type TransferInput = {
   operatorId?: string | null;
   fleetId?: string | null;
   note?: string;
+  ledgerType?: Extract<InventoryTxType, "PUTAWAY" | "MOVE" | "REPLENISH">;
 };
 
 function findSlot(snap: WmsSnapshot, code: string, siteId?: string): Slot | undefined {
@@ -101,7 +104,25 @@ function relocate(
     fleetId: input.fleetId ?? null,
     note: input.note ?? `${from.code} → ${to.code}`,
   };
-  return { ok: true, snap: appendMove(snap, movement, nextSlots, nextPallets) };
+  const physical = appendMove(snap, movement, nextSlots, nextPallets);
+  if (pallet.qty < 1) return { ok: true, snap: physical };
+  const led = applyTxToSnapshot(physical, {
+    type: input.ledgerType ?? (type === "entrada" ? "PUTAWAY" : "MOVE"),
+    skuId: pallet.skuId,
+    lot: pallet.lot || null,
+    fromLocationId: from.id,
+    toLocationId: to.id,
+    qty: pallet.qty,
+    reason: movement.note,
+    refType: "pallet",
+    refId: pallet.id,
+    palletId: pallet.id,
+    actorId: input.operatorId ?? null,
+    at,
+    id: `itx-MOVE-${pallet.id}-${at}`,
+  });
+  if (!led.ok) return { ok: false, error: "stock_negative" };
+  return { ok: true, snap: led.snap };
 }
 
 /** Zona preferida según categoría del SKU. Categorías de usuario caen en seco. */
@@ -314,7 +335,25 @@ export function transferPalletBetweenSites(
       input.note ??
       `Inter-centro ${fromSite?.code ?? pallet.siteId} ${from?.code ?? "—"} → ${dest.code} ${to.code}`,
   };
-  return { ok: true, snap: appendMove(snap, movement, nextSlots, nextPallets) };
+  const physical = appendMove(snap, movement, nextSlots, nextPallets);
+  if (pallet.qty < 1) return { ok: true, snap: physical };
+  const led = applyTxToSnapshot(physical, {
+    type: "MOVE",
+    skuId: pallet.skuId,
+    lot: pallet.lot || null,
+    fromLocationId: from?.id ?? locationOfPallet(pallet),
+    toLocationId: to.id,
+    qty: pallet.qty,
+    reason: movement.note,
+    refType: "pallet",
+    refId: pallet.id,
+    palletId: pallet.id,
+    actorId: input.operatorId ?? null,
+    at,
+    id: `itx-HUB-${pallet.id}-${at}`,
+  });
+  if (!led.ok) return { ok: false, error: "stock_negative" };
+  return { ok: true, snap: led.snap };
 }
 
 export function applyReplenishment(
@@ -337,6 +376,7 @@ export function applyReplenishment(
       fleetId,
       operatorId,
       note: `Reposición pick face ${to.code}`,
+      ledgerType: "REPLENISH",
     },
     at,
   );

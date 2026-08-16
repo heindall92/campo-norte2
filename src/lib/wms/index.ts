@@ -39,6 +39,7 @@ export * from "./copilot";
 export * from "./productivity";
 export * from "./costs";
 export * from "./alert-engine";
+export * from "./inventory-core";
 
 import { buildWmsSeed } from "./seed";
 import { normalizeWmsSnapshot, snapshotLooksUsable } from "./normalize";

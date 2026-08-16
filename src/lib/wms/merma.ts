@@ -1,4 +1,5 @@
 import { WMS_DEMO_NOW } from "./alerts";
+import { applyTxToSnapshot, locationOfPallet } from "./inventory-core";
 import { codesEqual } from "./location";
 import type { MermaEvent, MermaReason, WmsSnapshot } from "./types";
 
@@ -89,32 +90,44 @@ export function declareMerma(
   };
 
   const reasonLabel = MERMA_REASON_LABEL[input.reason].es;
-  return {
-    ok: true,
-    mermaId: event.id,
-    snap: {
-      ...snap,
-      pallets,
-      slots,
-      mermaEvents: [event, ...snap.mermaEvents],
-      movements: [
-        {
-          id: `mv-merma-${pallet.id}-${at}`,
-          at,
-          type: "ajuste",
-          skuId: pallet.skuId,
-          palletId: pallet.id,
-          fromSlotId: from.id,
-          toSlotId: mermaSlotId,
-          qty: input.qty,
-          operatorId: input.operatorId ?? null,
-          fleetId: null,
-          note: `Merma declarada · ${reasonLabel} · ${input.qty} ud.${destCode ? ` → ${destCode}` : ""}`,
-        },
-        ...snap.movements,
-      ],
-    },
+  const physical: WmsSnapshot = {
+    ...snap,
+    pallets,
+    slots,
+    mermaEvents: [event, ...snap.mermaEvents],
+    movements: [
+      {
+        id: `mv-merma-${pallet.id}-${at}`,
+        at,
+        type: "ajuste",
+        skuId: pallet.skuId,
+        palletId: pallet.id,
+        fromSlotId: from.id,
+        toSlotId: mermaSlotId,
+        qty: input.qty,
+        operatorId: input.operatorId ?? null,
+        fleetId: null,
+        note: `Merma declarada · ${reasonLabel} · ${input.qty} ud.${destCode ? ` → ${destCode}` : ""}`,
+      },
+      ...snap.movements,
+    ],
   };
+  const led = applyTxToSnapshot(physical, {
+    type: "ADJUSTMENT",
+    skuId: pallet.skuId,
+    lot: pallet.lot || null,
+    fromLocationId: locationOfPallet(pallet),
+    qty: -input.qty,
+    reason: `merma:${input.reason}`,
+    refType: "merma",
+    refId: event.id,
+    palletId: pallet.id,
+    actorId: input.operatorId ?? null,
+    at,
+    id: `itx-ADJ-${event.id}`,
+  });
+  if (!led.ok) return { ok: false, error: "invalid_qty" };
+  return { ok: true, mermaId: event.id, snap: led.snap };
 }
 
 export function mermaToday(snap: WmsSnapshot, siteId?: string, dayIso = WMS_DEMO_NOW): MermaEvent[] {

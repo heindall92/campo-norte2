@@ -1,8 +1,10 @@
+import { seedInventoryCore } from "./inventory-core";
 import { slotRecordId } from "./location";
 import { generateSiteSlots } from "./onboard";
 import { CAMPO_NORTE_ORG } from "./org";
 import { dockWindowFor } from "./carriers";
 import { ensureShiftRoster } from "./roster";
+import { WMS_DEMO_NOW } from "./alerts";
 import {
   SYSTEM_CATEGORIES,
   type Carrier,
@@ -924,6 +926,12 @@ export function buildWmsSeed(): WmsSnapshot {
     slotFixes: [],
     auditLogs: [],
     reservations: [],
+    ...seedInventoryCore({
+      orgId: CAMPO_NORTE_ORG.id,
+      skus: SKUS,
+      pallets,
+      now: WMS_DEMO_NOW,
+    }),
   };
 }
 

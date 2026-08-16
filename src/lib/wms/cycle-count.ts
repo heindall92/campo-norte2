@@ -1,3 +1,4 @@
+import { applyTxToSnapshot, locationOfPallet } from "./inventory-core";
 import { codesEqual } from "./location";
 import type { Slot, WmsSnapshot } from "./types";
 
@@ -90,29 +91,42 @@ export function confirmCycleCount(
     s.id === slot.id ? { ...s, lastCountedAt: at, status: s.status === "inventario" ? "ocupado" : s.status } : s,
   );
   const nextPallets = snap.pallets.map((p) => (p.id === pallet.id ? { ...p, qty: input.qty } : p));
-  return {
-    ok: true,
-    variance,
-    snap: {
-      ...snap,
-      slots: nextSlots,
-      pallets: nextPallets,
-      movements: [
-        {
-          id: `mv-cc-${slot.id}`,
-          at,
-          type: variance === 0 ? "inventario" : "ajuste",
-          skuId: pallet.skuId,
-          palletId: pallet.id,
-          fromSlotId: slot.id,
-          toSlotId: slot.id,
-          qty: variance,
-          operatorId: input.operatorId ?? null,
-          fleetId: null,
-          note: variance === 0 ? `Conteo OK ${slot.code}` : `Merma/ajuste ${variance} · ${slot.code}`,
-        },
-        ...snap.movements,
-      ],
-    },
+  const physical: WmsSnapshot = {
+    ...snap,
+    slots: nextSlots,
+    pallets: nextPallets,
+    movements: [
+      {
+        id: `mv-cc-${slot.id}`,
+        at,
+        type: variance === 0 ? "inventario" : "ajuste",
+        skuId: pallet.skuId,
+        palletId: pallet.id,
+        fromSlotId: slot.id,
+        toSlotId: slot.id,
+        qty: variance,
+        operatorId: input.operatorId ?? null,
+        fleetId: null,
+        note: variance === 0 ? `Conteo OK ${slot.code}` : `Merma/ajuste ${variance} · ${slot.code}`,
+      },
+      ...snap.movements,
+    ],
   };
+  const led = applyTxToSnapshot(physical, {
+    type: "COUNT",
+    skuId: pallet.skuId,
+    lot: pallet.lot || null,
+    fromLocationId: locationOfPallet(pallet),
+    qty: 0,
+    countedQty: input.qty,
+    reason: variance === 0 ? `Conteo OK ${slot.code}` : `Conteo ${variance} · ${slot.code}`,
+    refType: "cycle_count",
+    refId: task.id,
+    palletId: pallet.id,
+    actorId: input.operatorId ?? null,
+    at,
+    id: `itx-COUNT-${slot.id}-${at}`,
+  });
+  if (!led.ok) return { ok: false, error: "invalid_qty" };
+  return { ok: true, variance, snap: led.snap };
 }

@@ -1,4 +1,5 @@
-import type { StockReservation, WmsSnapshot } from "./types";
+import { applyTxToSnapshot, ledgerAvailableAt, locationOfPallet } from "./inventory-core";
+import type { InventoryReservation, StockReservation, WmsSnapshot } from "./types";
 import { classifyLotAlert, lotFromPallet } from "./lots";
 
 export type ReserveError =
@@ -24,7 +25,10 @@ export function heldQty(snap: WmsSnapshot, palletId: string): number {
 export function availableQty(snap: WmsSnapshot, palletId: string): number {
   const pallet = snap.pallets.find((p) => p.id === palletId);
   if (!pallet) return 0;
-  return Math.max(0, pallet.qty - heldQty(snap, palletId));
+  const physical = Math.max(0, pallet.qty - heldQty(snap, palletId));
+  const ledger = ledgerAvailableAt(snap, pallet);
+  if (ledger == null) return physical;
+  return Math.max(0, Math.min(physical, ledger));
 }
 
 export function reserveStock(
@@ -87,11 +91,46 @@ export function reserveStock(
     at,
     revision: ((snap.reservations ?? []).find((r) => r.palletId === pallet.id)?.revision ?? 0) + 1,
   };
+  const loc = locationOfPallet(pallet);
+  const invRow: InventoryReservation = {
+    id: `irsv-${reservation.id}`,
+    orgId: snap.org.id,
+    skuId: pallet.skuId,
+    lot: pallet.lot || null,
+    locationId: loc,
+    qty: input.qty,
+    status: "open",
+    orderCode: input.orderCode,
+    waveId: input.waveId ?? null,
+    lineId: input.lineId ?? null,
+    palletId: pallet.id,
+    createdAt: at,
+    revision: 1,
+  };
+  const held: WmsSnapshot = {
+    ...snap,
+    reservations: [reservation, ...(snap.reservations ?? [])],
+    inventoryReservations: [invRow, ...(snap.inventoryReservations ?? [])],
+  };
+  const led = applyTxToSnapshot(held, {
+    type: "ALLOCATE",
+    skuId: pallet.skuId,
+    lot: pallet.lot || null,
+    fromLocationId: loc,
+    qty: input.qty,
+    reason: `allocate ${input.orderCode}`,
+    refType: "reservation",
+    refId: reservation.id,
+    palletId: pallet.id,
+    at,
+    id: `itx-ALLOC-${reservation.id}`,
+  });
+  if (!led.ok) return { ok: false, error: "stock_shortage" };
 
   return {
     ok: true,
     reservation,
-    snap: { ...snap, reservations: [reservation, ...(snap.reservations ?? [])] },
+    snap: led.snap,
   };
 }
 
@@ -99,12 +138,30 @@ export function releaseReservation(snap: WmsSnapshot, reservationId: string): Re
   const row = (snap.reservations ?? []).find((r) => r.id === reservationId);
   if (!row || row.status !== "hold") return { ok: false, error: "hold_missing" };
   const reservation = { ...row, status: "released" as const, revision: row.revision + 1 };
-  return {
-    ok: true,
-    reservation,
-    snap: {
-      ...snap,
-      reservations: (snap.reservations ?? []).map((r) => (r.id === reservationId ? reservation : r)),
-    },
+  const pallet = snap.pallets.find((p) => p.id === row.palletId);
+  const released: WmsSnapshot = {
+    ...snap,
+    reservations: (snap.reservations ?? []).map((r) => (r.id === reservationId ? reservation : r)),
+    inventoryReservations: (snap.inventoryReservations ?? []).map((r) =>
+      r.id === `irsv-${reservationId}` && r.status === "open"
+        ? { ...r, status: "released" as const, revision: r.revision + 1 }
+        : r,
+    ),
   };
+  if (!pallet) return { ok: true, reservation, snap: released };
+  const led = applyTxToSnapshot(released, {
+    type: "DEALLOCATE",
+    skuId: row.skuId,
+    lot: pallet.lot || null,
+    fromLocationId: locationOfPallet(pallet),
+    qty: row.qty,
+    reason: `deallocate ${row.orderCode}`,
+    refType: "reservation",
+    refId: reservationId,
+    palletId: pallet.id,
+    at: row.at,
+    id: `itx-DEALLOC-${reservationId}`,
+  });
+  if (!led.ok) return { ok: false, error: "stock_shortage" };
+  return { ok: true, reservation, snap: led.snap };
 }

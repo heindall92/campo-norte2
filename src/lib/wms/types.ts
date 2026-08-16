@@ -137,6 +137,8 @@ export interface WmsOrg {
    * RLS Postgres real queda para infra; aquí el filtro es de dominio.
    */
   rlsMode: "snapshot" | "postgres";
+  /** Si es true, applyInventoryTx admite buckets o available < 0. Por defecto no. */
+  allowNegativeInventory?: boolean;
 }
 
 export interface Carrier {
@@ -424,6 +426,158 @@ export interface WmsSnapshot {
   slotFixes: SlotFix[];
   auditLogs: WmsAuditLog[];
   reservations: StockReservation[];
+  products: WmsProduct[];
+  productUoms: WmsProductUom[];
+  lots: WmsLot[];
+  serialNumbers: WmsSerialNumber[];
+  inventoryBalances: InventoryBalance[];
+  inventoryReservations: InventoryReservation[];
+  inventoryTransactions: InventoryTransaction[];
+  inventoryAdjustments: InventoryAdjustment[];
+  inventoryCounts: InventoryCount[];
+}
+
+export type InventoryTxType =
+  | "RECEIPT"
+  | "PUTAWAY"
+  | "MOVE"
+  | "ALLOCATE"
+  | "DEALLOCATE"
+  | "PICK"
+  | "REPLENISH"
+  | "PACK"
+  | "STAGE"
+  | "LOAD"
+  | "SHIP"
+  | "RETURN"
+  | "ADJUSTMENT"
+  | "COUNT"
+  | "QUARANTINE"
+  | "RELEASE";
+
+/** Catálogo de inventario. Proyección de `skus` — no inventa EAN ni SKU. */
+export interface WmsProduct {
+  id: string;
+  orgId: string;
+  sku: string;
+  name: string;
+  ean: string | null;
+  status: "active" | "inactive";
+  category: string;
+}
+
+export interface WmsProductUom {
+  id: string;
+  orgId: string;
+  productId: string;
+  uom: string;
+  isBase: boolean;
+  factorToBase: number;
+}
+
+export interface WmsLot {
+  id: string;
+  orgId: string;
+  productId: string;
+  lot: string;
+  expiry: string | null;
+  receivedAt: string;
+  blocked: boolean;
+}
+
+/** Vacío en semilla: no hay seriales reales que persistir. */
+export interface WmsSerialNumber {
+  id: string;
+  orgId: string;
+  productId: string;
+  serial: string;
+  lot: string | null;
+  status: "in_stock" | "shipped";
+}
+
+/**
+ * Estado actual de un grano (org, sku, lote, ubicación).
+ * `available = onHand - allocated - blocked - quarantined` (siempre recalculado).
+ */
+export interface InventoryBalance {
+  id: string;
+  orgId: string;
+  skuId: string;
+  lot: string | null;
+  locationId: string;
+  onHand: number;
+  allocated: number;
+  available: number;
+  picked: number;
+  packed: number;
+  staged: number;
+  blocked: number;
+  quarantined: number;
+  revision: number;
+  updatedAt: string;
+}
+
+export interface InventoryReservation {
+  id: string;
+  orgId: string;
+  skuId: string;
+  lot: string | null;
+  locationId: string;
+  qty: number;
+  status: "open" | "released" | "consumed";
+  orderCode: string;
+  waveId: string | null;
+  lineId: string | null;
+  palletId: string | null;
+  createdAt: string;
+  revision: number;
+}
+
+/** Ledger histórico. Append-only. */
+export interface InventoryTransaction {
+  id: string;
+  orgId: string;
+  type: InventoryTxType;
+  skuId: string;
+  lot: string | null;
+  fromLocationId: string | null;
+  toLocationId: string | null;
+  qty: number;
+  countedQty: number | null;
+  uom: string;
+  reason: string;
+  refType: string | null;
+  refId: string | null;
+  palletId: string | null;
+  createdAt: string;
+  actorId: string | null;
+}
+
+export interface InventoryAdjustment {
+  id: string;
+  orgId: string;
+  skuId: string;
+  lot: string | null;
+  locationId: string;
+  qty: number;
+  reason: string;
+  txId: string;
+  createdAt: string;
+  actorId: string | null;
+}
+
+export interface InventoryCount {
+  id: string;
+  orgId: string;
+  skuId: string;
+  lot: string | null;
+  locationId: string;
+  expectedQty: number;
+  countedQty: number;
+  variance: number;
+  txId: string;
+  createdAt: string;
+  actorId: string | null;
 }
 
 /** Hold de stock. No es reserva de viaje CRM. */

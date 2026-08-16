@@ -1,3 +1,4 @@
+import { applyTxToSnapshot, locationOfPallet } from "./inventory-core";
 import { ensureShiftRoster, ROSTER_PRIMARY_SITE } from "./roster";
 import type {
   FleetUnit,
@@ -168,16 +169,28 @@ export function createPallet(
     supplier: input.supplier.trim() || "—",
     asnId: input.asnId ?? null,
   };
-  return {
-    ok: true,
-    snap: {
-      ...snap,
-      pallets: [pallet, ...snap.pallets],
-      slots: snap.slots.map((s) =>
-        s.id === slotId ? { ...s, palletId: pallet.id, status: "ocupado" as const } : s,
-      ),
-    },
+  const physical: WmsSnapshot = {
+    ...snap,
+    pallets: [pallet, ...snap.pallets],
+    slots: snap.slots.map((s) =>
+      s.id === slotId ? { ...s, palletId: pallet.id, status: "ocupado" as const } : s,
+    ),
   };
+  const led = applyTxToSnapshot(physical, {
+    type: "RECEIPT",
+    skuId: pallet.skuId,
+    lot: pallet.lot || null,
+    toLocationId: locationOfPallet(pallet),
+    qty: pallet.qty,
+    reason: "create-pallet",
+    refType: "pallet",
+    refId: pallet.id,
+    palletId: pallet.id,
+    at: pallet.receivedAt,
+    id: `itx-RECEIPT-${pallet.id}`,
+  });
+  if (!led.ok) return { ok: false, error: "invalid_input" };
+  return { ok: true, snap: led.snap };
 }
 
 export function updatePallet(
@@ -185,41 +198,121 @@ export function updatePallet(
   id: string,
   input: { qty: number; lot: string; expiry: string | null; supplier: string; status: Pallet["status"] },
 ): CatalogResult {
-  if (!snap.pallets.some((p) => p.id === id)) return { ok: false, error: "pallet_missing" };
+  const current = snap.pallets.find((p) => p.id === id);
+  if (!current) return { ok: false, error: "pallet_missing" };
   if (!Number.isFinite(input.qty) || input.qty < 0) return { ok: false, error: "invalid_input" };
-  return {
-    ok: true,
-    snap: {
-      ...snap,
-      pallets: snap.pallets.map((p) =>
-        p.id === id
-          ? {
-              ...p,
-              qty: input.qty,
-              lot: input.lot.trim() || p.lot,
-              expiry: input.expiry,
-              supplier: input.supplier.trim() || p.supplier,
-              status: input.status,
-            }
-          : p,
-      ),
-    },
+  const nextLot = input.lot.trim() || current.lot;
+  const physical: WmsSnapshot = {
+    ...snap,
+    pallets: snap.pallets.map((p) =>
+      p.id === id
+        ? {
+            ...p,
+            qty: input.qty,
+            lot: nextLot,
+            expiry: input.expiry,
+            supplier: input.supplier.trim() || p.supplier,
+            status: input.status,
+          }
+        : p,
+    ),
   };
+  const loc = locationOfPallet(current);
+  let next = physical;
+  if (current.qty !== input.qty || current.lot !== nextLot) {
+    if (current.qty > 0) {
+      const down = applyTxToSnapshot(next, {
+        type: "ADJUSTMENT",
+        skuId: current.skuId,
+        lot: current.lot || null,
+        fromLocationId: loc,
+        qty: -current.qty,
+        reason: "edit-pallet",
+        refType: "pallet",
+        refId: id,
+        palletId: id,
+        id: `itx-ADJ-edit-down-${id}`,
+      });
+      if (!down.ok) return { ok: false, error: "invalid_input" };
+      next = down.snap;
+    }
+    if (input.qty > 0) {
+      const up = applyTxToSnapshot(next, {
+        type: "RECEIPT",
+        skuId: current.skuId,
+        lot: nextLot || null,
+        toLocationId: loc,
+        qty: input.qty,
+        reason: "edit-pallet",
+        refType: "pallet",
+        refId: id,
+        palletId: id,
+        id: `itx-RECEIPT-edit-${id}`,
+      });
+      if (!up.ok) return { ok: false, error: "invalid_input" };
+      next = up.snap;
+    }
+  }
+  if (current.status !== "cuarentena" && input.status === "cuarentena" && input.qty > 0) {
+    const q = applyTxToSnapshot(next, {
+      type: "QUARANTINE",
+      skuId: current.skuId,
+      lot: nextLot || null,
+      fromLocationId: loc,
+      qty: input.qty,
+      reason: "edit-quarantine",
+      refType: "pallet",
+      refId: id,
+      palletId: id,
+      id: `itx-QUAR-${id}`,
+    });
+    if (!q.ok) return { ok: false, error: "invalid_input" };
+    next = q.snap;
+  }
+  if (current.status === "cuarentena" && input.status !== "cuarentena" && input.qty > 0) {
+    const rel = applyTxToSnapshot(next, {
+      type: "RELEASE",
+      skuId: current.skuId,
+      lot: nextLot || null,
+      fromLocationId: loc,
+      qty: input.qty,
+      reason: "edit-release",
+      refType: "pallet",
+      refId: id,
+      palletId: id,
+      id: `itx-REL-${id}`,
+    });
+    if (!rel.ok) return { ok: false, error: "invalid_input" };
+    next = rel.snap;
+  }
+  return { ok: true, snap: next };
 }
 
 export function deletePallet(snap: WmsSnapshot, id: string): CatalogResult {
   const pallet = snap.pallets.find((p) => p.id === id);
   if (!pallet) return { ok: false, error: "pallet_missing" };
-  return {
-    ok: true,
-    snap: {
-      ...snap,
-      pallets: snap.pallets.filter((p) => p.id !== id),
-      slots: snap.slots.map((s) =>
-        s.palletId === id ? { ...s, palletId: null, status: "libre" as const } : s,
-      ),
-    },
+  const physical: WmsSnapshot = {
+    ...snap,
+    pallets: snap.pallets.filter((p) => p.id !== id),
+    slots: snap.slots.map((s) =>
+      s.palletId === id ? { ...s, palletId: null, status: "libre" as const } : s,
+    ),
   };
+  if (pallet.qty < 1) return { ok: true, snap: physical };
+  const led = applyTxToSnapshot(physical, {
+    type: "ADJUSTMENT",
+    skuId: pallet.skuId,
+    lot: pallet.lot || null,
+    fromLocationId: locationOfPallet(pallet),
+    qty: -pallet.qty,
+    reason: "delete-pallet",
+    refType: "pallet",
+    refId: id,
+    palletId: id,
+    id: `itx-ADJ-del-${id}`,
+  });
+  if (!led.ok) return { ok: false, error: "invalid_input" };
+  return { ok: true, snap: led.snap };
 }
 
 export function createAsn(

@@ -1,3 +1,4 @@
+import { applyTxToSnapshot, locationOfPallet } from "./inventory-core";
 import { codesEqual } from "./location";
 import type { SlotFix, SlotFixReason, WmsSnapshot } from "./types";
 
@@ -171,30 +172,44 @@ export function fixSlotCount(
     ? snap.slotFixes.map((f) => (f.id === completed.id ? completed : f))
     : [completed, ...snap.slotFixes];
 
-  return {
-    ok: true,
-    fixId: completed.id,
-    snap: {
-      ...snap,
-      pallets,
-      slots,
-      slotFixes,
-      movements: [
-        {
-          id: `mv-fix-${slot.id}-${at}`,
-          at,
-          type: "ajuste",
-          skuId: completed.skuId,
-          palletId: pallet?.id ?? null,
-          fromSlotId: slot.id,
-          toSlotId: slot.id,
-          qty: input.countedQty - (pallet?.qty ?? 0),
-          operatorId: input.fixedBy ?? null,
-          fleetId: null,
-          note: `Hueco arreglado · ${reasonLabel} · ${slot.code} · había ${completed.systemQty} · cuenta ${input.countedQty}`,
-        },
-        ...snap.movements,
-      ],
-    },
+  const physical: WmsSnapshot = {
+    ...snap,
+    pallets,
+    slots,
+    slotFixes,
+    movements: [
+      {
+        id: `mv-fix-${slot.id}-${at}`,
+        at,
+        type: "ajuste",
+        skuId: completed.skuId,
+        palletId: pallet?.id ?? null,
+        fromSlotId: slot.id,
+        toSlotId: slot.id,
+        qty: input.countedQty - (pallet?.qty ?? 0),
+        operatorId: input.fixedBy ?? null,
+        fleetId: null,
+        note: `Hueco arreglado · ${reasonLabel} · ${slot.code} · había ${completed.systemQty} · cuenta ${input.countedQty}`,
+      },
+      ...snap.movements,
+    ],
   };
+  if (!pallet) return { ok: true, fixId: completed.id, snap: physical };
+  const led = applyTxToSnapshot(physical, {
+    type: "COUNT",
+    skuId: pallet.skuId,
+    lot: pallet.lot || null,
+    fromLocationId: locationOfPallet(pallet),
+    qty: 0,
+    countedQty: input.countedQty,
+    reason: `slot-fix:${input.reason}`,
+    refType: "slot_fix",
+    refId: completed.id,
+    palletId: pallet.id,
+    actorId: input.fixedBy ?? null,
+    at,
+    id: `itx-COUNT-fix-${slot.id}-${at}`,
+  });
+  if (!led.ok) return { ok: false, error: "invalid_qty" };
+  return { ok: true, fixId: completed.id, snap: led.snap };
 }

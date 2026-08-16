@@ -36,6 +36,7 @@ const MOVE_ERR: Record<LiveMoveError, { es: string; en: string }> = {
   same_site: { es: "Elige otro centro de destino", en: "Pick a different destination site" },
   pallet_shipped: { es: "Ese palet ya salió", en: "That pallet already shipped" },
   pallet_in_wave: { es: "El palet está en una ola o en muelle de salida", en: "Pallet is on a wave or outbound dock" },
+  stock_negative: { es: "El ledger no admite stock negativo", en: "Ledger rejected negative stock" },
 };
 
 const COUNT_ERR: Record<CycleCountError, { es: string; en: string }> = {
