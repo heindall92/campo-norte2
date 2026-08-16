@@ -595,7 +595,7 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
     }
     commit(result.snap);
     setFeedback(null);
-    const variance = "variance" in result ? result.variance : 0;
+    const variance = result.variance ?? 0;
     setOkMsg(
       variance === 0
         ? lang === "es"

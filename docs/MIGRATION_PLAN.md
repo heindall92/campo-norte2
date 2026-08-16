@@ -87,11 +87,11 @@ docs(wms): …
 
 ### Oleada 4 — Inventory counts de verdad (brief 27, recorte)
 
-**Qué:** sesiones + líneas sobre el cycle-count actual. Diferencia → movement `ajuste` + (si hay ledger) fila audit. Tipos: cíclico / ABC / hueco / SKU / lote. Full count solo si lo piden (es caro en UI).
+**Hecho (2026-08-16).** Sesiones + líneas sobre `planCycleCounts`. Tipos: cyclic / abc / slot / sku / lot. Diferencia → movement `ajuste` + audit. Full count solo si `full: true`.
 
-**Qué no:** borrar `planCycleCounts`.
+**Qué no:** borrar `planCycleCounts`. Inventar un inventario completo de huecos vacíos.
 
-**DoD:** un desvío queda en movements con operatorId; tests.
+**DoD:** desvío con `operatorId` en movements; 248 verdes.
 
 ---
 
