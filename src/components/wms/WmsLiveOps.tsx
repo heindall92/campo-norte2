@@ -16,7 +16,9 @@ import {
   operatorForAppUser,
   planCycleCounts,
   proposeReplenishments,
+  PUTAWAY_REASON_LABEL,
   putawayReceivedPallet,
+  rankPutawayCandidates,
   skipCountSessionLine,
   suggestPutawaySlot,
   transferPalletBetweenSites,
@@ -45,6 +47,8 @@ const MOVE_ERR: Record<LiveMoveError, { es: string; en: string }> = {
   stock_negative: { es: "El ledger no admite stock negativo", en: "Ledger rejected negative stock" },
   qc_pending: { es: "QC pendiente: no ubicar hasta aprobar", en: "QC pending: do not put away until approved" },
   pallet_quarantined: { es: "Palet en cuarentena: no ubicar a picking", en: "Pallet in quarantine: do not put away to pick" },
+  rec_missing: { es: "No hay recomendación de slotting", en: "No slotting recommendation" },
+  rec_accepted: { es: "Esa recomendación ya se aplicó", en: "That recommendation was already applied" },
 };
 
 const COUNT_ERR: Record<CountSessionError, { es: string; en: string }> = {
@@ -136,8 +140,8 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
         </h2>
         <p className="mt-1 max-w-2xl text-sm text-[var(--ink-muted)]">
           {lang === "es"
-            ? "Putaway de muelle y traslados hueco a hueco. El destino se sugiere por zona del SKU; planta necesita haber fichado."
-            : "Dock putaway and slot-to-slot transfers. Destination follows the SKU zone; floor staff must clock in."}
+            ? "Putaway de muelle y traslados hueco a hueco. El ranking sugiere zona, capacidad, familia y viaje A/B/C (no metros). La recomendación no mueve: hay que confirmar."
+            : "Dock putaway and slot-to-slot transfers. Ranking uses zone, capacity, family and A/B/C travel (not meters). A recommendation does not move until you confirm."}
         </p>
       </header>
 
@@ -302,8 +306,15 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
           <ul className="space-y-2">
             {dockPals.slice(0, 8).map((pal) => {
               const from = pal.slotId ? snap.slots.find((s) => s.id === pal.slotId) : null;
-              const dest = suggestPutawaySlot(snap, pal);
+              const ranked = rankPutawayCandidates(snap, pal, { limit: 3 });
+              const dest = ranked[0] ? snap.slots.find((s) => s.id === ranked[0]!.slotId) : suggestPutawaySlot(snap, pal);
               const sku = snap.skus.find((s) => s.id === pal.skuId);
+              const reasonTxt = ranked[0]
+                ? ranked[0].reasons
+                    .slice(0, 3)
+                    .map((r) => PUTAWAY_REASON_LABEL[r as keyof typeof PUTAWAY_REASON_LABEL]?.[lang] ?? r)
+                    .join(" · ")
+                : "";
               return (
                 <li
                   key={pal.id}
@@ -313,7 +324,11 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
                     <span className="font-mono text-xs font-semibold">{pal.sscc.slice(-10)}</span>
                     <span className="mt-0.5 block truncate text-[var(--ink-muted)]">
                       {sku?.name} · {from?.code} → {dest?.code ?? "—"}
+                      {ranked[0] ? ` · ${ranked[0].travelPct}%` : ""}
                     </span>
+                    {reasonTxt && (
+                      <span className="mt-0.5 block truncate text-[10px] text-[var(--ink-muted)]">{reasonTxt}</span>
+                    )}
                   </span>
                   <button
                     type="button"

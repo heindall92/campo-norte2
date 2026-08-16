@@ -2,7 +2,18 @@ import { closeAsnIfLocated } from "./catalog";
 import { applyTxToSnapshot, locationOfPallet } from "./inventory-core";
 import { codesEqual } from "./location";
 import { palletCanPutaway } from "./receiving";
-import type { InventoryTxType, Pallet, Slot, StockMovement, WarehouseZone, WmsSnapshot } from "./types";
+import { WMS_DEMO_NOW } from "./alerts";
+import type { InventoryTxType, Pallet, Slot, StockMovement, WmsSnapshot } from "./types";
+
+export {
+  addSlottingRule,
+  openSlottingRecommendation,
+  PUTAWAY_REASON_LABEL,
+  rankPutawayCandidates,
+  suggestPutawaySlot,
+  travelPctBetween,
+  zoneForCategory,
+} from "./slotting";
 
 export type LiveMoveError =
   | "pallet_missing"
@@ -18,7 +29,9 @@ export type LiveMoveError =
   | "pallet_in_wave"
   | "stock_negative"
   | "qc_pending"
-  | "pallet_quarantined";
+  | "pallet_quarantined"
+  | "rec_missing"
+  | "rec_accepted";
 
 export type LiveMoveResult =
   | { ok: true; snap: WmsSnapshot }
@@ -128,38 +141,6 @@ function relocate(
   return { ok: true, snap: led.snap };
 }
 
-/** Zona preferida según categoría del SKU. Categorías de usuario caen en seco. */
-export function zoneForCategory(category: string): WarehouseZone {
-  if (category === "frescos" || category === "perecederos") return "fresco";
-  if (category === "congelados") return "congelado";
-  return "seco";
-}
-
-/**
- * Primer hueco libre del centro que encaja con la zona del SKU.
- * No inventa ocupación: solo huecos `libre` sin palet, fuera de muelle.
- */
-export function suggestPutawaySlot(snap: WmsSnapshot, pallet: Pallet): Slot | null {
-  const sku = snap.skus.find((s) => s.id === pallet.skuId);
-  const preferred = sku ? zoneForCategory(sku.category) : "seco";
-  const free = snap.slots.filter(
-    (s) =>
-      s.siteId === pallet.siteId &&
-      s.status === "libre" &&
-      !s.palletId &&
-      s.zone !== "muelle" &&
-      s.zone !== "crossdock",
-  );
-  const ranked = [...free].sort((a, b) => {
-    const zoneA = a.zone === preferred ? 0 : 1;
-    const zoneB = b.zone === preferred ? 0 : 1;
-    if (zoneA !== zoneB) return zoneA - zoneB;
-    if (a.pickFace !== b.pickFace) return a.pickFace ? 1 : -1;
-    return a.code.localeCompare(b.code);
-  });
-  return ranked[0] ?? null;
-}
-
 /** Ubica un palet de muelle y cierra el ASN si ya no queda ninguno suyo en muelle. */
 export function putawayReceivedPallet(
   snap: WmsSnapshot,
@@ -186,6 +167,30 @@ export function putawayReceivedPallet(
   const closed = closeAsnIfLocated(moved.snap, pallet.asnId);
   if (!closed.ok) return moved;
   return { ok: true, snap: closed.snap };
+}
+
+/** Confirma una recomendación de slotting. Sin este paso el palet no se mueve. */
+export function acceptSlottingRecommendation(
+  snap: WmsSnapshot,
+  recId: string,
+  operatorId: string | null,
+  fleetId: string | null = null,
+  at = WMS_DEMO_NOW,
+): LiveMoveResult {
+  const rec = (snap.slottingRecommendations ?? []).find((r) => r.id === recId);
+  if (!rec) return { ok: false, error: "rec_missing" };
+  if (rec.acceptedAt) return { ok: false, error: "rec_accepted" };
+  const moved = putawayReceivedPallet(snap, rec.palletId, rec.toCode, operatorId, fleetId, at);
+  if (!moved.ok) return moved;
+  return {
+    ok: true,
+    snap: {
+      ...moved.snap,
+      slottingRecommendations: (moved.snap.slottingRecommendations ?? []).map((r) =>
+        r.id === recId ? { ...r, acceptedAt: at, acceptedBy: operatorId } : r,
+      ),
+    },
+  };
 }
 
 /** Putaway: palet en muelle → hueco de almacén. */

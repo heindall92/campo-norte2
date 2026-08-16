@@ -51,6 +51,11 @@ export function scopeSnapshotToOrg(snap: WmsSnapshot, orgId: string): WmsSnapsho
       const session = (snap.countSessions ?? []).find((s) => s.id === l.sessionId);
       return !session || session.orgId === orgId;
     }),
+    slottingRules: snap.slottingRules ?? [],
+    slottingRecommendations: (snap.slottingRecommendations ?? []).filter((r) => {
+      const pal = snap.pallets.find((p) => p.id === r.palletId);
+      return pal ? siteIds.has(pal.siteId) : false;
+    }),
     memberships: (snap.memberships ?? []).filter((m) => m.organizationId === orgId),
     carriers: snap.carriers.filter((c) => c.orgId === orgId),
     movements: snap.movements.filter((m) => {
@@ -113,6 +118,11 @@ export function scopeSnapshotToWarehouse(snap: WmsSnapshot, siteId: string): Wms
     countLines: (scoped.countLines ?? []).filter((l) => {
       const session = (scoped.countSessions ?? []).find((s) => s.id === l.sessionId);
       return !session || siteIds.has(session.warehouseId);
+    }),
+    slottingRules: scoped.slottingRules ?? [],
+    slottingRecommendations: (scoped.slottingRecommendations ?? []).filter((r) => {
+      const pal = scoped.pallets.find((p) => p.id === r.palletId);
+      return pal ? siteIds.has(pal.siteId) : false;
     }),
   };
 }

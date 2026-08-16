@@ -12,6 +12,7 @@ import {
   palletCanPutaway,
   palletQcStatus,
   putawayReceivedPallet,
+  rankPutawayCandidates,
   receiveAgainstLine,
   receiveAsnPallet,
   suggestPutawaySlot,
@@ -428,7 +429,8 @@ export function WmsInboundPanel({ lang }: { lang: Lang }) {
                   <ul className="mt-3 space-y-2">
                     {dockPals.map((pal) => {
                       const sku = snap.skus.find((s) => s.id === pal.skuId);
-                      const dest = suggestPutawaySlot(snap, pal);
+                      const ranked = rankPutawayCandidates(snap, pal, { limit: 1 })[0];
+                      const dest = ranked ? snap.slots.find((s) => s.id === ranked.slotId) : suggestPutawaySlot(snap, pal);
                       const qc = palletQcStatus(pal);
                       const canPut = palletCanPutaway(pal);
                       return (
@@ -440,7 +442,7 @@ export function WmsInboundPanel({ lang }: { lang: Lang }) {
                             <span className="font-mono font-semibold">{pal.sscc.slice(-8)}</span>
                             <span className="mt-0.5 block truncate text-[var(--ink-muted)]">
                               {sku?.name} · {pal.qty} · QC {qc}
-                              {canPut ? ` → ${dest?.code ?? "—"}` : ""}
+                              {canPut ? ` → ${dest?.code ?? "—"}${ranked ? ` · ${ranked.travelPct}%` : ""}` : ""}
                             </span>
                           </span>
                           <span className="flex shrink-0 items-center gap-1">

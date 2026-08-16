@@ -480,6 +480,9 @@ export interface WmsSnapshot {
   /** Sesiones de conteo. Vacío en semilla: no se inventa un full count. */
   countSessions: CountSession[];
   countLines: CountLine[];
+  /** Reglas de slotting escritas. Vacío en semilla: no se inventan incompatibles. */
+  slottingRules: SlottingRule[];
+  slottingRecommendations: SlottingRecommendation[];
   /** Revisión del ledger Postgres. 0 en semilla local. */
   ledgerRevision: number;
   /** Pertenencias de auth al org. Sin contraseñas. */
@@ -662,6 +665,34 @@ export interface CountLine {
   variance: number | null;
   status: "pending" | "counted" | "skipped";
   taskReason: "caducidad" | "abc_a" | "antiguo" | "frio";
+}
+
+export const SLOTTING_RULE_KINDS = ["incompatible_sku", "incompatible_category"] as const;
+export type SlottingRuleKind = (typeof SLOTTING_RULE_KINDS)[number];
+
+/** Incompatible solo si está escrito. Semilla vacía. */
+export interface SlottingRule {
+  id: string;
+  kind: SlottingRuleKind;
+  left: string;
+  right: string;
+  note: string;
+}
+
+/** Recomendación from→to. acceptedAt null hasta confirmar. No mueve sola. */
+export interface SlottingRecommendation {
+  id: string;
+  palletId: string;
+  skuId: string;
+  fromSlotId: string;
+  toSlotId: string;
+  toCode: string;
+  score: number;
+  travelPct: number;
+  reasons: string[];
+  createdAt: string;
+  acceptedAt: string | null;
+  acceptedBy: string | null;
 }
 
 /** Hold de stock. No es reserva de viaje CRM. */

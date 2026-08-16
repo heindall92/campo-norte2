@@ -1,6 +1,6 @@
 import type { AppSection } from "@/lib/notifications";
 import { WMS_DEMO_NOW } from "./alerts";
-import { suggestPutawaySlot, zoneForCategory } from "./movements";
+import { rankPutawayCandidates, suggestPutawaySlot, zoneForCategory } from "./movements";
 import { recommendTowerActions } from "./tower";
 import type { Sku, WmsSnapshot } from "./types";
 
@@ -151,11 +151,12 @@ function slotSku(snap: WmsSnapshot, siteId: string | undefined, question: string
     ) ??
     snap.pallets.find((p) => p.skuId === sku.id && p.status !== "expedido" && (!siteId || p.siteId === siteId));
   const zone = zoneForCategory(sku.category);
+  const ranked = pallet ? rankPutawayCandidates(snap, pallet, { limit: 1 })[0] : null;
   const suggested = pallet ? suggestPutawaySlot(snap, pallet) : null;
   const evidence = [
     `${sku.sku} · zona preferida ${zone} (categoría ${sku.category})`,
     suggested
-      ? `Hueco libre propuesto ${suggested.code} · ${suggested.zone}`
+      ? `Hueco libre propuesto ${suggested.code} · ${suggested.zone} · viaje ${ranked?.travelPct ?? "—"}% (pasillos, no metros)`
       : "No hay hueco libre fuera de muelle en este recorte.",
   ];
   return {

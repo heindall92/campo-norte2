@@ -55,6 +55,8 @@ export function normalizeWmsSnapshot(snap: WmsSnapshot): WmsSnapshot {
     reservations: Array.isArray(snap.reservations) ? snap.reservations : [],
     asnLines: Array.isArray(snap.asnLines) ? snap.asnLines : [],
     asnIncidents: Array.isArray(snap.asnIncidents) ? snap.asnIncidents : [],
+    slottingRules: Array.isArray(snap.slottingRules) ? snap.slottingRules : [],
+    slottingRecommendations: Array.isArray(snap.slottingRecommendations) ? snap.slottingRecommendations : [],
     countSessions: Array.isArray(snap.countSessions) ? snap.countSessions : [],
     countLines: Array.isArray(snap.countLines) ? snap.countLines : [],
     org: {
