@@ -137,8 +137,14 @@
 - `docs/ARCHITECTURE_AUDIT.md`, `TARGET_ARCHITECTURE.md`, `DATABASE_PLAN.md`, `MIGRATION_PLAN.md`
 - El motor de planta (fases 1–20) no se ha reescrito
 
+## Oleada 8 — Packing + SSCC (esta entrega)
+- Estaciones y bultos solo si se escriben (semilla vacía)
+- Registro SSCC único (palet + caja de línea + bulto)
+- Generar SSCC interno solo con prefijo escrito; sin prefijo se teclea
+- Etiqueta de packing: SSCC del registro, peso/dims si existen; sin tracking
+
 ## Siguiente (tras revisión humana)
-- Oleadas 0–7 hechas en cliente (14 oleadas en total: 0–13)
-- Oleada 8: packing + SSCC
-- Briefs restantes (packing, SSCC, shipping, carriers, dock, yard, returns) — un módulo por oleada
+- Oleadas 0–8 hechas en cliente (14 oleadas en total: 0–13)
+- Oleada 9: shipping + MockCarrierAdapter
+- Briefs restantes (shipping, carriers, dock, yard, returns) — un módulo por oleada
 - Layout numérico 8–37 / SKU cerveza-vino / ZKTeco / telemetría flota: solo con dato real

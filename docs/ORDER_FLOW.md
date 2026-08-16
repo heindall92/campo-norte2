@@ -6,6 +6,7 @@ OutboundOrder (pendiente)
   → PickWave (abierta / en_curso)
   → confirmPick | skip | shortage
   → packPickLine / LoadUnit    fleje + etiqueta escrita
+  → openPackPackage            SSCC único; generar solo con prefijo
   → stageOrderToDock
   → shipOutboundOrder          tracking null si no se escribe
 ```
@@ -37,4 +38,4 @@ El súper lo asigna el patrón al **código de operario** (`OP-1903` = Jorge Pe�
 |---|---|
 | 4 | Pedidos + holds al abrir ola (hecho). Status ES no sustituido. |
 | 6 | Olas + picking (hecho) + replenishment MIN/MAX (**oleada 7**) |
-| 7 | Packing/SSCC/shipping (parcial: load unit + ship) |
+| 7 | Packing/SSCC (**oleada 8**) + shipping (parcial: stage/ship) |

@@ -127,9 +127,9 @@ docs(wms): …
 
 ### Oleada 8 — Packing + SSCC (brief 20–21)
 
-**Qué:** estaciones (las que se escriban), packages / lines, peso y dims **escritos**. Asociar a order. SSCC: registro único; generar **solo** con prefijo configurado; si no hay prefijo, seguir escribiendo. Etiqueta logística print (como las de lado del súper).
+**Hecho (2026-08-16).** `packStations` / `packPackages` en el snapshot (semilla `[]`). Peso y dims escritos o null. SSCC único frente a palets, cajas de línea y bultos. `generatePackSscc` solo si `org.ssccPrefix` está escrito; si no, hay que teclear. Etiqueta de packing (`packPackageLabelHtml`) no copia tracking del pedido.
 
-**Qué no:** GS1 de fantasía.
+**Qué no:** GS1 de fantasía (no dígito de control, no 18 dígitos). No se borra `LoadUnit` ni `packPickLine`. SQL de tablas packing **no** aplicado.
 
 **DoD:** dos packages no comparten SSCC; print no fabrica tracking.
 

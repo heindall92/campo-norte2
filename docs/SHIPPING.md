@@ -4,9 +4,10 @@
 
 - Pedido con `dock`, `cutOff`, `carrierId`, `tracking` (manual).
 - Ventana de muelle = cut-off − 90 min (`dockWindowFor`).
-- Embalaje: `qtyPacked` ≤ `qtyPicked`; SSCC de caja solo si se teclea.
+- Embalaje: `qtyPacked` ≤ `qtyPicked`; SSCC de caja solo si se teclea y no está tomado.
 - `LoadUnit`: palet / caja / carro → flejada → etiquetada → `en_muelle`.
-- Manifiesto HTML imprimible. No fabrica tracking.
+- Packing (oleada 8): estaciones y bultos escritos. SSCC único. Generar solo con `org.ssccPrefix`.
+- Manifiesto y etiqueta de packing HTML imprimibles. No fabrican tracking.
 - `stageOrderToDock` / `shipOutboundOrder`.
 - Carriers en catálogo (SEUR, DHL Freight, Carreras, XPO) como **datos**, no como API.
 
@@ -20,6 +21,7 @@ No hay `shipments`, `tracking_events`, `CarrierAdapter`, calendario de muelle ni
 2. El mock debe etiquetarse como mock en UI y en eventos. Un evento `SHIPPED` del mock no es tracking de SEUR.
 3. Dock calendar y yard (Phase 8 del brief) no reutilizan `fleet[]` (carretillas).
 4. Dos palets → 4 etiquetas de lado (fase 20). Eso no es SSCC GS1.
+5. El generador de packing (`generatePackSscc`) usa el prefijo escrito + serial interno. Sin GCP no se fabrica un SSCC de 18 dígitos.
 
 ---
 

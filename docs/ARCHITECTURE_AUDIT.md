@@ -243,7 +243,7 @@ Permisos = lista de secciones de menú (`ROLE_ALLOWED_SECTIONS`). No hay RLS de 
 | Picking / olas / RF / voz | Sí | LS | Sección de menú | Movements en el JSON |
 | Putaway / traslado / inter-centro | Sí | LS | Sección | Ídem |
 | Reposición pick-face vacío | Propuesta + ejecutar | LS | Sección | Ídem |
-| Packing (qtyPacked, SSCC escrito, load unit) | Sí | LS | Sección | Ídem |
+| Packing (qtyPacked, SSCC escrito, load unit, estaciones/bultos) | Sí | LS | Sección | Ídem |
 | Shipping (stage + ship) | Sí | LS | Sección | Tracking manual |
 | Cycle count (cola + confirmar) | Sí | LS | Sección | Ajuste implícito en palet |
 | Merma / slot-fix | Sí | LS | Sección | Eventos en JSON |
@@ -253,7 +253,7 @@ Permisos = lista de secciones de menú (`ROLE_ALLOWED_SECTIONS`). No hay RLS de 
 | Reservas ATP | No | — | — | — |
 | Yard / dock calendar | No | — | — | — |
 | Returns / QC | No (tipos huérfanos) | — | — | — |
-| SSCC generator | No | — | — | — |
+| SSCC generator | Solo con prefijo escrito (interno, no GS1) | LS | Sección | Audit `pack.open` |
 | Carrier adapter | No | — | — | — |
 | Slotting (recomendación + confirmación) | No | — | — | — |
 | MIN/MAX replenishment | Campos en SKU, sin motor | — | — | — |
@@ -272,8 +272,8 @@ Pedidas y **ausentes** en el tip fase 20. No se implementan en Phase 0.
 | 17 Quality / quarantine | Status `cuarentena` sin flujo; stock sí pica |
 | 18 Putaway rules (capacidad, familia, distancia) | `suggestPutawaySlot` zona + código |
 | 19 Slotting con confirmación | No existe |
-| 20 Packing stations / packages | `qtyPacked` + `LoadUnit`; no estaciones ni dims |
-| 21 SSCC único + etiqueta | SSCC de palet en semilla o escrito |
+| 20 Packing stations / packages | **Oleada 8:** estaciones/bultos escritos; peso/dims null si no se teclean |
+| 21 SSCC único + etiqueta | **Oleada 8:** registro único; generar solo con prefijo; print sin tracking |
 | 22 Shipping shipments/events | Status en `OutboundOrder` |
 | 23 CarrierAdapter + mock | Catálogo + tracking texto |
 | 24 Dock calendar / appointments | `order.dock` + ventana cut-off |

@@ -210,13 +210,15 @@ Reglas en dominio (`slotting.ts`). `slottingRules` y `slottingRecommendations` e
 
 `LoadUnit` actual es el embrión. Migrar, no clonar en paralelo para siempre.
 
+Dominio (oleada 8, SQL **no** aplicado): `packStations` / `packPackages` en el snapshot. Semilla vacía.
+
 ### SSCC (21)
 
 | Tabla | Notas |
 |---|---|
 | `wms_sscc_registry` | único por org; extension digit + GCP cuando exista GCP real. **Sin GCP no generar** números que parezcan GS1. |
 
-Hasta tener prefijo de empresa, la etiqueta imprime el SSCC **escrito** (comportamiento actual).
+Dominio (oleada 8): unicidad en palets + `cartonSscc` + `packPackages`. `org.ssccPrefix` null en semilla → hay que escribir el SSCC. Con prefijo se genera `{prefijo}{serial 6}` interno, sin dígito GS1. Hasta entonces la etiqueta imprime el SSCC **escrito**.
 
 ### Shipping / carriers (22–23)
 
