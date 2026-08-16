@@ -35,6 +35,6 @@ El súper lo asigna el patrón al **código de operario** (`OP-1903` = Jorge Pe�
 
 | Phase brief | Pieza |
 |---|---|
-| 4 | Pedidos + holds al abrir ola (hecho). Status ES no sustituido | Cablear transiciones de `order-state` |
+| 4 | Pedidos + holds al abrir ola (hecho). Status ES no sustituido. |
 | 6 | Olas + picking (hecho en memoria) + replenishment MIN/MAX (no) |
 | 7 | Packing/SSCC/shipping (parcial: load unit + ship) |
