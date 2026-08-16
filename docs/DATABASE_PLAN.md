@@ -197,7 +197,7 @@ No hace falta tabla nueva al inicio: `Sku.minStock` / `maxStock` ya están. Una 
 
 ### Putaway / slotting (18–19)
 
-Reglas en dominio. Opcional: `wms_slotting_recommendations` (SKU, from, to, reason, `accepted_at` null hasta confirmar). **Nunca** mover sin confirmación.
+Reglas en dominio (`slotting.ts`). `slottingRules` y `slottingRecommendations` en el snapshot (semilla vacía). `accepted_at` null hasta confirmar. **Nunca** mover sin confirmación. SQL de tabla **no** aplicado.
 
 ### Packing (20)
 

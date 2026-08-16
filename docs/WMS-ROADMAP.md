@@ -138,7 +138,7 @@
 - El motor de planta (fases 1–20) no se ha reescrito
 
 ## Siguiente (tras revisión humana)
-- Oleadas 0–5 hechas en cliente (14 oleadas en total: 0–13)
-- Oleada 6: putaway ranking + slotting
-- Briefs 15–27 restantes (replenishment, slotting, packing, SSCC, shipping, carriers, dock, yard, returns) — un módulo por oleada
+- Oleadas 0–6 hechas en cliente (14 oleadas en total: 0–13)
+- Oleada 7: replenishment MIN/MAX
+- Briefs 15–27 restantes (replenishment, packing, SSCC, shipping, carriers, dock, yard, returns) — un módulo por oleada
 - Layout numérico 8–37 / SKU cerveza-vino / ZKTeco / telemetría flota: solo con dato real

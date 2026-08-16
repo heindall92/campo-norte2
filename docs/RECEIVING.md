@@ -8,7 +8,7 @@
 
 `receiveAsnPallet` (pistola) crea un palet en muelle con SKU/qty/lote **escritos**, QC `APPROVED`. `receiveAgainstLine` recibe contra una línea: el palet queda `PENDING` hasta QC. `putawayReceivedPallet` lo ubica **solo** si QC está `APPROVED`. El ASN se cierra cuando no queda palet suyo en muelle.
 
-`suggestPutawaySlot`: zona de la categoría del SKU, hueco libre, reserva antes que pick face, luego orden de código. Sin capacidad, familia, distancia ni incompatibles.
+`suggestPutawaySlot` es el primer hueco del **ranking** (oleada 6): zona/temperatura, capacidad (`capacityPallets` ≥ 1), familia (misma categoría en el pasillo), incompatibles **solo con reglas escritas**, FEFO si hay caducidad, viaje entre pasillos A/B/C (**% heurístico, no metros**). `openSlottingRecommendation` escribe `from → to` y no mueve. Hay que confirmar (`acceptSlottingRecommendation` / Ubicar). Semilla de reglas vacía.
 
 Parcial, exceso, faltante, dañado, lote incorrecto → `AsnIncident` con **qty real**. QC `PENDING|APPROVED|REJECTED|QUARANTINED`. Palet en cuarentena / QC no aprobado **no pica** (`confirmPick` → `pallet_quarantined`).
 

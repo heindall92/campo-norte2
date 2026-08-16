@@ -21,6 +21,7 @@ Unidad de ATP / ledger = **balance** por `(org, sku, lote, ubicación)` + **tran
 | `inventory_adjustments` / `inventory_counts` | auditoría de merma/conteo | Apuntan al `txId` |
 | `countSessions` / `countLines` | oleada 4 | Encima de `planCycleCounts`. Semilla vacía |
 | `asnLines` / `asnIncidents` | oleada 5 | Líneas escritas. Semilla vacía. QC en el palet |
+| `slottingRules` / `slottingRecommendations` | oleada 6 | Reglas escritas. Semilla vacía. Recomendación ≠ movimiento |
 
 ### Regla de available
 

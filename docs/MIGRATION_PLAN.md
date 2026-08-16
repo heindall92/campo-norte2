@@ -107,11 +107,11 @@ docs(wms): …
 
 ### Oleada 6 — Putaway rules + slotting (brief 18–19)
 
-**Qué:** ranking: zona/temperatura (ya hay), capacidad del hueco, familia SKU, no mezclar incompatibles **solo con reglas escritas**, FIFO/FEFO si hay caducidad, distancia de pasillo (heurística A/B/C, no GPS). Slotting: recomendación `from → to` + % de viaje estimado + reason. **Confirmación obligatoria.**
+**Hecho (2026-08-16).** Ranking: zona, capacidad del hueco, familia SKU, incompatibles solo con `slottingRules` escritas, FEFO si hay caducidad, % de viaje por pasillos A/B/C (no metros). `openSlottingRecommendation` no mueve. Confirmar = `acceptSlottingRecommendation` o Ubicar.
 
-**Qué no:** mover solo. Inventar distancias en metros si no hay layout métrico.
+**Qué no:** mover solo. Inventar distancias en metros. Inventar reglas aceite/droguería en semilla.
 
-**DoD:** test de ranking; test de «recomendación no aplica putaway».
+**DoD:** test de ranking; test de «recomendación no aplica putaway»; 257 verdes.
 
 ---
 
