@@ -166,9 +166,13 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS demo es semilla local (`seededFromDemo`). En PRODUCTION el stock vive en `wms_handling_units` + ledger. Batería de flota y huella: sin telemetría inventada.
 
-**Hecho (2026-08-16 noche):** ciclo operativo cerrado en Postgres. Sevilla: recepción + putaway + olas 01/02/rep cerradas; pedidos OUT-SEV-8840/8841/8842 **expedidos**. Huelva: ola `wave-hue` cerrada, OUT-HUE-2201 **expedido**, helado `L26H1` ubicado. Overlay ya no pisa dos HU en el mismo hueco.
+**Hecho (2026-08-16 noche):** jornada operativa persistida en Postgres.
+- Pedidos **expedidos:** OUT-SEV-8840/8841/8842/8838 y OUT-HUE-2201.
+- Olas **cerradas:** wave-01, wave-02, wave-rep, wave-hue.
+- Recepción: Sevilla ASN-02 3/16 y ASN-03 abierto 1/22; Huelva H1 8/18; helado `L26H1` en `G-02-02-1`.
+- Muelle residual vaciado. Conteo cíclico Sevilla sin merma (qty real). Overlay no pisa dos HU en un hueco.
 
-**Siguiente:** Ctrl+F5. Recorrer RF / pistola sobre reposición ya cerrada, o seguir ASN abiertos (Sevilla 02/03, Huelva H1).
+**Siguiente:** Ctrl+F5. Seguir ASN abiertos o pistola RF (cola de pick vacía: las olas ya están cerradas).
 
 **Phase 0** (2026-08-16): auditoría en `docs/ARCHITECTURE_AUDIT.md`, `TARGET_ARCHITECTURE.md`, `DATABASE_PLAN.md`, `MIGRATION_PLAN.md`.
 
