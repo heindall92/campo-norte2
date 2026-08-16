@@ -1,5 +1,6 @@
 import { applyTxToSnapshot, locationOfPallet } from "./inventory-core";
 import { codesEqual } from "./location";
+import { palletCanPick } from "./receiving";
 import { availableQty, consumeReservation, holdForLine, releaseHoldsForLine } from "./reservations";
 import type { FleetKind, PickLine, PickWave, StockMovement, WmsSnapshot } from "./types";
 
@@ -25,7 +26,8 @@ export type ConfirmPickError =
   | "wrong_sscc"
   | "invalid_qty"
   | "pallet_missing"
-  | "slot_blocked";
+  | "slot_blocked"
+  | "pallet_quarantined";
 
 export type ConfirmPickResult =
   | { ok: true; snap: WmsSnapshot }
@@ -62,6 +64,7 @@ export function confirmPick(
 
   const pallet = line.palletId ? snap.pallets.find((p) => p.id === line.palletId) : null;
   if (!pallet) return { ok: false, error: "pallet_missing" };
+  if (!palletCanPick(pallet)) return { ok: false, error: "pallet_quarantined" };
   if (input.sscc.trim() !== pallet.sscc) return { ok: false, error: "wrong_sscc" };
   if (!Number.isFinite(input.qty) || input.qty < 1 || input.qty > line.qty || input.qty > pallet.qty) {
     return { ok: false, error: "invalid_qty" };

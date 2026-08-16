@@ -69,6 +69,7 @@ const PICK_ERROR: Record<ConfirmPickError, { es: string; en: string }> = {
   invalid_qty: { es: "Cantidad no válida", en: "Invalid quantity" },
   pallet_missing: { es: "Palet no localizado en el hueco", en: "Pallet missing in slot" },
   slot_blocked: { es: "Hueco bloqueado: el jefe tiene que cuadrarlo", en: "Slot blocked: the lead must fix it" },
+  pallet_quarantined: { es: "Palet en cuarentena: no se pica", en: "Pallet in quarantine: do not pick" },
 };
 
 /** Vista pasillo: rack selectivo (montantes azules, 2 palets/bahía, film + SSCC). */

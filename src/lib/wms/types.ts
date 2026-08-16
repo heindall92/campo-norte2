@@ -8,6 +8,9 @@ export type SlotStatus = "libre" | "ocupado" | "reservado" | "bloqueado" | "inve
 
 export type PalletStatus = "en_ubicacion" | "en_transito" | "picking" | "muelle" | "expedido" | "cuarentena";
 
+export const QC_STATUSES = ["PENDING", "APPROVED", "REJECTED", "QUARANTINED"] as const;
+export type QcStatus = (typeof QC_STATUSES)[number];
+
 export type CategoryCode =
   | "alimentacion_seca"
   | "frescos"
@@ -223,6 +226,11 @@ export interface Pallet {
   supplier: string;
   /** ASN del que se descargó. null en semilla o alta manual. */
   asnId: string | null;
+  /**
+   * QC de recepción. Ausente en semilla histórica = ya estaba en hueco (APPROVED al normalizar).
+   * PENDING / REJECTED / QUARANTINED no pican.
+   */
+  qcStatus?: QcStatus;
 }
 
 export interface FleetUnit {
@@ -296,10 +304,39 @@ export interface InboundAsn {
   eta: string;
   dock: string;
   status: "previsto" | "en_muelle" | "descargando" | "ubicando" | "cerrado";
+  /** Número declarado. Las líneas reales viven en `asnLines`. */
   lines: number;
   palletsExpected: number;
   palletsDone: number;
   siteId: string;
+}
+
+export const ASN_INCIDENT_KINDS = ["partial", "overage", "shortage", "damaged", "wrong_lot"] as const;
+export type AsnIncidentKind = (typeof ASN_INCIDENT_KINDS)[number];
+
+export type AsnLineStatus = "open" | "partial" | "received" | "closed";
+
+/** Línea ASN escrita. No se fabrica a partir del número `InboundAsn.lines`. */
+export interface AsnLine {
+  id: string;
+  asnId: string;
+  skuId: string;
+  expectedQty: number;
+  receivedQty: number;
+  expectedLot: string | null;
+  status: AsnLineStatus;
+}
+
+/** Diferencia de recepción. `qty` es la magnitud real del desvío. */
+export interface AsnIncident {
+  id: string;
+  asnId: string;
+  lineId: string | null;
+  palletId: string | null;
+  kind: AsnIncidentKind;
+  qty: number;
+  note: string;
+  at: string;
 }
 
 export interface OutboundOrder {
@@ -417,6 +454,9 @@ export interface WmsSnapshot {
   operators: Operator[];
   clockPunches: ClockPunch[];
   inbound: InboundAsn[];
+  /** Líneas ASN. Vacío en semilla: no se inventan SKU/qty a partir del número. */
+  asnLines: AsnLine[];
+  asnIncidents: AsnIncident[];
   outbound: OutboundOrder[];
   carriers: Carrier[];
   costs: CostLine[];

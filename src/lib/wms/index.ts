@@ -43,6 +43,7 @@ export * from "./inventory-core";
 export * from "./rbac";
 export * from "./tenant";
 export * from "./persist";
+export * from "./receiving";
 
 import { buildWmsSeed } from "./seed";
 import { normalizeWmsSnapshot, snapshotLooksUsable } from "./normalize";

@@ -7,6 +7,7 @@ import type {
   OperatorRoleFloor,
   Pallet,
   ProductCategory,
+  QcStatus,
   ShiftCode,
   Sku,
   WmsSnapshot,
@@ -145,6 +146,7 @@ export function createPallet(
     supplier: string;
     sscc?: string;
     asnId?: string | null;
+    qcStatus?: QcStatus;
   },
 ): CatalogResult {
   if (!snap.skus.some((s) => s.id === input.skuId)) return { ok: false, error: "sku_missing" };
@@ -168,6 +170,7 @@ export function createPallet(
     receivedAt: new Date().toISOString(),
     supplier: input.supplier.trim() || "—",
     asnId: input.asnId ?? null,
+    qcStatus: input.qcStatus ?? "APPROVED",
   };
   const physical: WmsSnapshot = {
     ...snap,
@@ -362,7 +365,15 @@ export function updateAsn(
 
 export function deleteAsn(snap: WmsSnapshot, id: string): CatalogResult {
   if (!snap.inbound.some((a) => a.id === id)) return { ok: false, error: "asn_missing" };
-  return { ok: true, snap: { ...snap, inbound: snap.inbound.filter((a) => a.id !== id) } };
+  return {
+    ok: true,
+    snap: {
+      ...snap,
+      inbound: snap.inbound.filter((a) => a.id !== id),
+      asnLines: (snap.asnLines ?? []).filter((l) => l.asnId !== id),
+      asnIncidents: (snap.asnIncidents ?? []).filter((i) => i.asnId !== id),
+    },
+  };
 }
 
 /**

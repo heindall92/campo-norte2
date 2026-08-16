@@ -14,7 +14,7 @@ function normalizeFleet(unit: FleetUnit): FleetUnit {
 }
 
 function normalizePallet(pallet: Pallet): Pallet {
-  return { ...pallet, asnId: pallet.asnId ?? null };
+  return { ...pallet, asnId: pallet.asnId ?? null, qcStatus: pallet.qcStatus ?? "APPROVED" };
 }
 
 function normalizeWave(wave: PickWave): PickWave {
@@ -53,6 +53,8 @@ export function normalizeWmsSnapshot(snap: WmsSnapshot): WmsSnapshot {
     slotFixes: Array.isArray(snap.slotFixes) ? snap.slotFixes : [],
     auditLogs: Array.isArray(snap.auditLogs) ? snap.auditLogs : [],
     reservations: Array.isArray(snap.reservations) ? snap.reservations : [],
+    asnLines: Array.isArray(snap.asnLines) ? snap.asnLines : [],
+    asnIncidents: Array.isArray(snap.asnIncidents) ? snap.asnIncidents : [],
     countSessions: Array.isArray(snap.countSessions) ? snap.countSessions : [],
     countLines: Array.isArray(snap.countLines) ? snap.countLines : [],
     org: {

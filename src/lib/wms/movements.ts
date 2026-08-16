@@ -1,6 +1,7 @@
 import { closeAsnIfLocated } from "./catalog";
 import { applyTxToSnapshot, locationOfPallet } from "./inventory-core";
 import { codesEqual } from "./location";
+import { palletCanPutaway } from "./receiving";
 import type { InventoryTxType, Pallet, Slot, StockMovement, WarehouseZone, WmsSnapshot } from "./types";
 
 export type LiveMoveError =
@@ -15,7 +16,9 @@ export type LiveMoveError =
   | "same_site"
   | "pallet_shipped"
   | "pallet_in_wave"
-  | "stock_negative";
+  | "stock_negative"
+  | "qc_pending"
+  | "pallet_quarantined";
 
 export type LiveMoveResult =
   | { ok: true; snap: WmsSnapshot }
@@ -193,8 +196,10 @@ export function confirmPutaway(
 ): LiveMoveResult {
   const pallet = snap.pallets.find((p) => p.sscc === input.sscc.trim());
   if (!pallet) return { ok: false, error: "pallet_missing" };
+  if (pallet.status === "cuarentena") return { ok: false, error: "pallet_quarantined" };
   const from = pallet.slotId ? snap.slots.find((s) => s.id === pallet.slotId) : undefined;
   if (!from || from.zone !== "muelle") return { ok: false, error: "not_on_dock" };
+  if (!palletCanPutaway(pallet)) return { ok: false, error: "qc_pending" };
   if (!codesEqual(from.code, input.fromSlotCode)) return { ok: false, error: "wrong_from" };
   const to = findSlot(snap, input.toSlotCode, pallet.siteId);
   if (!to) return { ok: false, error: "to_missing" };

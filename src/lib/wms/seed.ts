@@ -916,6 +916,8 @@ export function buildWmsSeed(): WmsSnapshot {
     operators: ensureShiftRoster(OPERATORS),
     clockPunches: [],
     inbound: INBOUND,
+    asnLines: [],
+    asnIncidents: [],
     outbound: OUTBOUND,
     carriers: CARRIERS,
     costs: COSTS,

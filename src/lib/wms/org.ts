@@ -24,6 +24,14 @@ export function scopeSnapshotToOrg(snap: WmsSnapshot, orgId: string): WmsSnapsho
     operators: snap.operators.filter((o) => siteIds.has(o.siteId)),
     clockPunches: snap.clockPunches.filter((p) => siteIds.has(p.siteId)),
     inbound: snap.inbound.filter((i) => siteIds.has(i.siteId)),
+    asnLines: (snap.asnLines ?? []).filter((l) => {
+      const asn = snap.inbound.find((a) => a.id === l.asnId);
+      return asn ? siteIds.has(asn.siteId) : false;
+    }),
+    asnIncidents: (snap.asnIncidents ?? []).filter((i) => {
+      const asn = snap.inbound.find((a) => a.id === i.asnId);
+      return asn ? siteIds.has(asn.siteId) : false;
+    }),
     outbound: snap.outbound.filter((o) => siteIds.has(o.siteId)),
     costs: snap.costs.filter((c) => siteIds.has(c.siteId)),
     pickWaves: snap.pickWaves.filter((w) => siteIds.has(w.siteId)),
@@ -76,6 +84,14 @@ export function scopeSnapshotToWarehouse(snap: WmsSnapshot, siteId: string): Wms
     operators: scoped.operators.filter((o) => siteIds.has(o.siteId)),
     clockPunches: scoped.clockPunches.filter((p) => siteIds.has(p.siteId)),
     inbound: scoped.inbound.filter((i) => siteIds.has(i.siteId)),
+    asnLines: (scoped.asnLines ?? []).filter((l) => {
+      const asn = scoped.inbound.find((a) => a.id === l.asnId);
+      return asn ? siteIds.has(asn.siteId) : false;
+    }),
+    asnIncidents: (scoped.asnIncidents ?? []).filter((i) => {
+      const asn = scoped.inbound.find((a) => a.id === i.asnId);
+      return asn ? siteIds.has(asn.siteId) : false;
+    }),
     outbound: scoped.outbound.filter((o) => siteIds.has(o.siteId)),
     costs: scoped.costs.filter((c) => siteIds.has(c.siteId)),
     pickWaves: scoped.pickWaves.filter((w) => siteIds.has(w.siteId)),

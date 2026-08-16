@@ -43,6 +43,8 @@ const MOVE_ERR: Record<LiveMoveError, { es: string; en: string }> = {
   pallet_shipped: { es: "Ese palet ya salió", en: "That pallet already shipped" },
   pallet_in_wave: { es: "El palet está en una ola o en muelle de salida", en: "Pallet is on a wave or outbound dock" },
   stock_negative: { es: "El ledger no admite stock negativo", en: "Ledger rejected negative stock" },
+  qc_pending: { es: "QC pendiente: no ubicar hasta aprobar", en: "QC pending: do not put away until approved" },
+  pallet_quarantined: { es: "Palet en cuarentena: no ubicar a picking", en: "Pallet in quarantine: do not put away to pick" },
 };
 
 const COUNT_ERR: Record<CountSessionError, { es: string; en: string }> = {
