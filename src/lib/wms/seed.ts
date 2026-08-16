@@ -933,6 +933,7 @@ export function buildWmsSeed(): WmsSnapshot {
     countLines: [],
     slottingRules: [],
     slottingRecommendations: [],
+    replenishTasks: [],
     ...seedInventoryCore({
       orgId: CAMPO_NORTE_ORG.id,
       skus: SKUS,

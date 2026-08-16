@@ -2,6 +2,7 @@ import { WMS_DEMO_NOW } from "./alerts";
 import { dockWindowFor } from "./carriers";
 import { classifyLotAlert, compareLotsFefo, lotFromPallet } from "./lots";
 import { recommendedFleetKind } from "./picking";
+import { enqueueWaveReplenishments } from "./replenishment";
 import { availableQty, reserveStock } from "./reservations";
 import { pickPackForSku } from "./voice";
 import type { OutboundOrder, Pallet, PickWave, Sku, Slot, WmsSnapshot } from "./types";
@@ -140,6 +141,7 @@ export function openWaveFromOrder(
     next = held.snap;
   }
 
+  next = enqueueWaveReplenishments(next, waveId);
   return { ok: true, waveId, snap: next };
 }
 

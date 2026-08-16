@@ -56,6 +56,7 @@ export function scopeSnapshotToOrg(snap: WmsSnapshot, orgId: string): WmsSnapsho
       const pal = snap.pallets.find((p) => p.id === r.palletId);
       return pal ? siteIds.has(pal.siteId) : false;
     }),
+    replenishTasks: (snap.replenishTasks ?? []).filter((t) => siteIds.has(t.warehouseId)),
     memberships: (snap.memberships ?? []).filter((m) => m.organizationId === orgId),
     carriers: snap.carriers.filter((c) => c.orgId === orgId),
     movements: snap.movements.filter((m) => {
@@ -124,6 +125,7 @@ export function scopeSnapshotToWarehouse(snap: WmsSnapshot, siteId: string): Wms
       const pal = scoped.pallets.find((p) => p.id === r.palletId);
       return pal ? siteIds.has(pal.siteId) : false;
     }),
+    replenishTasks: (scoped.replenishTasks ?? []).filter((t) => siteIds.has(t.warehouseId)),
   };
 }
 

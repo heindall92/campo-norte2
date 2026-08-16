@@ -4,6 +4,7 @@ import type { Lang } from "@/lib/i18n";
 import {
   FLEET_KIND_LABEL,
   applyReplenishment,
+  applyReplenishTask,
   assertCanPick,
   closeCountSession,
   confirmCountSessionLine,
@@ -14,7 +15,9 @@ import {
   openCountSession,
   openCountSessionForSite,
   operatorForAppUser,
+  openMinMaxTasks,
   planCycleCounts,
+  planMinMaxReplenishments,
   proposeReplenishments,
   PUTAWAY_REASON_LABEL,
   putawayReceivedPallet,
@@ -24,6 +27,7 @@ import {
   transferPalletBetweenSites,
   type CountSessionError,
   type LiveMoveError,
+  type ReplenishError,
 } from "@/lib/wms";
 import { cn } from "@/lib/utils";
 import { ArrowDownToLine, ArrowLeftRight, Check, Forklift, ScanBarcode } from "lucide-react";
@@ -49,6 +53,14 @@ const MOVE_ERR: Record<LiveMoveError, { es: string; en: string }> = {
   pallet_quarantined: { es: "Palet en cuarentena: no ubicar a picking", en: "Pallet in quarantine: do not put away to pick" },
   rec_missing: { es: "No hay recomendación de slotting", en: "No slotting recommendation" },
   rec_accepted: { es: "Esa recomendación ya se aplicó", en: "That recommendation was already applied" },
+};
+
+const REPLENISH_ERR: Record<ReplenishError, { es: string; en: string }> = {
+  task_missing: { es: "Tarea de reposición no vigente", en: "Replenish task gone" },
+  task_done: { es: "La tarea ya está cerrada", en: "Task already closed" },
+  operator_required: { es: "AUTO no mueve sin operario", en: "AUTO does not move without an operator" },
+  no_source: { es: "No hay reserva sobre un pick face vacío para bajar", en: "No reserve over an empty pick face to drop" },
+  sku_missing: { es: "SKU no está en el catálogo", en: "SKU not in catalog" },
 };
 
 const COUNT_ERR: Record<CountSessionError, { es: string; en: string }> = {
@@ -83,6 +95,11 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
 
   const dockPals = snap.pallets.filter((p) => p.status === "muelle");
   const proposals = useMemo(() => proposeReplenishments(snap), [snap]);
+  const minMaxPlan = useMemo(() => planMinMaxReplenishments(snap).slice(0, 8), [snap]);
+  const minMaxOpen = useMemo(
+    () => (snap.replenishTasks ?? []).filter((t) => t.status === "open").slice(0, 8),
+    [snap],
+  );
   const doubleReach = snap.fleet.find((f) => f.kind === "retractil_doble" && f.status === "operativa");
   const operatorId = matched?.id ?? null;
 
@@ -488,6 +505,92 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
           )}
         </Card>
       </div>}
+
+      <Card
+        title={lang === "es" ? "Reposición MIN/MAX" : "MIN/MAX replenishment"}
+        subtitle={lang === "es" ? "qty = max(0, máx − actual) si actual < mín. AUTO no mueve sola." : "qty = max(0, max − current) if current < min. AUTO does not move alone."}
+      >
+        <div className="mb-3 flex flex-wrap gap-2">
+          {snap.sites.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className="rounded-full border border-[var(--glass-border)] px-3 py-1 text-xs font-semibold"
+              onClick={() => {
+                const opened = openMinMaxTasks(snap, s.id);
+                commit(opened.snap);
+                setOkMsg(
+                  lang === "es"
+                    ? `${opened.opened} tareas MIN/MAX abiertas · no se ha movido nada`
+                    : `${opened.opened} MIN/MAX tasks opened · nothing moved`,
+                );
+              }}
+            >
+              {lang === "es" ? `Abrir en ${s.city}` : `Open in ${s.city}`}
+            </button>
+          ))}
+        </div>
+        {minMaxPlan.length === 0 && minMaxOpen.length === 0 ? (
+          <p className="text-sm text-[var(--ink-muted)]">
+            {lang === "es" ? "Ningún SKU bajo el mínimo en este recorte." : "No SKU below min in this cut."}
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {minMaxOpen.slice(0, 6).map((task) => {
+              const sku = snap.skus.find((s) => s.id === task.skuId);
+              return (
+                <li
+                  key={task.id}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-[var(--glass-border)] px-3 py-2 text-sm"
+                >
+                  <span className="min-w-0">
+                    <span className="font-medium">{sku?.sku}</span>
+                    <span className="mt-0.5 block text-xs text-[var(--ink-muted)]">
+                      {task.kind} · {task.currentQty}/{task.minStock} → +{task.qty} (máx {task.maxStock})
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-white"
+                    onClick={() => {
+                      if (!gateFloor()) return;
+                      const result = applyReplenishTask(snap, task.id, operatorId, doubleReach?.id ?? null);
+                      if (!result.ok) {
+                        const err = result.error;
+                        setFeedback(
+                          err in REPLENISH_ERR
+                            ? REPLENISH_ERR[err as ReplenishError][lang]
+                            : MOVE_ERR[err as LiveMoveError][lang],
+                        );
+                        return;
+                      }
+                      commit(result.snap);
+                      setOkMsg(lang === "es" ? "Reposición MIN/MAX confirmada" : "MIN/MAX replenishment confirmed");
+                    }}
+                  >
+                    {lang === "es" ? "Bajar" : "Drop"}
+                  </button>
+                </li>
+              );
+            })}
+            {minMaxOpen.length === 0 &&
+              minMaxPlan.slice(0, 6).map((row) => {
+                const sku = snap.skus.find((s) => s.id === row.skuId);
+                return (
+                  <li
+                    key={`${row.skuId}-${row.warehouseId}`}
+                    className="rounded-xl border border-[var(--glass-border)] px-3 py-2 text-sm"
+                  >
+                    <span className="font-medium">{sku?.sku}</span>
+                    <span className="mt-0.5 block text-xs text-[var(--ink-muted)]">
+                      {row.kind} · {row.currentQty}/{row.minStock} → +{row.qty} (máx {row.maxStock})
+                    </span>
+                  </li>
+                );
+              })}
+          </ul>
+        )}
+      </Card>
 
       <Card title={lang === "es" ? "Últimos movimientos" : "Latest movements"}>
         <ul className="space-y-2 text-sm">

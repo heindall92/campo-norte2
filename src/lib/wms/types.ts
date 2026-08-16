@@ -483,6 +483,8 @@ export interface WmsSnapshot {
   /** Reglas de slotting escritas. Vacío en semilla: no se inventan incompatibles. */
   slottingRules: SlottingRule[];
   slottingRecommendations: SlottingRecommendation[];
+  /** Tareas MIN/MAX. Vacío en semilla: se calculan, no se inventan. */
+  replenishTasks: ReplenishTask[];
   /** Revisión del ledger Postgres. 0 en semilla local. */
   ledgerRevision: number;
   /** Pertenencias de auth al org. Sin contraseñas. */
@@ -693,6 +695,32 @@ export interface SlottingRecommendation {
   createdAt: string;
   acceptedAt: string | null;
   acceptedBy: string | null;
+}
+
+export const REPLENISH_KINDS = ["PLANNED", "URGENT", "AUTO"] as const;
+export type ReplenishKind = (typeof REPLENISH_KINDS)[number];
+
+export type ReplenishTaskSource = "pick_face" | "min_max" | "wave";
+
+/** Propuesta de reposición. AUTO no mueve sin operario. */
+export interface ReplenishTask {
+  id: string;
+  warehouseId: string;
+  skuId: string;
+  kind: ReplenishKind;
+  source: ReplenishTaskSource;
+  currentQty: number;
+  minStock: number;
+  maxStock: number;
+  qty: number;
+  fromSlotId: string | null;
+  toSlotId: string | null;
+  palletId: string | null;
+  waveId: string | null;
+  status: "open" | "done" | "cancelled";
+  createdAt: string;
+  executedAt: string | null;
+  operatorId: string | null;
 }
 
 /** Hold de stock. No es reserva de viaje CRM. */
