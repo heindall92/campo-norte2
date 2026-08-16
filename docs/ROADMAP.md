@@ -21,9 +21,9 @@ Phase 0 del brief = auditoría. **Hecha.** El código de planta no se ha parado:
 | **7** | Packing + SSCC + shipping | Load unit + ship. Sin SSCC gen / shipments | Adapter mock + registro SSCC |
 | **8** | Dock + yard + carriers | Dock texto + catálogo carriers | Calendar; yard vacío de semilla |
 | **9** | Returns + quality + cycle counting | Cycle-count básico. Sin returns/QC | Cuarentena bloquea pick |
-| **10** | RF mobile + offline sync | RF **online** en LS | No fingir offline |
-| **11** | Audit + observability + hardening | Audit CRM parcial. WMS sin traza servidor | `operationId` + `wms_audit` |
-| **12** | Control tower | Torre **existe** (KPIs demo) | Misma torre, datos reales |
+| **10** | RF mobile + offline sync | RF + cola `cn-wms-offline-q-v1`. Sync al volver; conflicto si el apply rechaza | No inventar un segundo snapshot |
+| **11** | Audit + observability + hardening | `audit_logs` en snapshot + SQL no aplicado | Ledger + `operationId` servidor |
+| **12** | Control tower | ¿Qué pasa? / ¿Qué hago? sobre el snapshot | No inventar «38 líneas» si la ola tiene 8 |
 | **13** | AI operational copilot | IA = CRM/knowledge. No opera stock | Nunca escribe al hueco sola |
 | **14** | Performance + QA + prod ready | Build/test locales | Tras ledger + demo OFF |
 

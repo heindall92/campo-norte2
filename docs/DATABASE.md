@@ -14,7 +14,7 @@ Detalle de tablas futuras: [`DATABASE_PLAN.md`](./DATABASE_PLAN.md).
 
 `mps_reservations` = reservas de **viaje**. No usarla para holds de stock.
 
-No hay carpeta de migrations WMS aplicada. Convención (cuando se abra Phase 1/2 de datos):
+Primera migration WMS (no aplicada): `supabase/migrations/20260816033000_create_wms_audit_logs.sql` — `wms_audit_logs` append-only. Convención:
 
 ```
 supabase/migrations/YYYYMMDDHHMMSS_description.sql
@@ -40,7 +40,7 @@ wms_sites
 wms_ledgers     -- org_id, revision, payload jsonb
 wms_movements   -- extract append-only
 wms_reservations
-wms_audit
+wms_audit / wms_audit_logs   -- brief 28; SQL escrito, no aplicado
 ```
 
 Un tenant sembrado: `org-camponorte`. RLS: miembro de org **o** `mps_is_team()` en la transición.

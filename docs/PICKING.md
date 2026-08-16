@@ -21,10 +21,10 @@ Dominio: `picking.ts`, `waves.ts`, `floor.ts`, `voice.ts`, `rf.ts`, `merma.ts`, 
 1. No se reescribe esta UI en las oleadas de persistencia.
 2. El aparato no asigna por número de terminal.
 3. Reposición actual = pick face vacío + reserva encima + retráctil doble. MIN/MAX es Phase 6 del brief, encima de esto.
-4. Offline sync (Phase 10 del brief) no se finge con otro `localStorage`. Requiere cola de operaciones con id y conflicto; no está.
+4. Offline: cola `cn-wms-offline-q-v1`. Sin red no se toca stock. Al volver, `applyOfflineRfEvent` confirma o marca `conflict`. No hay un segundo snapshot inventado.
 
 ---
 
 ## Tests
 
-`picking.test.ts`, `voice.test.ts`, `floor.test.ts`, `rf.test.ts`, `merma.test.ts`, `slot-fix.test.ts`, `jornada.test.ts`. Sin tests de componente.
+`picking.test.ts`, `voice.test.ts`, `floor.test.ts`, `rf.test.ts`, `merma.test.ts`, `slot-fix.test.ts`, `jornada.test.ts`, `offline-queue.test.ts`, `offline-apply.test.ts`. Sin tests de componente.

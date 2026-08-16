@@ -95,3 +95,4 @@ No hay `src/modules/` todavía. No se crean carpetas vacías en Phase 0.
 | [UOM.md](./UOM.md) | Conversiones y unidad base |
 | [LOTS.md](./LOTS.md) | FIFO / FEFO / LIFO / MANUAL |
 | [BARCODE.md](./BARCODE.md) | Parser GS1 desacoplado |
+| [AUDIT.md](./AUDIT.md) | `audit_logs` append-only |

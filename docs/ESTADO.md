@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-16 · Cloud Agent · Phase 0: auditoría de arquitectura (sin cambiar el motor)
+**Última actualización:** 2026-08-16 · Cloud Agent · briefs 28–30: audit_logs, RF offline, torre
 
 ---
 
@@ -86,7 +86,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | 13 | IA contextual global + streaming + decay con fecha + detalle score + EN ESTA VISTA + FAB arrastrable | `AiAssistantHost`, `chat-stream.ts`, `coldBy*`, `ViewTotals` leads/reservas/clientes, `DraggableAiFab` |
 | 13b | Streaming también en pestaña Conocimiento | `KnowledgePanel` → `askKnowledgeStream` |
 
-**Verificación automática:** lint, `npm test` (**195**), `npm run build` — limpios.
+**Verificación automática:** lint, `npm test`, `npm run build` — ver sección 6 para el lote 28–30.
 
 **Decisiones de alcance (no son olvidos):**
 - **Núcleo = viajes + leads.** Todo lo demás deliberado → `docs/FUERA-DE-NUCLEO.md`.
@@ -161,6 +161,9 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | **Phase 0 — plan de migración** | `docs/MIGRATION_PLAN.md` |
 | **Phase 0 — índice arquitectura** | `docs/ARCHITECTURE.md` |
 | **Phase 0 — roadmap brief 0–14** | `docs/ROADMAP.md` |
+| **Brief 28 — auditoría** | `docs/AUDIT.md`, `src/lib/wms/audit.ts` |
+| **Brief 29 — RF offline** | `src/lib/wms/offline-queue.ts`, `offline-apply.ts`, `WmsRfGun.tsx` |
+| **Brief 30 — torre** | `src/lib/wms/tower.ts`, `WmsTowerOps.tsx` |
 | **Aurora playbook futuros** | `docs/AURORA-CONOCIMIENTO.md` |
 
 ---
@@ -169,15 +172,15 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–20 hechas en esta rama. Phase 0 (2026-08-16): auditoría completa, **sin implementar** persistencia, reservas ni los briefs 15–27.
+Fases 8–20 + Phase 0 docs + motores 8–11 + **briefs 28–30** en esta rama.
 
-Leer y revisar (índice: `docs/ARCHITECTURE.md` y `docs/ROADMAP.md`):
+**28 Audit:** `audit_logs` en snapshot. `appendAuditLog` / `listAuditLogs`. Sin delete. SQL `wms_audit_logs` no aplicado.
 
-- Auditoría: `ARCHITECTURE_AUDIT.md`, `TARGET_ARCHITECTURE.md`, `DATABASE_PLAN.md`, `MIGRATION_PLAN.md`
-- Producto: `INVENTORY.md`, `ORDER_FLOW.md`, `RECEIVING.md`, `PICKING.md`, `SHIPPING.md`, `API.md`, `DEPLOYMENT.md`, `TESTING.md`
-- Brief 39–44 documentado (semilla coherente, logs, migrations, phases 0–14). **Sin código nuevo.**
+**29 RF / Mobile:** flujo SCAN LOCATION → SKU → QTY → COMPLETE. Sin red: cola `cn-wms-offline-q-v1`. Al volver: `applyOfflineRfEvent` o `conflict`. Home móvil = pulso + acciones + PDA.
 
-Motores puros (briefs 8–11), **sin cablear UI**: UOM, FEFO, parser GS1 (`src/infrastructure/barcode`), máquina de pedido. Planta sigue con `ud/caja` y `pendiente|picking|…`.
+**30 Torre:** ¿qué está pasando? / ¿qué debo hacer? Cifras del snapshot. WAVE-A-0815-01 tiene **8** líneas, no 38. ASIGNAR PICKER solo si `operatorId` es null.
+
+Motores UOM/FEFO/GS1/pedido **siguen sin cablear** a `openWaveFromOrder`.
 
 **Parar el resto.** Phase 1 (RLS/ledger) y cablear FEFO/UOM a olas no se abren solos.
 

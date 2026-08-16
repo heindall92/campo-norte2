@@ -27,7 +27,7 @@ Hasta Phase 2 de datos, **no** se inventa un `/api/wms/*` vacío.
 
 ## Observabilidad (brief 40) — contrato, no código
 
-Hoy: `console` de navegador y errores de Data Hub en UI. Sin correlation id.
+Hoy: `console` de navegador, `audit_logs.correlation_id` en el snapshot, y errores de Data Hub en UI. Sin logger HTTP WMS.
 
 Objetivo, al abrir Phase 11 / endurecer API:
 
