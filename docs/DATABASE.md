@@ -19,6 +19,7 @@ Migrations WMS (no aplicadas):
 - `20260816033000_create_wms_audit_logs.sql` — `wms_audit_logs` append-only
 - `20260816040000_wms_rls_tenant_warehouse.sql` — `wms_site_members`
 - `20260816053000_create_wms_inventory_core.sql` — products, uoms, lots, serials, balances, reservations, transactions, adjustments, counts + `apply_wms_inventory_tx` (lock de `revision`)
+- `20260816060000_create_wms_tenant_rbac.sql` — organizations, warehouses, zones, locations, users, roles, permissions, user_roles, ledgers + `save_wms_ledger`. UUID, FK, RLS. **No aplicado.**
 
 Convención:
 
@@ -40,18 +41,18 @@ Reglas:
 ## Decisión: ledger primero
 
 ```
-wms_orgs
-wms_org_members
-wms_sites
-wms_ledgers     -- org_id, revision, payload jsonb
-wms_movements   -- extract append-only
-wms_reservations
-wms_audit / wms_audit_logs   -- brief 28; SQL escrito, no aplicado
+wms_organizations
+wms_warehouses / wms_warehouse_zones / wms_warehouse_locations
+wms_users / wms_roles / wms_permissions / wms_user_roles
+wms_ledgers     -- organization_id, revision, payload jsonb
+wms_audit_logs / inventory_*   -- escritos, no aplicados
 ```
 
-Un tenant sembrado: `org-camponorte`. RLS: miembro de org **o** `mps_is_team()` en la transición.
+Un tenant sembrado: `org-camponorte` (código estable; PK UUID). RLS: `wms_has_permission` + `wms_is_org_member`. Transición: `mps_is_team()` / `mps_is_admin()`.
 
-Lock: `update wms_ledgers set revision = revision+1 … where revision = $esperada`.
+Lock: `save_wms_ledger(org_code, expected, payload)` → `UPDATE … WHERE revision = $esperada`.
+
+Demo (`forceLocalHub` / `VITE_RUNTIME_MODE=demo`) **no** escribe Postgres. Sin service role en `VITE_*`. Sin passwords en SQL.
 
 ---
 

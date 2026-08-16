@@ -4,7 +4,7 @@ WMS y CRM. La auditoría CRM (hallazgos 1–6) sigue debajo. Decisiones WMS:
 
 - Roles de menú: `admin` Dirección, `ops` Almacén, `booking` Office, `guide` Planta, `pending` sin acceso.
 - Stock hoy en el navegador: **cualquiera con la demo ve el snapshot local**. RLS de almacén: SQL `wms_site_members` **no aplicado**.
-- Autorización de dominio: `authorizeWms(snap, actor, perm, warehouseId)`. El frontend no basta.
+- Autorización de dominio: `authorizeWms(snap, actor, perm, warehouseId)` con roles WMS (ADMIN…VIEWER). El frontend no basta. En prod, `authorizeWmsWrite` exige actor y `save_wms_ledger` chequea RBAC en SQL.
 - Un tenant: `org-camponorte`. Aislamiento de centro: `scopeSnapshotToWarehouse` + `warehouseIds` del actor.
 - Service role nunca en `VITE_*`. Demo ≠ producción: `VITE_RUNTIME_MODE=production` o `VITE_STRICT_AUTH`.
 - Credenciales `sofia@camponorte.demo` / `norte2026` **no** se usan en prod.

@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-16 · Cloud Agent · briefs 6–7: inventory core + balances / ledger
+**Última actualización:** 2026-08-16 · Cloud Agent · briefs 4–5: multi-tenant + Postgres/RBAC
 
 ---
 
@@ -172,6 +172,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | **Brief 32 — costes** | `src/lib/wms/costs.ts` |
 | **Brief 33 — alertas** | `src/lib/wms/alert-engine.ts` |
 | **Briefs 6–7 — inventory** | `src/lib/wms/inventory-core.ts`, SQL `20260816053000_create_wms_inventory_core.sql` (no aplicado) |
+| **Briefs 4–5 — tenant/RBAC** | `rbac.ts`, `tenant.ts`, `persist.ts`, SQL `20260816060000_create_wms_tenant_rbac.sql` (no aplicado) |
 | **Aurora playbook futuros** | `docs/AURORA-CONOCIMIENTO.md` |
 
 ---
@@ -180,7 +181,9 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–20 + Phase 0 + briefs 28–30 + 34–38 + 31–33 + **6–7 inventory ledger** en esta rama.
+Fases 8–20 + Phase 0 + briefs 28–38 + 31–33 + 6–7 + **4–5 tenant/RBAC/Postgres** en esta rama.
+
+**4–5 Multi-tenant + Postgres:** `organization → warehouses → zones/locations`. 11 roles WMS. `authorizeWms` resuelve permiso de planta, no el menú. SQL con UUID, FK, RLS, `save_wms_ledger` (transacción + revisión). Un org. Sin passwords en SQL. Demo sigue en LS hasta aplicar la migration y `VITE_RUNTIME_MODE=production`.
 
 **6–7 Inventory core / balance:** `applyInventoryTx` es la única mutación de stock. `available = on_hand − allocated − blocked − quarantined`. Semilla = RECEIPT de palets reales (sin seriales). SQL no aplicado. UOM/FEFO **siguen sin cablear** a `openWaveFromOrder`.
 
