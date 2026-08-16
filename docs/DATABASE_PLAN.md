@@ -189,7 +189,7 @@ Flujo: `ASN → ARRIVAL → DOCK → RECEIVING → QC → PUTAWAY → AVAILABLE`
 | `wms_quarantine_stock` | **No disponible para picking** |
 | `wms_quality_incidents` | |
 
-`PalletStatus.cuarentena` ya existe: el motor de pick debe rechazarlo. Hoy no lo hace.
+`PalletStatus.cuarentena` y `qcStatus` bloquean `confirmPick` / putaway (oleada 5). SQL de inspecciones **no** aplicado.
 
 ### Replenishment (brief 15)
 

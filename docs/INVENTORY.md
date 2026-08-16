@@ -20,6 +20,7 @@ Unidad de ATP / ledger = **balance** por `(org, sku, lote, ubicación)` + **tran
 | `inventory_reservations` | holds de ATP | Distinto de `reservations` (hold de palet) y de `mps_reservations` (viajes). |
 | `inventory_adjustments` / `inventory_counts` | auditoría de merma/conteo | Apuntan al `txId` |
 | `countSessions` / `countLines` | oleada 4 | Encima de `planCycleCounts`. Semilla vacía |
+| `asnLines` / `asnIncidents` | oleada 5 | Líneas escritas. Semilla vacía. QC en el palet |
 
 ### Regla de available
 

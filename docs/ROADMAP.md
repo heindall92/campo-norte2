@@ -16,11 +16,11 @@ Phase 0 del brief = auditoría. **Hecha.** El código de planta no se ha parado:
 | **2** | Warehouse + Locations + Products + UOM | Sites/slots + proyección tenant + UOM puro | Extraer locations a Postgres + factores |
 | **3** | Inventory ledger + balances + lots | Motor + FEFO + holds al abrir ola. SQL no aplicado | Aplicar SQL |
 | **4** | Orders + allocation + reservations | Pedidos + holds de palet. `order-state.ts` no sustituye status ES | Cablear transiciones |
-| **5** | Receiving + ASN + putaway | ASN plano + putaway zona | Líneas, incidencias, reglas |
+| **5** | Receiving + ASN + putaway | ASN plano + **líneas/incidencias/QC** (oleada 5) + putaway zona | Ranking putaway, reglas |
 | **6** | Waves + picking + replenishment | Olas + pick **hechos**. Reposición = cara vacía | MIN/MAX encima |
 | **7** | Packing + SSCC + shipping | Load unit + ship. Sin SSCC gen / shipments | Adapter mock + registro SSCC |
 | **8** | Dock + yard + carriers | Dock texto + catálogo carriers | Calendar; yard vacío de semilla |
-| **9** | Returns + quality + cycle counting | Cycle-count con sesiones. Sin returns/QC | Cuarentena bloquea pick + ASN lines |
+| **9** | Returns + quality + cycle counting | Cycle-count con sesiones. QC ASN + cuarentena bloquea pick | Returns |
 | **10** | RF mobile + offline sync | RF + cola `cn-wms-offline-q-v1`. Sync al volver; conflicto si el apply rechaza | No inventar un segundo snapshot |
 | **11** | Audit + observability + hardening | `audit_logs` en snapshot + SQL no aplicado | Ledger + `operationId` servidor |
 | **12** | Control tower | ¿Qué pasa? / ¿Qué hago? sobre el snapshot | No inventar «38 líneas» si la ola tiene 8 |

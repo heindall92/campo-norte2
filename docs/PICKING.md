@@ -14,6 +14,8 @@
 UI: `AislePicking.tsx`, `WmsRfGun.tsx`, `WmsVoiceHeadset.tsx`, `WmsFloorBoard.tsx`.
 Dominio: `picking.ts`, `waves.ts`, `floor.ts`, `voice.ts`, `rf.ts`, `merma.ts`, `slot-fix.ts`, `jornada.ts`.
 
+Cuarentena / QC no `APPROVED`: `confirmPick` → `pallet_quarantined`. La cola RF no ofrece ese palet.
+
 ---
 
 ## Decisiones

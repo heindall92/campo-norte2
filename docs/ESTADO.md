@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-16 · Cloud Agent · oleada 4 sesiones de cycle-count
+**Última actualización:** 2026-08-16 · Cloud Agent · oleada 5 ASN lines + QC
 
 ---
 
@@ -86,7 +86,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | 13 | IA contextual global + streaming + decay con fecha + detalle score + EN ESTA VISTA + FAB arrastrable | `AiAssistantHost`, `chat-stream.ts`, `coldBy*`, `ViewTotals` leads/reservas/clientes, `DraggableAiFab` |
 | 13b | Streaming también en pestaña Conocimiento | `KnowledgePanel` → `askKnowledgeStream` |
 
-**Verificación automática:** lint (warnings previos), `npm test` (**248**), `npm run build` — limpios.
+**Verificación automática:** lint (warnings previos), `npm test` (**253**), `npm run build` — limpios.
 
 **Decisiones de alcance (no son olvidos):**
 - **Núcleo = viajes + leads.** Todo lo demás deliberado → `docs/FUERA-DE-NUCLEO.md`.
@@ -177,6 +177,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | **FEFO al abrir ola** | `openWaveFromOrder` filtra caducado/cuarentena y ordena por expiry (`WMS_DEMO_NOW`) |
 | **Oleada 3 — holds** | Hold ALLOCATE al abrir ola; consume al picar; release al omitir; merma recorta |
 | **Oleada 4 — counts** | Sesión + líneas sobre `planCycleCounts`. Desvío = movimiento `ajuste` + audit |
+| **Oleada 5 — receiving/QC** | `asnLines` + incidencias + QC. Palet en cuarentena no pica. Semilla sin líneas inventadas |
 | **Aurora playbook futuros** | `docs/AURORA-CONOCIMIENTO.md` |
 
 ---
@@ -185,13 +186,13 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–20 + Phase 0 + briefs 28–38 + 31–33 + 6–7 + 4–5 + oleadas 1–4 + FEFO en esta rama.
+Fases 8–20 + Phase 0 + briefs 28–38 + 31–33 + 6–7 + 4–5 + oleadas 1–5 + FEFO en esta rama.
 
-**Plan de oleadas:** **14** (0–13) en `docs/MIGRATION_PLAN.md`. Hechas: 0 auditoría, 1 estado compartido, 2 ledger cableado (SQL no aplicado), 3 holds, **4 counts**. Siguientes: 5 receiving/QC, 6 putaway/slotting, 7 replenishment MIN/MAX, 8 packing/SSCC, 9 shipping/mock carrier, 10 dock calendar, 11 yard, 12 returns, 13 mover carpetas.
+**Plan de oleadas:** **14** (0–13) en `docs/MIGRATION_PLAN.md`. Hechas: 0 auditoría, 1 estado compartido, 2 ledger cableado (SQL no aplicado), 3 holds, 4 counts, **5 receiving/QC**. Siguientes: 6 putaway/slotting, 7 replenishment MIN/MAX, 8 packing/SSCC, 9 shipping/mock carrier, 10 dock calendar, 11 yard, 12 returns, 13 mover carpetas.
 
-**Oleada 4 hecha:** `openCountSession` (cyclic / abc / slot / sku / lot) usa palets reales. Full count solo con `full: true`. Un desvío escribe `movements` tipo `ajuste` con `operatorId` y `auditLogs`. Semilla **sin** sesiones. `planCycleCounts` no se borra.
+**Oleada 5 hecha:** `asnLines` escritas (no se fabrican desde el número del ASN). Parcial/exceso/faltante/dañado/lote incorrecto = incidencia con qty real. QC PENDING hasta aprobar. `confirmPick` rechaza cuarentena. Pistola `receiveAsnPallet` intacta.
 
-**Siguiente (UNA):** oleada 5 — ASN lines + QC mínimo. Palet en cuarentena no pica. No inventar suppliers. No aplicar SQL en prod.
+**Siguiente (UNA):** oleada 6 — putaway ranking + slotting con confirmación. No inventar metros. No aplicar SQL en prod.
 
 **4–5 Multi-tenant + Postgres:** `organization → warehouses → zones/locations`. 11 roles WMS. `authorizeWms` / `actorFromAppUser`. SQL no aplicado. Un org.
 

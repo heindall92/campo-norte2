@@ -97,11 +97,11 @@ docs(wms): …
 
 ### Oleada 5 — Receiving + QC mínimo (brief 16–17)
 
-**Qué:** `asn_lines` en el snapshot (y tabla cuando el módulo duela). Recepción parcial, exceso, faltante, dañado, lote incorrecto → incidencia. QC `PENDING|APPROVED|REJECTED|QUARANTINED`. Palet en cuarentena **no pica**.
+**Hecho (2026-08-16).** `asnLines` / `asnIncidents` en el snapshot. Recepción parcial, exceso, faltante, dañado, lote incorrecto → incidencia con qty real. QC `PENDING|APPROVED|REJECTED|QUARANTINED`. Palet en cuarentena **no pica**. Semilla sin líneas inventadas. La pistola (`receiveAsnPallet`) sigue.
 
-**Qué no:** suppliers inventados. Flujo de oficina no descrito.
+**Qué no:** suppliers inventados. Flujo de oficina no descrito. SQL de `wms_asn_lines` no aplicado.
 
-**DoD:** no se puede `confirmPick` un palet `cuarentena`; incidencia tiene qty real; tests.
+**DoD:** `confirmPick` rechaza palet `cuarentena`; incidencia tiene qty real; 253 verdes.
 
 ---
 
