@@ -1,5 +1,7 @@
 /** Dominio WMS — Campo Norte Logística (fase 8: catálogo, prioridades, roster y fichaje). */
 
+import type { WmsMembership } from "./rbac";
+
 export type WarehouseZone = "seco" | "fresco" | "congelado" | "picking" | "muelle" | "crossdock";
 
 export type SlotStatus = "libre" | "ocupado" | "reservado" | "bloqueado" | "inventario";
@@ -435,6 +437,10 @@ export interface WmsSnapshot {
   inventoryTransactions: InventoryTransaction[];
   inventoryAdjustments: InventoryAdjustment[];
   inventoryCounts: InventoryCount[];
+  /** Revisión del ledger Postgres. 0 en semilla local. */
+  ledgerRevision: number;
+  /** Pertenencias de auth al org. Sin contraseñas. */
+  memberships: WmsMembership[];
 }
 
 export type InventoryTxType =

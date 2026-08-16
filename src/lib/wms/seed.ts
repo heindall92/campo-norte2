@@ -1,4 +1,5 @@
 import { seedInventoryCore } from "./inventory-core";
+import { seedMemberships } from "./tenant";
 import { slotRecordId } from "./location";
 import { generateSiteSlots } from "./onboard";
 import { CAMPO_NORTE_ORG } from "./org";
@@ -932,6 +933,8 @@ export function buildWmsSeed(): WmsSnapshot {
       pallets,
       now: WMS_DEMO_NOW,
     }),
+    ledgerRevision: 0,
+    memberships: seedMemberships(CAMPO_NORTE_ORG.id),
   };
 }
 

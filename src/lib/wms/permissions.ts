@@ -1,59 +1,48 @@
 import type { UserRole } from "@/lib/auth/types";
 import { belongsToOrg } from "./org";
+import {
+  mapCrmRoleToWms,
+  permissionsForRoles,
+  type WmsPermission,
+  type WmsRole,
+} from "./rbac";
+import type { WmsMembership } from "./rbac";
 import type { WmsSnapshot } from "./types";
-
-export type WmsPermission =
-  | "stock.read"
-  | "stock.write"
-  | "wave.assign"
-  | "ship"
-  | "receive"
-  | "audit.read"
-  | "copilot.recommend"
-  | "copilot.execute";
 
 export type WmsActor = {
   role: UserRole | "pending";
+  /** Si viene, manda sobre el mapeo CRM. */
+  wmsRoles?: readonly WmsRole[];
   orgId: string;
   /** Lista de centros o `*` (todos los del org). */
   warehouseIds: string[] | "*";
+  userId?: string;
 };
 
-export type AuthzError = "forbidden" | "org_mismatch" | "warehouse_forbidden" | "confirmation_required";
+export type AuthzError = "forbidden" | "org_mismatch" | "warehouse_forbidden" | "confirmation_required" | "auth_required";
 
-const ROLE_PERMS: Record<UserRole | "pending", readonly WmsPermission[]> = {
-  admin: [
-    "stock.read",
-    "stock.write",
-    "wave.assign",
-    "ship",
-    "receive",
-    "audit.read",
-    "copilot.recommend",
-    "copilot.execute",
-  ],
-  ops: [
-    "stock.read",
-    "stock.write",
-    "wave.assign",
-    "ship",
-    "receive",
-    "audit.read",
-    "copilot.recommend",
-    "copilot.execute",
-  ],
-  booking: ["stock.read", "audit.read", "copilot.recommend"],
-  guide: ["stock.read", "stock.write", "receive", "copilot.recommend"],
-  pending: [],
-};
+export function effectiveWmsRoles(actor: WmsActor): readonly WmsRole[] {
+  if (actor.wmsRoles?.length) return actor.wmsRoles;
+  return mapCrmRoleToWms(actor.role);
+}
 
 export function can(actor: WmsActor, perm: WmsPermission): boolean {
-  return ROLE_PERMS[actor.role].includes(perm);
+  return permissionsForRoles(effectiveWmsRoles(actor)).includes(perm);
 }
 
 export function canAccessWarehouse(actor: WmsActor, warehouseId: string): boolean {
   if (actor.warehouseIds === "*") return true;
   return actor.warehouseIds.includes(warehouseId);
+}
+
+export function actorFromMembership(row: WmsMembership, crmRole: UserRole | "pending" = "pending"): WmsActor {
+  return {
+    role: crmRole,
+    wmsRoles: row.roles,
+    orgId: row.organizationId,
+    warehouseIds: row.warehouseIds,
+    userId: row.userId,
+  };
 }
 
 /**
@@ -73,6 +62,24 @@ export function authorizeWms(
     if (!canAccessWarehouse(actor, warehouseId)) return { ok: false, error: "warehouse_forbidden" };
   }
   return { ok: true };
+}
+
+/**
+ * En producción toda escritura exige actor. En demo el motor de planta
+ * puede seguir llamándose desde tests sin sesión.
+ */
+export function authorizeWmsWrite(
+  snap: WmsSnapshot,
+  actor: WmsActor | null,
+  perm: WmsPermission,
+  warehouseId: string | undefined,
+  requireActor: boolean,
+): { ok: true; actor: WmsActor | null } | { ok: false; error: AuthzError } {
+  if (requireActor && !actor) return { ok: false, error: "auth_required" };
+  if (!actor) return { ok: true, actor: null };
+  const gate = authorizeWms(snap, actor, perm, warehouseId);
+  if (!gate.ok) return gate;
+  return { ok: true, actor };
 }
 
 export function requireConfirmation(confirmed: boolean): { ok: true } | { ok: false; error: AuthzError } {

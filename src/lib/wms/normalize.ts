@@ -1,4 +1,5 @@
 import { hydrateInventoryIfMissing } from "./inventory-core";
+import { seedMemberships } from "./tenant";
 import { ensureShiftRoster, normalizeOperator, ROSTER_PRIMARY_SITE } from "./roster";
 import { SYSTEM_CATEGORIES, type FleetUnit, type Pallet, type PickWave, type WmsSnapshot } from "./types";
 
@@ -56,6 +57,10 @@ export function normalizeWmsSnapshot(snap: WmsSnapshot): WmsSnapshot {
       ...snap.org,
       allowNegativeInventory: snap.org.allowNegativeInventory === true,
     },
+    ledgerRevision: typeof snap.ledgerRevision === "number" ? snap.ledgerRevision : 0,
+    memberships: Array.isArray(snap.memberships) && snap.memberships.length
+      ? snap.memberships
+      : seedMemberships(snap.org.id),
   };
   return hydrateInventoryIfMissing(base);
 }

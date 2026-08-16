@@ -38,6 +38,7 @@ export function scopeSnapshotToOrg(snap: WmsSnapshot, orgId: string): WmsSnapsho
     inventoryTransactions: (snap.inventoryTransactions ?? []).filter((t) => t.orgId === orgId),
     inventoryAdjustments: (snap.inventoryAdjustments ?? []).filter((a) => a.orgId === orgId),
     inventoryCounts: (snap.inventoryCounts ?? []).filter((c) => c.orgId === orgId),
+    memberships: (snap.memberships ?? []).filter((m) => m.organizationId === orgId),
     carriers: snap.carriers.filter((c) => c.orgId === orgId),
     movements: snap.movements.filter((m) => {
       const slotId = m.toSlotId ?? m.fromSlotId;
