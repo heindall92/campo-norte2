@@ -210,11 +210,15 @@ export function overlayStock(
   const pallets = new Map(floor.pallets.map((p) => [p.id, { ...p }]));
   const idBySscc = new Map(floor.pallets.map((p) => [p.sscc, p.id]));
 
+  const occupiedSlots = new Set<string>();
   for (const hu of hus) {
     const id = hu.external_id || idBySscc.get(hu.sscc) || `hu-${hu.sscc}`;
     const existing = pallets.get(id);
     const slot = hu.location_code ? slotsByCode.get(hu.location_code) : undefined;
     const status = isPalletStatus(hu.status) ? hu.status : (existing?.status ?? "en_ubicacion");
+    let slotId = slot?.id ?? existing?.slotId ?? null;
+    if (slotId && occupiedSlots.has(slotId)) slotId = null;
+    if (slotId) occupiedSlots.add(slotId);
     const next: Pallet = {
       id,
       sscc: hu.sscc,
@@ -223,7 +227,7 @@ export function overlayStock(
       lot: hu.lot_code ?? existing?.lot ?? "",
       expiry: existing?.expiry ?? null,
       status,
-      slotId: slot?.id ?? existing?.slotId ?? null,
+      slotId,
       siteId: existing?.siteId ?? slot?.siteId ?? hu.warehouse_code ?? floor.sites[0]?.id ?? "site",
       receivedAt: hu.received_at ?? existing?.receivedAt ?? "2026-08-15T07:00:00.000Z",
       supplier: existing?.supplier ?? "",

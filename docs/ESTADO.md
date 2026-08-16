@@ -166,9 +166,9 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS demo es semilla local (`seededFromDemo`). En PRODUCTION el stock vive en `wms_handling_units` + ledger. Batería de flota y huella: sin telemetría inventada.
 
-**Hecho (2026-08-16 noche):** planta en Postgres **y** recepción en Sevilla ejecutada: ASN-260815-02 (Lácteos Guadalquivir) 1/16 en muelle, lote `L26R1`. El save de producción ahora trocea HU/ledger; la caché vacía ya no tapa el stock.
+**Hecho (2026-08-16 noche):** ciclo operativo cerrado en Postgres. Sevilla: recepción + putaway + olas 01/02/rep cerradas; pedidos OUT-SEV-8840/8841/8842 **expedidos**. Huelva: ola `wave-hue` cerrada, OUT-HUE-2201 **expedido**, helado `L26H1` ubicado. Overlay ya no pisa dos HU en el mismo hueco.
 
-**Siguiente:** Ctrl+F5 en https://campo-norte2.vercel.app → Recepción. Ubicar el palet de leche o seguir descargando el ASN.
+**Siguiente:** Ctrl+F5. Recorrer RF / pistola sobre reposición ya cerrada, o seguir ASN abiertos (Sevilla 02/03, Huelva H1).
 
 **Phase 0** (2026-08-16): auditoría en `docs/ARCHITECTURE_AUDIT.md`, `TARGET_ARCHITECTURE.md`, `DATABASE_PLAN.md`, `MIGRATION_PLAN.md`.
 

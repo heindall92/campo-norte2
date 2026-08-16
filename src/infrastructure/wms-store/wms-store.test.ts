@@ -96,6 +96,44 @@ describe("mapper overlay", () => {
     expect(overlaid.org.rlsMode).toBe("postgres");
   });
 
+  it("dos HU en el mismo hueco no se pisan: el segundo se queda sin slot", () => {
+    const seed = hydrateInventory(buildWmsSeed());
+    const slot = seed.slots.find((s) => s.code === "A-01-01-1")!;
+    const overlaid = overlayStock(
+      stripStockForFloor(seed),
+      [
+        {
+          external_id: "pal-a",
+          sscc: "003841009000000001",
+          qty_base: 10,
+          status: "en_ubicacion",
+          location_code: slot.code,
+          lot_code: "L1",
+          sku_code: "sku-arroz",
+          received_at: "2026-08-15T08:00:00.000Z",
+          warehouse_code: "site-sev",
+        },
+        {
+          external_id: "pal-b",
+          sscc: "003841009000000002",
+          qty_base: 11,
+          status: "en_ubicacion",
+          location_code: slot.code,
+          lot_code: "L2",
+          sku_code: "sku-arroz",
+          received_at: "2026-08-15T08:00:00.000Z",
+          warehouse_code: "site-sev",
+        },
+      ],
+      [],
+    );
+    const a = overlaid.pallets.find((p) => p.id === "pal-a")!;
+    const b = overlaid.pallets.find((p) => p.id === "pal-b")!;
+    expect(a.slotId).toBe(slot.id);
+    expect(b.slotId).toBeNull();
+    expect(overlaid.slots.find((s) => s.id === slot.id)?.palletId).toBe("pal-a");
+  });
+
   it("planta de producción trae operación para recorrer las fases", () => {
     const plant = productionPlantSnapshot();
     expect(plant.pallets.length).toBeGreaterThan(20);
