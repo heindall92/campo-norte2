@@ -38,6 +38,11 @@ export function scopeSnapshotToOrg(snap: WmsSnapshot, orgId: string): WmsSnapsho
     inventoryTransactions: (snap.inventoryTransactions ?? []).filter((t) => t.orgId === orgId),
     inventoryAdjustments: (snap.inventoryAdjustments ?? []).filter((a) => a.orgId === orgId),
     inventoryCounts: (snap.inventoryCounts ?? []).filter((c) => c.orgId === orgId),
+    countSessions: (snap.countSessions ?? []).filter((s) => s.orgId === orgId),
+    countLines: (snap.countLines ?? []).filter((l) => {
+      const session = (snap.countSessions ?? []).find((s) => s.id === l.sessionId);
+      return !session || session.orgId === orgId;
+    }),
     memberships: (snap.memberships ?? []).filter((m) => m.organizationId === orgId),
     carriers: snap.carriers.filter((c) => c.orgId === orgId),
     movements: snap.movements.filter((m) => {
@@ -88,6 +93,11 @@ export function scopeSnapshotToWarehouse(snap: WmsSnapshot, siteId: string): Wms
       locationInSites(a.locationId, siteIds, scoped.slots),
     ),
     inventoryCounts: scoped.inventoryCounts.filter((c) => locationInSites(c.locationId, siteIds, scoped.slots)),
+    countSessions: (scoped.countSessions ?? []).filter((s) => siteIds.has(s.warehouseId)),
+    countLines: (scoped.countLines ?? []).filter((l) => {
+      const session = (scoped.countSessions ?? []).find((s) => s.id === l.sessionId);
+      return !session || siteIds.has(session.warehouseId);
+    }),
   };
 }
 

@@ -927,6 +927,8 @@ export function buildWmsSeed(): WmsSnapshot {
     slotFixes: [],
     auditLogs: [],
     reservations: [],
+    countSessions: [],
+    countLines: [],
     ...seedInventoryCore({
       orgId: CAMPO_NORTE_ORG.id,
       skus: SKUS,

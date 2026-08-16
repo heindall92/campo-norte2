@@ -53,6 +53,8 @@ export function normalizeWmsSnapshot(snap: WmsSnapshot): WmsSnapshot {
     slotFixes: Array.isArray(snap.slotFixes) ? snap.slotFixes : [],
     auditLogs: Array.isArray(snap.auditLogs) ? snap.auditLogs : [],
     reservations: Array.isArray(snap.reservations) ? snap.reservations : [],
+    countSessions: Array.isArray(snap.countSessions) ? snap.countSessions : [],
+    countLines: Array.isArray(snap.countLines) ? snap.countLines : [],
     org: {
       ...snap.org,
       allowNegativeInventory: snap.org.allowNegativeInventory === true,

@@ -437,6 +437,9 @@ export interface WmsSnapshot {
   inventoryTransactions: InventoryTransaction[];
   inventoryAdjustments: InventoryAdjustment[];
   inventoryCounts: InventoryCount[];
+  /** Sesiones de conteo. Vacío en semilla: no se inventa un full count. */
+  countSessions: CountSession[];
+  countLines: CountLine[];
   /** Revisión del ledger Postgres. 0 en semilla local. */
   ledgerRevision: number;
   /** Pertenencias de auth al org. Sin contraseñas. */
@@ -586,6 +589,39 @@ export interface InventoryCount {
   txId: string;
   createdAt: string;
   actorId: string | null;
+}
+
+export const COUNT_SESSION_KINDS = ["cyclic", "abc", "slot", "sku", "lot"] as const;
+export type CountSessionKind = (typeof COUNT_SESSION_KINDS)[number];
+
+/** Sesión de inventario. Full count solo si `full` se pide; no se fabrica. */
+export interface CountSession {
+  id: string;
+  orgId: string;
+  warehouseId: string;
+  kind: CountSessionKind;
+  status: "open" | "closed";
+  openedAt: string;
+  closedAt: string | null;
+  operatorId: string | null;
+  skuId: string | null;
+  lot: string | null;
+  slotId: string | null;
+  abc: "A" | "B" | "C" | null;
+  full: boolean;
+}
+
+export interface CountLine {
+  id: string;
+  sessionId: string;
+  slotId: string;
+  palletId: string;
+  skuId: string;
+  expectedQty: number;
+  countedQty: number | null;
+  variance: number | null;
+  status: "pending" | "counted" | "skipped";
+  taskReason: "caducidad" | "abc_a" | "antiguo" | "frio";
 }
 
 /** Hold de stock. No es reserva de viaje CRM. */

@@ -5,16 +5,22 @@ import {
   FLEET_KIND_LABEL,
   applyReplenishment,
   assertCanPick,
+  closeCountSession,
+  confirmCountSessionLine,
   confirmCycleCount,
   confirmPutaway,
   confirmTransfer,
+  linesForSession,
+  openCountSession,
+  openCountSessionForSite,
   operatorForAppUser,
   planCycleCounts,
   proposeReplenishments,
   putawayReceivedPallet,
+  skipCountSessionLine,
   suggestPutawaySlot,
   transferPalletBetweenSites,
-  type CycleCountError,
+  type CountSessionError,
   type LiveMoveError,
 } from "@/lib/wms";
 import { cn } from "@/lib/utils";
@@ -39,11 +45,18 @@ const MOVE_ERR: Record<LiveMoveError, { es: string; en: string }> = {
   stock_negative: { es: "El ledger no admite stock negativo", en: "Ledger rejected negative stock" },
 };
 
-const COUNT_ERR: Record<CycleCountError, { es: string; en: string }> = {
+const COUNT_ERR: Record<CountSessionError, { es: string; en: string }> = {
   task_missing: { es: "Tarea no vigente", en: "Task gone" },
   wrong_slot: { es: "Hueco incorrecto", en: "Wrong slot" },
   wrong_sscc: { es: "SSCC incorrecto", en: "Wrong SSCC" },
   invalid_qty: { es: "Cantidad no válida", en: "Invalid qty" },
+  session_missing: { es: "No hay sesión abierta", en: "No open session" },
+  line_missing: { es: "Línea no vigente", en: "Line gone" },
+  line_done: { es: "Línea ya cerrada", en: "Line already closed" },
+  filter_required: { es: "Escribe SKU, lote o hueco", en: "Type SKU, lot or slot" },
+  no_lines: { es: "No hay huecos ocupados para ese recorte", en: "No occupied slots for that filter" },
+  session_closed: { es: "La sesión ya está cerrada", en: "Session already closed" },
+  site_missing: { es: "Centro no encontrado", en: "Site not found" },
 };
 
 export function WmsMovementsPanel({ lang }: { lang: Lang }) {
@@ -490,12 +503,27 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
   const isFloor = user?.role === "guide";
   const [pickPin, setPickPin] = useState("");
   const [siteId, setSiteId] = useState(snap.sites[0]?.id ?? "");
+  const session = openCountSessionForSite(snap, siteId);
+  const sessionLines = session ? linesForSession(snap, session.id) : [];
   const tasks = useMemo(
     () => planCycleCounts(snap, { siteId, limit: 10 }),
     [snap, siteId],
   );
   const [taskId, setTaskId] = useState(tasks[0]?.id ?? "");
-  const task = tasks.find((t) => t.id === taskId) ?? tasks[0];
+  const [lineId, setLineId] = useState(sessionLines.find((l) => l.status === "pending")?.id ?? "");
+  const line = sessionLines.find((l) => l.id === lineId) ?? sessionLines.find((l) => l.status === "pending") ?? sessionLines[0];
+  const task = session
+    ? line
+      ? {
+          id: line.id,
+          slotId: line.slotId,
+          palletId: line.palletId,
+          skuId: line.skuId,
+          reason: line.taskReason,
+          expectedQty: line.expectedQty,
+        }
+      : null
+    : (tasks.find((t) => t.id === taskId) ?? tasks[0]);
   const slot = task ? snap.slots.find((s) => s.id === task.slotId) : null;
   const pallet = task ? snap.pallets.find((p) => p.id === task.palletId) : null;
   const sku = task ? snap.skus.find((s) => s.id === task.skuId) : null;
@@ -505,12 +533,33 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
 
-  const reasonLabel: Record<typeof tasks[number]["reason"], string> = {
+  const reasonLabel: Record<(typeof tasks)[number]["reason"], string> = {
     caducidad: lang === "es" ? "Caducidad" : "Expiry",
     abc_a: "ABC A",
     antiguo: lang === "es" ? "Sin conteo reciente" : "Stale count",
     frio: lang === "es" ? "Cámara" : "Cold",
   };
+
+  function openSession(kind: "cyclic" | "abc") {
+    const result = openCountSession(snap, {
+      warehouseId: siteId,
+      kind,
+      operatorId: matched?.id ?? null,
+    });
+    if (!result.ok) {
+      setOkMsg(null);
+      setFeedback(COUNT_ERR[result.error][lang]);
+      return;
+    }
+    commit(result.snap);
+    const first = linesForSession(result.snap, result.sessionId).find((l) => l.status === "pending");
+    if (first) {
+      setLineId(first.id);
+      setQty(first.expectedQty);
+    }
+    setFeedback(null);
+    setOkMsg(lang === "es" ? "Sesión abierta · palets reales del recorte" : "Session opened · real pallets only");
+  }
 
   function confirm() {
     if (!task) return;
@@ -530,12 +579,15 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
         return;
       }
     }
-    const result = confirmCycleCount(snap, task, {
+    const payload = {
       slotCode: scanSlot,
       sscc: scanSscc,
       qty,
       operatorId: matched?.id ?? null,
-    });
+    };
+    const result = session && line
+      ? confirmCountSessionLine(snap, session.id, line.id, payload)
+      : confirmCycleCount(snap, tasks.find((t) => t.id === task.id) ?? tasks[0]!, payload);
     if (!result.ok) {
       setOkMsg(null);
       setFeedback(COUNT_ERR[result.error][lang]);
@@ -543,14 +595,15 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
     }
     commit(result.snap);
     setFeedback(null);
+    const variance = "variance" in result ? result.variance : 0;
     setOkMsg(
-      result.variance === 0
+      variance === 0
         ? lang === "es"
           ? "Conteo OK · sin desvío"
           : "Count OK · no variance"
         : lang === "es"
-          ? `Ajuste ${result.variance > 0 ? "+" : ""}${result.variance} ud.`
-          : `Adjust ${result.variance > 0 ? "+" : ""}${result.variance} u.`,
+          ? `Ajuste ${variance > 0 ? "+" : ""}${variance} ud.`
+          : `Adjust ${variance > 0 ? "+" : ""}${variance} u.`,
     );
     setScanSlot("");
     setScanSscc("");
@@ -565,8 +618,8 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
           </h2>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
             {lang === "es"
-              ? "Prioridad: caducidad, ABC A y huecos sin conteo reciente. Planta necesita haber fichado; el desvío se firma con el operario."
-              : "Priority: expiry, ABC A and stale slots. Floor staff must clock in; variance is signed by the operator."}
+              ? "Sesión + líneas sobre el planner (caducidad, ABC A, hueco). Full count solo si se pide. El desvío queda en movimientos con el operario."
+              : "Session + lines on the planner (expiry, ABC A, slot). Full count only if asked. Variance is signed on movements."}
           </p>
         </div>
         <select
@@ -583,6 +636,43 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
       </header>
 
       {matched && <WmsJornadaCard lang={lang} snap={snap} operatorId={matched.id} onChange={commit} />}
+      {!session && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => openSession("cyclic")}
+            className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white"
+          >
+            {lang === "es" ? "Abrir sesión cíclica" : "Open cyclic session"}
+          </button>
+          <button
+            type="button"
+            onClick={() => openSession("abc")}
+            className="rounded-full border border-[var(--glass-border)] px-4 py-2 text-sm font-semibold"
+          >
+            {lang === "es" ? "Sesión ABC A" : "ABC A session"}
+          </button>
+        </div>
+      )}
+      {session && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <Badge tone="brand">{session.kind === "abc" ? "ABC" : session.kind}</Badge>
+          <span className="text-[var(--ink-muted)]">
+            {sessionLines.filter((l) => l.status === "counted").length}/{sessionLines.length}{" "}
+            {lang === "es" ? "contadas" : "counted"}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              const closed = closeCountSession(snap, session.id);
+              if (closed.ok) commit(closed.snap);
+            }}
+            className="rounded-full border border-[var(--glass-border)] px-3 py-1.5 text-xs font-semibold"
+          >
+            {lang === "es" ? "Cerrar sesión" : "Close session"}
+          </button>
+        </div>
+      )}
       {isFloor && matched?.fingerprintEnrolled && (
         <input
           value={pickPin}
@@ -595,21 +685,24 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
       <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
         <Card title={lang === "es" ? "Cola de conteo" : "Count queue"}>
           <ul className="space-y-2">
-            {tasks.map((t) => {
-              const s = snap.slots.find((x) => x.id === t.slotId);
+            {(session ? sessionLines : tasks).map((t) => {
+              const s = snap.slots.find((x) => x.id === ("slotId" in t ? t.slotId : ""));
               const sk = snap.skus.find((x) => x.id === t.skuId);
+              const selected = session ? t.id === line?.id : t.id === task?.id;
+              const reason = "taskReason" in t ? t.taskReason : t.reason;
               return (
                 <li key={t.id}>
                   <button
                     type="button"
                     onClick={() => {
-                      setTaskId(t.id);
-                      setQty(t.expectedQty);
+                      if (session) setLineId(t.id);
+                      else setTaskId(t.id);
+                      setQty("expectedQty" in t ? t.expectedQty : 0);
                       setFeedback(null);
                     }}
                     className={cn(
                       "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm",
-                      t.id === task?.id
+                      selected
                         ? "border-[color-mix(in_oklab,var(--accent)_45%,transparent)] bg-[color-mix(in_oklab,var(--accent)_10%,transparent)]"
                         : "border-[var(--glass-border)]",
                     )}
@@ -618,7 +711,9 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
                       <span className="font-mono text-xs font-semibold">{s?.code}</span>
                       <span className="mt-0.5 block text-[var(--ink-muted)]">{sk?.name}</span>
                     </span>
-                    <Badge tone={t.reason === "caducidad" ? "bad" : "warn"}>{reasonLabel[t.reason]}</Badge>
+                    <Badge tone={"status" in t && t.status === "counted" ? "good" : reason === "caducidad" ? "bad" : "warn"}>
+                      {"status" in t && t.status !== "pending" ? t.status : reasonLabel[reason]}
+                    </Badge>
                   </button>
                 </li>
               );
@@ -676,6 +771,18 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
                 <Check className="h-4 w-4" />
                 {lang === "es" ? "Confirmar conteo" : "Confirm count"}
               </button>
+              {session && line?.status === "pending" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const skipped = skipCountSessionLine(snap, session.id, line.id);
+                    if (skipped.ok) commit(skipped.snap);
+                  }}
+                  className="rounded-full border border-[var(--glass-border)] px-4 py-2.5 text-sm font-semibold"
+                >
+                  {lang === "es" ? "Omitir línea" : "Skip line"}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
