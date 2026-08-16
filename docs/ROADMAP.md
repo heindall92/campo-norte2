@@ -18,7 +18,7 @@ Phase 0 del brief = auditoría. **Hecha.** El código de planta no se ha parado:
 | **4** | Orders + allocation + reservations | Pedidos + holds de palet. `order-state.ts` no sustituye status ES | Cablear transiciones |
 | **5** | Receiving + ASN + putaway | ASN + QC + **ranking putaway/slotting** (oleadas 5–6) | — |
 | **6** | Waves + picking + replenishment | Olas + pick + **MIN/MAX** (oleada 7). Pick face vacío se mantiene | — |
-| **7** | Packing + SSCC + shipping | Packing/SSCC **oleada 8**. Ship sin shipments | Adapter mock (oleada 9) |
+| **7** | Packing + SSCC + shipping | Packing/SSCC oleada 8. **Shipments + mock (oleada 9)** | — |
 | **8** | Dock + yard + carriers | Dock texto + catálogo carriers | Calendar; yard vacío de semilla |
 | **9** | Returns + quality + cycle counting | Cycle-count con sesiones. QC ASN + cuarentena bloquea pick | Returns |
 | **10** | RF mobile + offline sync | RF + cola `cn-wms-offline-q-v1`. Sync al volver; conflicto si el apply rechaza | No inventar un segundo snapshot |

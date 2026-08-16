@@ -143,8 +143,13 @@
 - Generar SSCC interno solo con prefijo escrito; sin prefijo se teclea
 - Etiqueta de packing: SSCC del registro, peso/dims si existen; sin tracking
 
+## Oleada 9 — Shipping + MockCarrierAdapter (esta entrega)
+- `shipments` con timestamps; LOADED no se inventa
+- MockCarrierAdapter etiquetado MOCK; tracking solo si se escribe
+- Expedir sin tracking sigue siendo válido; el dominio no importa seur
+
 ## Siguiente (tras revisión humana)
-- Oleadas 0–8 hechas en cliente (14 oleadas en total: 0–13)
-- Oleada 9: shipping + MockCarrierAdapter
-- Briefs restantes (shipping, carriers, dock, yard, returns) — un módulo por oleada
+- Oleadas 0–9 hechas en cliente (14 oleadas en total: 0–13)
+- Oleada 10: dock calendar
+- Briefs restantes (dock, yard, returns) — un módulo por oleada
 - Layout numérico 8–37 / SKU cerveza-vino / ZKTeco / telemetría flota: solo con dato real

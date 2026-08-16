@@ -229,7 +229,7 @@ Dominio (oleada 8): unicidad en palets + `cartonSscc` + `packPackages`. `org.ssc
 | `wms_carrier_services` | |
 | `wms_tracking_events` | Solo eventos reales o mock **etiquetado** |
 
-`CarrierAdapter` en aplicación, no en SQL.
+`CarrierAdapter` en aplicación, no en SQL. Oleada 9: `MockCarrierAdapter` en `shipping.ts`. Semilla de `shipments` / `trackingEvents` vacía. SQL **no** aplicado.
 
 ### Dock / yard (24–25)
 

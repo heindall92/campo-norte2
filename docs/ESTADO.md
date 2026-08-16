@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-16 · Cloud Agent · oleada 8 packing + SSCC
+**Última actualización:** 2026-08-16 · Cloud Agent · oleada 9 shipping + MockCarrierAdapter
 
 ---
 
@@ -181,6 +181,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | **Oleada 6 — putaway/slotting** | Ranking zona/capacidad/familia/FEFO/% pasillo. Recomendación no mueve. Semilla sin reglas |
 | **Oleada 7 — MIN/MAX** | `max(0, máx−actual)` si actual < mín. AUTO no mueve sin operario. Pick face vacío se mantiene |
 | **Oleada 8 — packing/SSCC** | Estaciones y bultos escritos. Registro SSCC único. Generar solo con prefijo. Etiqueta sin tracking |
+| **Oleada 9 — shipping/mock** | `shipments` PACKED→STAGED→LOADED→SHIPPED. MockCarrierAdapter etiquetado. Expedir sin tracking válido |
 | **Aurora playbook futuros** | `docs/AURORA-CONOCIMIENTO.md` |
 
 ---
@@ -189,13 +190,13 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–20 + Phase 0 + briefs 28–38 + 31–33 + 6–7 + 4–5 + oleadas 1–8 + FEFO en esta rama.
+Fases 8–20 + Phase 0 + briefs 28–38 + 31–33 + 6–7 + 4–5 + oleadas 1–9 + FEFO en esta rama.
 
-**Plan de oleadas:** **14** (0–13) en `docs/MIGRATION_PLAN.md`. Hechas: 0–8. Siguientes: 9 shipping/mock carrier, 10 dock calendar, 11 yard, 12 returns, 13 mover carpetas.
+**Plan de oleadas:** **14** (0–13) en `docs/MIGRATION_PLAN.md`. Hechas: 0–9. Siguientes: 10 dock calendar, 11 yard, 12 returns, 13 mover carpetas.
 
-**Oleada 8 hecha:** `packStations` / `packPackages` semilla `[]`. Dos bultos no comparten SSCC. Sin prefijo hay que escribirlo. Print no copia ni fabrica tracking. No GS1 de 18 dígitos.
+**Oleada 9 hecha:** `shipments` / `trackingEvents` semilla `[]`. Stage/ship mapean timestamps. MockCarrierAdapter no fabrica tracking. El dominio no importa `seur`. Pedido expedido sin tracking válido.
 
-**Siguiente (UNA):** oleada 9 — shipping + MockCarrierAdapter. No SEUR/DHL reales. No aplicar SQL en prod.
+**Siguiente (UNA):** oleada 10 — dock calendar. No inventar capacidad de muelle. No aplicar SQL en prod.
 
 **4–5 Multi-tenant + Postgres:** `organization → warehouses → zones/locations`. 11 roles WMS. `authorizeWms` / `actorFromAppUser`. SQL no aplicado. Un org.
 

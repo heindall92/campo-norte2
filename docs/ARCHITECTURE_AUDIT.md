@@ -254,7 +254,7 @@ Permisos = lista de secciones de menú (`ROLE_ALLOWED_SECTIONS`). No hay RLS de 
 | Yard / dock calendar | No | — | — | — |
 | Returns / QC | No (tipos huérfanos) | — | — | — |
 | SSCC generator | Solo con prefijo escrito (interno, no GS1) | LS | Sección | Audit `pack.open` |
-| Carrier adapter | No | — | — | — |
+| Carrier adapter | Mock etiquetado | LS | Sección | Eventos source=mock |
 | Slotting (recomendación + confirmación) | No | — | — | — |
 | MIN/MAX replenishment | Campos en SKU, sin motor | — | — | — |
 | Multiempresa real | Schema mental `org_id` | Un org | — | — |
@@ -274,8 +274,8 @@ Pedidas y **ausentes** en el tip fase 20. No se implementan en Phase 0.
 | 19 Slotting con confirmación | No existe |
 | 20 Packing stations / packages | **Oleada 8:** estaciones/bultos escritos; peso/dims null si no se teclean |
 | 21 SSCC único + etiqueta | **Oleada 8:** registro único; generar solo con prefijo; print sin tracking |
-| 22 Shipping shipments/events | Status en `OutboundOrder` |
-| 23 CarrierAdapter + mock | Catálogo + tracking texto |
+| 22 Shipping shipments/events | **Oleada 9:** timestamps; tracking null si no se escribe |
+| 23 CarrierAdapter + mock | **Oleada 9:** MockCarrierAdapter etiquetado; no importa seur |
 | 24 Dock calendar / appointments | `order.dock` + ventana cut-off |
 | 25 Yard visits / vehicles | No existe (y no hay telemetría de flota de calle) |
 | 26 Returns | No existe |

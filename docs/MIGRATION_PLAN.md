@@ -137,11 +137,11 @@ docs(wms): …
 
 ### Oleada 9 — Shipping + CarrierAdapter (brief 22–23)
 
-**Qué:** `shipments` con timestamps `PACKED→STAGED→LOADED→SHIPPED` (el stage/ship actual se mapea). `MockCarrierAdapter` (`createShipment`, `getLabel`, `trackShipment`, `cancelShipment`) **etiquetado mock**. Tracking real solo si el mock o el usuario lo escribe.
+**Hecho (2026-08-16).** `shipments` con timestamps `PACKED→STAGED→LOADED→SHIPPED` (stage/ship actuales mapean). `LOADED` solo si se llama `markShipmentLoaded` — no se inventa. `MockCarrierAdapter` (`createShipment`, `getLabel`, `trackShipment`, `cancelShipment`) etiquetado MOCK. Tracking solo si el mock o el usuario lo escriben.
 
-**Qué no:** SEUR/DHL de verdad en el primer commit.
+**Qué no:** SEUR/DHL de verdad. El dominio no importa `seur`.
 
-**DoD:** el dominio no importa `seur`. Tests del mock. Pedido expedido sin tracking sigue siendo válido (regla actual).
+**DoD:** tests del mock. Pedido expedido sin tracking sigue siendo válido.
 
 ---
 
