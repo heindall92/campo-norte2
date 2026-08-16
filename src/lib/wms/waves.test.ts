@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { buildWmsSeed, createOutboundOrder, openWaveFromOrder } from "@/lib/wms";
+import {
+  availableQty,
+  buildWmsSeed,
+  confirmPick,
+  createOutboundOrder,
+  declareMerma,
+  holdForLine,
+  openWaveFromOrder,
+  skipPickLine,
+} from "@/lib/wms";
 import { emptyInventorySlice, hydrateInventoryIfMissing } from "./inventory-core";
 import type { Pallet, WmsSnapshot } from "./types";
 
@@ -124,3 +133,110 @@ describe("olas · FEFO al abrir", () => {
     expect(wave?.lines.some((l) => l.palletId === blockedId)).toBe(false);
   });
 });
+
+describe("olas · holds al abrir", () => {
+  it("reserva el palet, deja available a 0 y no admite otro hold", () => {
+    const seed = withClosedWaves(buildWmsSeed());
+    const created = createOutboundOrder(seed, {
+      customer: "Tienda CN · hold",
+      cutOff: "2026-08-15T17:00:00.000Z",
+      dock: "M-06",
+      siteId: "site-sev",
+      lines: 1,
+      pallets: 1,
+      priority: "urgente",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    const opened = openWaveFromOrder(created.snap, created.orderId, "op-08");
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    const wave = opened.snap.pickWaves.find((w) => w.id === opened.waveId)!;
+    const line = wave.lines[0]!;
+    expect(line.qty).toBe(opened.snap.pallets.find((p) => p.id === line.palletId)?.qty);
+    const hold = holdForLine(opened.snap, line.id);
+    expect(hold?.status).toBe("hold");
+    expect(hold?.qty).toBe(line.qty);
+    expect(availableQty(opened.snap, line.palletId!)).toBe(0);
+  });
+
+  it("omitir libera el hold; picar lo consume", () => {
+    const seed = withClosedWaves(buildWmsSeed());
+    const created = createOutboundOrder(seed, {
+      customer: "Tienda CN · hold pick",
+      cutOff: "2026-08-15T18:00:00.000Z",
+      dock: "M-05",
+      siteId: "site-sev",
+      lines: 2,
+      pallets: 2,
+      priority: "normal",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    const opened = openWaveFromOrder(created.snap, created.orderId, "op-08");
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    const wave = opened.snap.pickWaves.find((w) => w.id === opened.waveId)!;
+    const first = wave.lines[0]!;
+    const pallet = opened.snap.pallets.find((p) => p.id === first.palletId)!;
+    const slot = opened.snap.slots.find((s) => s.id === first.slotId)!;
+
+    const skipped = skipPickLine(opened.snap, opened.waveId, first.id);
+    expect(skipped.ok).toBe(true);
+    if (!skipped.ok) return;
+    expect(holdForLine(skipped.snap, first.id)).toBeUndefined();
+    expect(availableQty(skipped.snap, pallet.id)).toBe(pallet.qty);
+
+    const second = skipped.snap.pickWaves.find((w) => w.id === opened.waveId)!.lines.find((l) => l.id !== first.id);
+    expect(second).toBeTruthy();
+    if (!second?.palletId) return;
+    const pal2 = skipped.snap.pallets.find((p) => p.id === second.palletId)!;
+    const slot2 = skipped.snap.slots.find((s) => s.id === second.slotId)!;
+    const picked = confirmPick(skipped.snap, opened.waveId, second.id, {
+      slotCode: slot2.code,
+      sscc: pal2.sscc,
+      qty: second.qty,
+    });
+    expect(picked.ok).toBe(true);
+    if (!picked.ok) return;
+    const consumed = picked.snap.reservations.find((r) => r.lineId === second.id);
+    expect(consumed?.status).toBe("consumed");
+    expect(availableQty(picked.snap, pal2.id)).toBe(0);
+    expect(slot.code).toBeTruthy();
+  });
+
+  it("la merma recorta el hold antes de bajar el físico", () => {
+    const seed = withClosedWaves(buildWmsSeed());
+    const created = createOutboundOrder(seed, {
+      customer: "Tienda CN · hold merma",
+      cutOff: "2026-08-15T19:00:00.000Z",
+      dock: "M-04",
+      siteId: "site-sev",
+      lines: 1,
+      pallets: 1,
+      priority: "normal",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    const opened = openWaveFromOrder(created.snap, created.orderId, "op-08");
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    const wave = opened.snap.pickWaves.find((w) => w.id === opened.waveId)!;
+    const line = wave.lines[0]!;
+    const pallet = opened.snap.pallets.find((p) => p.id === line.palletId)!;
+    const slot = opened.snap.slots.find((s) => s.id === pallet.slotId)!;
+    expect(pallet.qty).toBeGreaterThan(1);
+    const merma = declareMerma(opened.snap, {
+      sscc: pallet.sscc,
+      fromSlotCode: slot.code,
+      qty: 1,
+      reason: "caida",
+    });
+    expect(merma.ok).toBe(true);
+    if (!merma.ok) return;
+    const hold = holdForLine(merma.snap, line.id);
+    expect(hold?.qty).toBe(pallet.qty - 1);
+    expect(merma.snap.pallets.find((p) => p.id === pallet.id)?.qty).toBe(pallet.qty - 1);
+  });
+});
+

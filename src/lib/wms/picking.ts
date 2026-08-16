@@ -1,5 +1,6 @@
 import { applyTxToSnapshot, locationOfPallet } from "./inventory-core";
 import { codesEqual } from "./location";
+import { availableQty, consumeReservation, holdForLine, releaseHoldsForLine } from "./reservations";
 import type { FleetKind, PickLine, PickWave, StockMovement, WmsSnapshot } from "./types";
 
 export function nextOpenLine(wave: PickWave): PickLine | null {
@@ -65,6 +66,9 @@ export function confirmPick(
   if (!Number.isFinite(input.qty) || input.qty < 1 || input.qty > line.qty || input.qty > pallet.qty) {
     return { ok: false, error: "invalid_qty" };
   }
+  const hold = holdForLine(snap, line.id);
+  const pickCap = availableQty(snap, pallet.id) + (hold?.qty ?? 0);
+  if (input.qty > pickCap) return { ok: false, error: "invalid_qty" };
 
   const nextLines = wave.lines.map((l) => {
     if (l.id === line.id) return { ...l, status: "picada" as const, qtyPicked: input.qty, qtyPacked: 0, cartonSscc: null };
@@ -125,16 +129,6 @@ export function confirmPick(
     pallets: nextPallets,
     movements: [movement, ...snap.movements],
     operators: nextOperators,
-    reservations: (snap.reservations ?? []).map((r) =>
-      r.status === "hold" && r.palletId === pallet.id && (r.lineId === line.id || r.orderCode === line.orderCode)
-        ? { ...r, status: "consumed" as const, revision: r.revision + 1 }
-        : r,
-    ),
-    inventoryReservations: (snap.inventoryReservations ?? []).map((r) =>
-      r.status === "open" && r.palletId === pallet.id && (r.lineId === line.id || r.orderCode === line.orderCode)
-        ? { ...r, status: "consumed" as const, revision: r.revision + 1 }
-        : r,
-    ),
   };
   const led = applyTxToSnapshot(physical, {
     type: "PICK",
@@ -151,7 +145,30 @@ export function confirmPick(
     id: `itx-PICK-${line.id}-${at}`,
   });
   if (!led.ok) return { ok: false, error: "invalid_qty" };
-  return { ok: true, snap: led.snap };
+  let next = led.snap;
+  if (hold) {
+    const consumed = consumeReservation(next, hold.id);
+    if (consumed.ok) next = consumed.snap;
+    const leftover = hold.qty - input.qty;
+    if (leftover > 0) {
+      const rest = applyTxToSnapshot(next, {
+        type: "DEALLOCATE",
+        skuId: line.skuId,
+        lot: pallet.lot || null,
+        fromLocationId: locationOfPallet(pallet),
+        qty: leftover,
+        reason: `${nextWave.code} leftover`,
+        refType: "reservation",
+        refId: hold.id,
+        palletId: pallet.id,
+        actorId: wave.operatorId,
+        at,
+        id: `itx-DEALLOC-LEFT-${hold.id}`,
+      });
+      if (rest.ok) next = rest.snap;
+    }
+  }
+  return { ok: true, snap: next };
 }
 
 function closeLine(
@@ -189,26 +206,30 @@ function closeLine(
 
   return {
     ok: true,
-    snap: {
-      ...snap,
-      pickWaves: snap.pickWaves.map((w) => (w.id === nextWave.id ? nextWave : w)),
-      movements: [
-        {
-          id: `mv-${status}-${line.id}`,
-          at,
-          type: "ajuste",
-          skuId: line.skuId,
-          palletId: line.palletId,
-          fromSlotId: line.slotId,
-          toSlotId: null,
-          qty: qtyPicked,
-          operatorId: wave.operatorId,
-          fleetId: wave.fleetId,
-          note,
-        },
-        ...snap.movements,
-      ],
-    },
+    snap: releaseHoldsForLine(
+      {
+        ...snap,
+        pickWaves: snap.pickWaves.map((w) => (w.id === nextWave.id ? nextWave : w)),
+        movements: [
+          {
+            id: `mv-${status}-${line.id}`,
+            at,
+            type: "ajuste",
+            skuId: line.skuId,
+            palletId: line.palletId,
+            fromSlotId: line.slotId,
+            toSlotId: null,
+            qty: qtyPicked,
+            operatorId: wave.operatorId,
+            fleetId: wave.fleetId,
+            note,
+          },
+          ...snap.movements,
+        ],
+      },
+      line.id,
+      line.palletId,
+    ),
   };
 }
 

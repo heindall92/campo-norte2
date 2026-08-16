@@ -1,6 +1,7 @@
 import { WMS_DEMO_NOW } from "./alerts";
 import { applyTxToSnapshot, locationOfPallet } from "./inventory-core";
 import { codesEqual } from "./location";
+import { trimHoldsToQty } from "./reservations";
 import type { MermaEvent, MermaReason, WmsSnapshot } from "./types";
 
 export type MermaError =
@@ -44,6 +45,8 @@ export function declareMerma(
   if (!Number.isFinite(input.qty) || input.qty < 1 || input.qty > pallet.qty) {
     return { ok: false, error: "invalid_qty" };
   }
+
+  snap = trimHoldsToQty(snap, pallet.id, pallet.qty - input.qty);
 
   const from = pallet.slotId ? snap.slots.find((s) => s.id === pallet.slotId) : undefined;
   if (!from || !codesEqual(from.code, input.fromSlotCode)) {

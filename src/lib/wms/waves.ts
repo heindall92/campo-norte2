@@ -2,7 +2,7 @@ import { WMS_DEMO_NOW } from "./alerts";
 import { dockWindowFor } from "./carriers";
 import { classifyLotAlert, compareLotsFefo, lotFromPallet } from "./lots";
 import { recommendedFleetKind } from "./picking";
-import { availableQty } from "./reservations";
+import { availableQty, reserveStock } from "./reservations";
 import { pickPackForSku } from "./voice";
 import type { OutboundOrder, Pallet, PickWave, Sku, Slot, WmsSnapshot } from "./types";
 
@@ -41,7 +41,7 @@ function pickCandidates(snap: WmsSnapshot, siteId: string): Array<{ slot: Slot; 
     if (slot.siteId !== siteId || !slot.pickFace || !slot.palletId) continue;
     if (used.has(slot.palletId)) continue;
     const pallet = snap.pallets.find((p) => p.id === slot.palletId && p.status !== "expedido");
-    if (!pallet || availableQty(snap, pallet.id) < 1) continue;
+    if (!pallet || availableQty(snap, pallet.id) < pallet.qty) continue;
     const lot = lotFromPallet(pallet);
     const alert = classifyLotAlert(lot, nowMs);
     if (alert === "EXPIRED" || alert === "BLOCKED") continue;
@@ -56,7 +56,7 @@ function pickCandidates(snap: WmsSnapshot, siteId: string): Array<{ slot: Slot; 
 /**
  * Abre una ola a partir de un pedido de expedición.
  * Candidatos = palets reales en cara de picking, no caducados ni en cuarentena,
- * ordenados FEFO (reloj `WMS_DEMO_NOW`). No reserva hold al abrir.
+ * ordenados FEFO (reloj `WMS_DEMO_NOW`). Hold de palet al abrir; no ATP de ERP.
  */
 export function openWaveFromOrder(
   snap: WmsSnapshot,
@@ -118,17 +118,29 @@ export function openWaveFromOrder(
     })),
   };
 
-  return {
-    ok: true,
-    waveId,
-    snap: {
-      ...snap,
-      pickWaves: [...snap.pickWaves, wave],
-      outbound: snap.outbound.map((o) =>
-        o.id === order.id && o.status === "pendiente" ? { ...o, status: "picking" as const } : o,
-      ),
-    },
+  let next: WmsSnapshot = {
+    ...snap,
+    pickWaves: [...snap.pickWaves, wave],
+    outbound: snap.outbound.map((o) =>
+      o.id === order.id && o.status === "pendiente" ? { ...o, status: "picking" as const } : o,
+    ),
   };
+  for (const line of wave.lines) {
+    if (!line.palletId) continue;
+    const held = reserveStock(next, {
+      palletId: line.palletId,
+      qty: line.qty,
+      orderCode: line.orderCode,
+      warehouseId: order.siteId,
+      waveId,
+      lineId: line.id,
+      at: WMS_DEMO_NOW,
+    });
+    if (!held.ok) return { ok: false, error: "no_free_pallets" };
+    next = held.snap;
+  }
+
+  return { ok: true, waveId, snap: next };
 }
 
 export function createOutboundOrder(
