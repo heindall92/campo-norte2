@@ -13,7 +13,9 @@ import {
   computeSitePnl,
   computeTowerKpis,
   computeUnitEconomics,
+  buildOpsAlerts,
   computeWmsAlerts,
+  opsAlertCounts,
   fleetUtilization,
   createOutboundOrder,
   navigateWmsSection,
@@ -63,6 +65,7 @@ import { useState } from "react";
 import { WmsAssignSuperCard, WmsAisleTraceCard, WmsFloorHint, WmsLoadUnitCard, WmsMermaCard, WmsSlotFixCard } from "./WmsFloorBoard";
 import { WmsCopilot } from "./WmsCopilot";
 import { WmsModeBadge } from "./WmsModeBadge";
+import { WmsOpsMetrics } from "./WmsOpsMetrics";
 import { WmsTowerOps } from "./WmsTowerOps";
 import { WmsAisleGuideCard } from "./WmsVoiceHeadset";
 import { WmsJornadaCard, WmsShiftCloseCard } from "./WmsJornadaCard";
@@ -105,7 +108,9 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
   const occ = occupancyByZone(snap.slots.filter((s) => s.siteId === siteId));
   const site = snap.sites.find((s) => s.id === siteId) ?? snap.sites[0];
   const alerts = computeWmsAlerts(snap, new Date(WMS_DEMO_NOW), siteId);
+  const opsAlerts = buildOpsAlerts(snap, new Date(WMS_DEMO_NOW), siteId);
   const counts = alertCounts(alerts);
+  const opsCounts = opsAlertCounts(opsAlerts);
   const unit = computeUnitEconomics(snap, siteId);
   const coverage = computeShiftCoverage(snap, siteId);
   const openGaps = coverage.gaps.filter((g) => g.gap < 0).length;
@@ -141,14 +146,15 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
           </select>
           <WmsModeBadge lang={lang} />
           <Badge tone="brand">{site?.code}</Badge>
-          <Badge tone={counts.critical ? "bad" : counts.warn ? "warn" : "good"}>
-            {counts.total} {lang === "es" ? "alertas" : "alerts"}
+          <Badge tone={opsCounts.critical || counts.critical ? "bad" : opsCounts.warn || counts.warn ? "warn" : "good"}>
+            {opsCounts.total} {lang === "es" ? "alertas motor" : "engine alerts"}
           </Badge>
         </div>
       </header>
 
       {matched && <WmsJornadaCard lang={lang} snap={snap} operatorId={matched.id} onChange={commit} />}
       <WmsTowerOps lang={lang} siteId={siteId} />
+      <WmsOpsMetrics lang={lang} siteId={siteId} />
       <WmsCopilot lang={lang} siteId={siteId} />
       <WmsAisleTraceCard lang={lang} siteId={siteId} />
       <WmsAisleGuideCard lang={lang} />
@@ -389,31 +395,46 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
       </Card>
 
       <Card
-        title={lang === "es" ? "Alertas operativas" : "Operational alerts"}
+        title={lang === "es" ? "Motor de alertas" : "Alert engine"}
         subtitle={
           lang === "es"
-            ? "Batería · caducidad · cut-off tienda · pick face vacío"
-            : "Battery · expiry · store cut-off · empty pick face"
+            ? "severity · status · entity · acción · sin inventar tracking de flota"
+            : "severity · status · entity · action · no invented fleet tracking"
         }
       >
-        <ul className="space-y-2">
-          {alerts.slice(0, 10).map((a) => (
-            <li
-              key={a.id}
-              className="flex items-start justify-between gap-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2.5 text-sm"
-            >
-              <span>
-                <span className="font-medium text-[var(--ink)]">{lang === "es" ? a.titleEs : a.titleEn}</span>
-                <span className="mt-0.5 block text-xs text-[var(--ink-muted)]">
-                  {lang === "es" ? a.detailEs : a.detailEn}
-                </span>
-              </span>
-              <Badge tone={a.severity === "critical" ? "bad" : a.severity === "warn" ? "warn" : "neutral"}>
-                {a.kind}
-              </Badge>
-            </li>
-          ))}
-        </ul>
+        {opsAlerts.length === 0 ? (
+          <p className="text-sm text-[var(--ink-muted)]" role="status">
+            {lang === "es" ? "Nada abierto en este centro." : "Nothing open at this site."}
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {opsAlerts
+              .filter((a) => a.status === "open")
+              .slice(0, 12)
+              .map((a) => (
+                <li key={a.id}>
+                <button
+                  type="button"
+                  onClick={() => navigateWmsSection(a.section)}
+                  className="flex w-full items-start justify-between gap-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2.5 text-left text-sm"
+                >
+                  <span>
+                    <span className="font-medium text-[var(--ink)]">{lang === "es" ? a.titleEs : a.titleEn}</span>
+                    <span className="mt-0.5 block text-xs text-[var(--ink-muted)]">
+                      {a.recommendedAction} · {a.entity} {a.entityId}
+                    </span>
+                  </span>
+                  <span className="flex flex-col items-end gap-1">
+                    <Badge tone={a.severity === "critical" ? "bad" : a.severity === "warn" ? "warn" : "neutral"}>
+                      {a.type}
+                    </Badge>
+                    <span className="text-[10px] uppercase text-[var(--ink-muted)]">{a.status}</span>
+                  </span>
+                </button>
+                </li>
+              ))}
+          </ul>
+        )}
       </Card>
     </div>
   );

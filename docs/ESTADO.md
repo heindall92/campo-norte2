@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-16 · Cloud Agent · briefs 34–38: copilot, seguridad, tests, UX, demo/prod
+**Última actualización:** 2026-08-16 · Cloud Agent · briefs 31–33: productividad, costes, motor de alertas
 
 ---
 
@@ -86,7 +86,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | 13 | IA contextual global + streaming + decay con fecha + detalle score + EN ESTA VISTA + FAB arrastrable | `AiAssistantHost`, `chat-stream.ts`, `coldBy*`, `ViewTotals` leads/reservas/clientes, `DraggableAiFab` |
 | 13b | Streaming también en pestaña Conocimiento | `KnowledgePanel` → `askKnowledgeStream` |
 
-**Verificación automática:** lint (warnings previos), `npm test` (**217**), `npm run build` — limpios.
+**Verificación automática:** lint (warnings previos), `npm test` (**221**), `npm run build` — limpios.
 
 **Decisiones de alcance (no son olvidos):**
 - **Núcleo = viajes + leads.** Todo lo demás deliberado → `docs/FUERA-DE-NUCLEO.md`.
@@ -168,6 +168,9 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | **Brief 35 — seguridad** | `permissions.ts`, `runtime.ts`, SQL RLS no aplicado |
 | **Brief 36 — tests** | `ops-critical.test.ts`, `copilot.test.ts` |
 | **Brief 38 — demo/prod** | `resolveRuntimeMode` · semilla vs Supabase |
+| **Brief 31 — productividad** | `src/lib/wms/productivity.ts` |
+| **Brief 32 — costes** | `src/lib/wms/costs.ts` |
+| **Brief 33 — alertas** | `src/lib/wms/alert-engine.ts` |
 | **Aurora playbook futuros** | `docs/AURORA-CONOCIMIENTO.md` |
 
 ---
@@ -176,7 +179,13 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–20 + Phase 0 + briefs 28–30 + **34–38** en esta rama.
+Fases 8–20 + Phase 0 + briefs 28–30 + 34–38 + **31–33** en esta rama.
+
+**31 Productividad:** l/h, u/h, ped/h, accuracy, distancia estimada, min/tarea. Por picker/packer/carretilla/turno/zona/almacén. Código, no nombre.
+
+**32 Costes:** cost/order|line|pallet|pick|ship. Estructura labor/carrier/handling/storage. No es tesorería del Hub.
+
+**33 Alertas:** motor tipado (LOW_STOCK… CARRIER_DELAY) con severity/status/entity/acción. `resolved_at` solo si el hueco ya está cuadrado.
 
 **34 Copilot:** cinco preguntas sobre el snapshot. `finding/evidence/confidence/recommendation/optional_action`. Confirmación obligatoria. No LLM.
 

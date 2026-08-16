@@ -36,6 +36,9 @@ export * from "./reservations";
 export * from "./returns";
 export * from "./permissions";
 export * from "./copilot";
+export * from "./productivity";
+export * from "./costs";
+export * from "./alert-engine";
 
 import { buildWmsSeed } from "./seed";
 import { normalizeWmsSnapshot, snapshotLooksUsable } from "./normalize";

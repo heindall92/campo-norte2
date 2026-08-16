@@ -97,3 +97,6 @@ No hay `src/modules/` todavía. No se crean carpetas vacías en Phase 0.
 | [BARCODE.md](./BARCODE.md) | Parser GS1 desacoplado |
 | [AUDIT.md](./AUDIT.md) | `audit_logs` append-only |
 | [COPILOT.md](./COPILOT.md) | Preguntas de planta, no chat genérico |
+| [PRODUCTIVITY.md](./PRODUCTIVITY.md) | Ritmo por código, no vigilancia |
+| [COSTS.md](./COSTS.md) | cost/order… y cubos labor/carrier |
+| [ALERTS.md](./ALERTS.md) | Motor LOW_STOCK… CARRIER_DELAY |
