@@ -33,13 +33,18 @@ export function WmsInboundPanel({ lang }: { lang: Lang }) {
   const [supplier, setSupplier] = useState("");
   const [dock, setDock] = useState("M-01");
   const [eta, setEta] = useState("2026-08-16T09:00");
-  const [siteId, setSiteId] = useState(snap.sites[0]?.id ?? "");
+  const [siteId, setSiteId] = useState("site-sev");
   const [lines, setLines] = useState(4);
   const [palletsExpected, setPalletsExpected] = useState(8);
-  const [recvSku, setRecvSku] = useState(snap.skus[0]?.id ?? "");
+  const [recvSku, setRecvSku] = useState("sku-leche");
   const [recvQty, setRecvQty] = useState(48);
-  const [recvLot, setRecvLot] = useState("");
+  const [recvLot, setRecvLot] = useState("L26R1");
   const [recvMsg, setRecvMsg] = useState<string | null>(null);
+  const inbound = [...snap.inbound].sort((a, b) => {
+    const siteRank = (id: string) => (id === "site-sev" ? 0 : 1);
+    const closed = (s: string) => (s === "cerrado" ? 1 : 0);
+    return siteRank(a.siteId) - siteRank(b.siteId) || closed(a.status) - closed(b.status);
+  });
 
   return (
     <div className="space-y-4">
@@ -128,12 +133,13 @@ export function WmsInboundPanel({ lang }: { lang: Lang }) {
       </Card>
 
       <div className="grid gap-3 md:grid-cols-2">
-        {snap.inbound.map((asn) => {
+        {inbound.map((asn) => {
           const pct = asn.palletsExpected
             ? Math.round((asn.palletsDone / asn.palletsExpected) * 100)
             : 0;
+          const siteCity = snap.sites.find((s) => s.id === asn.siteId)?.city ?? asn.siteId;
           return (
-            <Card key={asn.id} title={asn.code} subtitle={asn.supplier}>
+            <Card key={asn.id} title={asn.code} subtitle={`${asn.supplier} · ${siteCity}`}>
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <select
                   value={asn.status}

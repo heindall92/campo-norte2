@@ -15,7 +15,7 @@ import {
 } from "./mapper";
 import { canWriteWmsProduction, toPostgresOrgId, type WmsPort } from "./port";
 
-const PROD_CACHE_KEY = "cn-wms-hub-prod-cache-v1";
+const PROD_CACHE_KEY = "cn-wms-hub-prod-cache-v2";
 
 type HuQueryRow = {
   external_id: string | null;
@@ -51,7 +51,9 @@ function cacheGet(): WmsSnapshot | null {
     const raw = localStorage.getItem(PROD_CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as WmsSnapshot;
-    return snapshotLooksUsable(parsed) ? parsed : null;
+    if (!snapshotLooksUsable(parsed)) return null;
+    if (parsed.pallets.length > 0 && parsed.pallets.every((p) => p.qty === 0)) return null;
+    return parsed;
   } catch {
     return null;
   }
@@ -62,6 +64,22 @@ function cacheSet(snap: WmsSnapshot): void {
     localStorage.setItem(PROD_CACHE_KEY, JSON.stringify(snap));
   } catch {
     /* ignore */
+  }
+}
+
+async function persistStock(
+  sb: { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ error: { message: string } | null }> },
+  organizationId: string,
+  snap: WmsSnapshot,
+) {
+  const batches = stockCommitBatches(palletStockPayload(snap), ledgerStockPayload(snap));
+  for (const batch of batches) {
+    const { error } = await sb.rpc("wms_commit_stock", {
+      p_organization_id: organizationId,
+      p_ledger: batch.ledger,
+      p_pallets: batch.pallets,
+    });
+    if (error) throw new Error(error.message);
   }
 }
 
@@ -108,15 +126,7 @@ export function createPostgresWmsAdapter(): WmsPort {
           p_floor: stripStockForFloor(plant),
         });
         if (bootErr) throw new Error(bootErr.message);
-        const batches = stockCommitBatches(palletStockPayload(plant), ledgerStockPayload(plant));
-        for (const batch of batches) {
-          const { error: stockErr } = await sb.rpc("wms_commit_stock", {
-            p_organization_id: organizationId,
-            p_ledger: batch.ledger,
-            p_pallets: batch.pallets,
-          });
-          if (stockErr) throw new Error(stockErr.message);
-        }
+        await persistStock(sb, organizationId, plant);
         memory = plant;
         cacheSet(plant);
         return plant;
@@ -163,12 +173,7 @@ export function createPostgresWmsAdapter(): WmsPort {
         p_floor: floor,
       });
       if (floorErr) throw new Error(floorErr.message);
-      const { error: stockErr } = await sb.rpc("wms_commit_stock", {
-        p_organization_id: organizationId,
-        p_ledger: ledgerStockPayload(snap),
-        p_pallets: palletStockPayload(snap),
-      });
-      if (stockErr) throw new Error(stockErr.message);
+      await persistStock(sb, organizationId, snap);
     },
   };
 }

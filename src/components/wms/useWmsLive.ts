@@ -41,7 +41,9 @@ export function useWmsLive() {
   const commit = useCallback(
     (next: WmsSnapshot) => {
       setSnap(next);
-      void adapter.save(next, user);
+      void adapter.save(next, user).catch((err) => {
+        console.error("wms save failed", err);
+      });
     },
     [adapter, user],
   );

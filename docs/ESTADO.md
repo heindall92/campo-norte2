@@ -166,9 +166,9 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS demo es semilla local (`seededFromDemo`). En PRODUCTION el stock vive en `wms_handling_units` + ledger. Batería de flota y huella: sin telemetría inventada.
 
-**Hecho (2026-08-16):** fases 0–14 en código. El primer login guardó el floor pero **falló el ledger** (FK de HU: se enviaba el diario con el primer lote de palets). Corregido: palets primero, ledger después; el RPC salta HU inexistente.
+**Hecho (2026-08-16 noche):** planta en Postgres **y** recepción en Sevilla ejecutada: ASN-260815-02 (Lácteos Guadalquivir) 1/16 en muelle, lote `L26R1`. El save de producción ahora trocea HU/ledger; la caché vacía ya no tapa el stock.
 
-**Siguiente:** recargar https://campo-norte2.vercel.app con `yoandy@campo-norte.es` (Ctrl+F5). Debe sembrar ~277 palets + ASN/olas. Recibir en Sevilla.
+**Siguiente:** Ctrl+F5 en https://campo-norte2.vercel.app → Recepción. Ubicar el palet de leche o seguir descargando el ASN.
 
 **Phase 0** (2026-08-16): auditoría en `docs/ARCHITECTURE_AUDIT.md`, `TARGET_ARCHITECTURE.md`, `DATABASE_PLAN.md`, `MIGRATION_PLAN.md`.
 
