@@ -61,6 +61,8 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useState } from "react";
 import { WmsAssignSuperCard, WmsAisleTraceCard, WmsFloorHint, WmsLoadUnitCard, WmsMermaCard, WmsSlotFixCard } from "./WmsFloorBoard";
+import { WmsCopilot } from "./WmsCopilot";
+import { WmsModeBadge } from "./WmsModeBadge";
 import { WmsTowerOps } from "./WmsTowerOps";
 import { WmsAisleGuideCard } from "./WmsVoiceHeadset";
 import { WmsJornadaCard, WmsShiftCloseCard } from "./WmsJornadaCard";
@@ -137,6 +139,7 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
               </option>
             ))}
           </select>
+          <WmsModeBadge lang={lang} />
           <Badge tone="brand">{site?.code}</Badge>
           <Badge tone={counts.critical ? "bad" : counts.warn ? "warn" : "good"}>
             {counts.total} {lang === "es" ? "alertas" : "alerts"}
@@ -146,6 +149,7 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
 
       {matched && <WmsJornadaCard lang={lang} snap={snap} operatorId={matched.id} onChange={commit} />}
       <WmsTowerOps lang={lang} siteId={siteId} />
+      <WmsCopilot lang={lang} siteId={siteId} />
       <WmsAisleTraceCard lang={lang} siteId={siteId} />
       <WmsAisleGuideCard lang={lang} />
       <WmsMermaCard lang={lang} siteId={siteId} />
@@ -157,10 +161,14 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
           title={lang === "es" ? "Ocupación" : "Occupancy"}
           lang={lang}
           metrics={[
-            { label: lang === "es" ? "Huecos ocupados" : "Occupied slots", value: `${kpis.occupancyPct}%`, deltaPct: 2.1 },
+            { label: lang === "es" ? "Huecos ocupados" : "Occupied slots", value: `${kpis.occupancyPct}%` },
             { label: lang === "es" ? "Libres" : "Free", value: String(kpis.freeSlots) },
           ]}
-          footnote={`${kpis.occupiedSlots} / ${kpis.occupiedSlots + kpis.freeSlots} ${lang === "es" ? "slots vivos" : "live slots"}`}
+          footnote={
+            lang === "es"
+              ? `${kpis.freeSlots} libres · ¿cabe el inbound de hoy?`
+              : `${kpis.freeSlots} free · can today's inbound fit?`
+          }
         />
         <StatCard
           title={lang === "es" ? "Mercancía" : "Goods"}
@@ -170,11 +178,17 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
             { label: lang === "es" ? "Bajo mínimo" : "Below min", value: String(kpis.lowStockSkus), lowerIsBetter: true },
           ]}
           footnote={
-            kpis.expiringSoon
+            kpis.lowStockSkus
               ? lang === "es"
-                ? `${kpis.expiringSoon} caducan en 7 días`
-                : `${kpis.expiringSoon} expire in 7 days`
-              : undefined
+                ? `${kpis.lowStockSkus} SKU bajo mínimo · reponer o recibir`
+                : `${kpis.lowStockSkus} SKUs below min · replenish or receive`
+              : kpis.expiringSoon
+                ? lang === "es"
+                  ? `${kpis.expiringSoon} caducan en 7 días · FEFO`
+                  : `${kpis.expiringSoon} expire in 7 days · FEFO`
+                : lang === "es"
+                  ? "Stock por encima del mínimo"
+                  : "Stock above minimum"
           }
         />
         <StatCard

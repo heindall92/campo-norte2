@@ -423,6 +423,23 @@ export interface WmsSnapshot {
   mermaEvents: MermaEvent[];
   slotFixes: SlotFix[];
   auditLogs: WmsAuditLog[];
+  reservations: StockReservation[];
+}
+
+/** Hold de stock. No es reserva de viaje CRM. */
+export interface StockReservation {
+  id: string;
+  organizationId: string;
+  warehouseId: string;
+  palletId: string;
+  skuId: string;
+  qty: number;
+  status: "hold" | "consumed" | "released";
+  orderCode: string;
+  waveId: string | null;
+  lineId: string | null;
+  at: string;
+  revision: number;
 }
 
 export const CATEGORY_LABEL: Record<CategoryCode, { es: string; en: string }> = {

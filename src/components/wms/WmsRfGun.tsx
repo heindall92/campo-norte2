@@ -380,13 +380,13 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
                 </button>
               </form>
               {feedback && (
-                <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-red-300">
+                <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-red-300" role="alert">
                   <X className="h-3.5 w-3.5" />
                   {feedback}
                 </p>
               )}
               {okMsg && (
-                <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300">
+                <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300" role="status">
                   <Check className="h-3.5 w-3.5" />
                   {okMsg}
                 </p>

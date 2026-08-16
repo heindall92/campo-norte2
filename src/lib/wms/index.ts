@@ -32,6 +32,10 @@ export * from "./audit";
 export * from "./offline-queue";
 export * from "./offline-apply";
 export * from "./tower";
+export * from "./reservations";
+export * from "./returns";
+export * from "./permissions";
+export * from "./copilot";
 
 import { buildWmsSeed } from "./seed";
 import { normalizeWmsSnapshot, snapshotLooksUsable } from "./normalize";

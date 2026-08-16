@@ -923,6 +923,7 @@ export function buildWmsSeed(): WmsSnapshot {
     mermaEvents: [],
     slotFixes: [],
     auditLogs: [],
+    reservations: [],
   };
 }
 

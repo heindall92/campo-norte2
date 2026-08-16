@@ -27,6 +27,7 @@ export function scopeSnapshotToOrg(snap: WmsSnapshot, orgId: string): WmsSnapsho
     costs: snap.costs.filter((c) => siteIds.has(c.siteId)),
     pickWaves: snap.pickWaves.filter((w) => siteIds.has(w.siteId)),
     auditLogs: (snap.auditLogs ?? []).filter((a) => !a.warehouseId || siteIds.has(a.warehouseId)),
+    reservations: (snap.reservations ?? []).filter((r) => siteIds.has(r.warehouseId)),
     carriers: snap.carriers.filter((c) => c.orgId === orgId),
     movements: snap.movements.filter((m) => {
       const slotId = m.toSlotId ?? m.fromSlotId;
@@ -39,4 +40,30 @@ export function scopeSnapshotToOrg(snap: WmsSnapshot, orgId: string): WmsSnapsho
 
 export function belongsToOrg(snap: WmsSnapshot, siteId: string, orgId = snap.org.id): boolean {
   return snap.sites.some((s) => s.id === siteId && s.orgId === orgId);
+}
+
+/** Aísla un centro. No inventa el otro hub. */
+export function scopeSnapshotToWarehouse(snap: WmsSnapshot, siteId: string): WmsSnapshot {
+  if (!belongsToOrg(snap, siteId)) {
+    return scopeSnapshotToOrg({ ...snap, sites: [] }, snap.org.id);
+  }
+  const scoped = scopeSnapshotToOrg(snap, snap.org.id);
+  const sites = scoped.sites.filter((s) => s.id === siteId);
+  const siteIds = new Set(sites.map((s) => s.id));
+  return {
+    ...scoped,
+    sites,
+    slots: scoped.slots.filter((s) => siteIds.has(s.siteId)),
+    pallets: scoped.pallets.filter((p) => siteIds.has(p.siteId)),
+    fleet: scoped.fleet.filter((f) => siteIds.has(f.siteId)),
+    chargers: scoped.chargers.filter((c) => siteIds.has(c.siteId)),
+    operators: scoped.operators.filter((o) => siteIds.has(o.siteId)),
+    clockPunches: scoped.clockPunches.filter((p) => siteIds.has(p.siteId)),
+    inbound: scoped.inbound.filter((i) => siteIds.has(i.siteId)),
+    outbound: scoped.outbound.filter((o) => siteIds.has(o.siteId)),
+    costs: scoped.costs.filter((c) => siteIds.has(c.siteId)),
+    pickWaves: scoped.pickWaves.filter((w) => siteIds.has(w.siteId)),
+    auditLogs: scoped.auditLogs.filter((a) => !a.warehouseId || siteIds.has(a.warehouseId)),
+    reservations: scoped.reservations.filter((r) => siteIds.has(r.warehouseId)),
+  };
 }

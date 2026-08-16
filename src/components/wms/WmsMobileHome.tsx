@@ -15,6 +15,7 @@ import {
 import { ArrowLeftRight, ChevronRight, ClipboardCheck, Clock, Package, ScanBarcode, Truck, WifiOff } from "lucide-react";
 import { WmsAisleTraceCard } from "./WmsFloorBoard";
 import { WmsJornadaCard, WmsShiftCloseCard } from "./WmsJornadaCard";
+import { WmsModeBadge } from "./WmsModeBadge";
 import { useWmsLive } from "./useWmsLive";
 
 export function WmsMobileHome({
@@ -43,6 +44,9 @@ export function WmsMobileHome({
         <h2 className="font-[family-name:var(--mps-display)] text-xl text-[var(--ink)]">
           {matched?.name ?? (lang === "es" ? "Torre de control" : "Control tower")}
         </h2>
+        <div className="mt-1">
+          <WmsModeBadge lang={lang} />
+        </div>
         {jornada && (
           <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-[var(--ink-muted)]">
             <Clock className="h-3.5 w-3.5" />

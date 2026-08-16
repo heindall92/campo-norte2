@@ -24,7 +24,7 @@ export const ROLE_LABEL: Record<UserRole, string> = {
  * son públicas por definición y solo dan acceso a datos semilla ficticios.
  *
  * La contraseña se puede rotar sin tocar código con `VITE_DEMO_PASSWORD`.
- * Con Supabase configurado, estas cuentas quedan desactivadas por completo.
+ * En PRODUCTION MODE / STRICT_AUTH estas cuentas quedan desactivadas.
  */
 const DEMO_PASSWORD =
   (import.meta.env.VITE_DEMO_PASSWORD as string | undefined)?.trim() || "norte2026";
