@@ -3,12 +3,16 @@ import { useAuth } from "@/lib/auth";
 import type { Lang } from "@/lib/i18n";
 import type { AppSection } from "@/lib/notifications";
 import {
+  computeTowerPulse,
   navigateWmsSection,
   operatorForAppUser,
   operatorJornada,
+  pendingOfflineEvents,
   rankDayPriorities,
+  recommendTowerActions,
+  WMS_DEMO_NOW,
 } from "@/lib/wms";
-import { ArrowLeftRight, ChevronRight, ClipboardCheck, Clock, Package, ScanBarcode, Truck } from "lucide-react";
+import { ArrowLeftRight, ChevronRight, ClipboardCheck, Clock, Package, ScanBarcode, Truck, WifiOff } from "lucide-react";
 import { WmsAisleTraceCard } from "./WmsFloorBoard";
 import { WmsJornadaCard, WmsShiftCloseCard } from "./WmsJornadaCard";
 import { useWmsLive } from "./useWmsLive";
@@ -26,6 +30,9 @@ export function WmsMobileHome({
   const jornada = matched ? operatorJornada(snap, matched.id) : null;
   const siteId = matched?.siteId ?? snap.sites[0]?.id;
   const priorities = rankDayPriorities(snap, siteId).slice(0, 5);
+  const pulse = computeTowerPulse(snap, siteId, new Date(WMS_DEMO_NOW));
+  const actions = recommendTowerActions(snap, siteId, new Date(WMS_DEMO_NOW)).slice(0, 2);
+  const queued = pendingOfflineEvents().length;
 
   return (
     <div className="space-y-3">
@@ -52,6 +59,68 @@ export function WmsMobileHome({
       </div>
 
       {matched && <WmsJornadaCard lang={lang} snap={snap} operatorId={matched.id} onChange={commit} />}
+
+      <div className="rounded-[1.15rem] bg-[var(--field-bg)] px-3 py-2.5 shadow-sm">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+          {lang === "es" ? "¿Qué está pasando?" : "What's happening?"}
+        </p>
+        <p className="mt-1 text-xs text-[var(--ink)]">
+          {lang === "es" ? "Stock" : "Stock"} {pulse.stockAvailabilityPct}% ·{" "}
+          {lang === "es" ? "olas" : "waves"} {pulse.wavesOpen} · picking {pulse.pickingProgressPct}% ·{" "}
+          {lang === "es" ? "muelle" : "dock"} {pulse.dockOccupancyPct}%
+        </p>
+        <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
+          {lang === "es" ? "Pedidos pend." : "Orders pend."} {pulse.ordersPending} ·{" "}
+          {lang === "es" ? "retraso ASN" : "ASN delay"} {pulse.asnDelayed} ·{" "}
+          {lang === "es" ? "cut-off" : "cut-off"} {pulse.cutOffRisk} ·{" "}
+          {lang === "es" ? "flota" : "fleet"} {pulse.fleetOperative}/{pulse.fleetTotal}
+        </p>
+        {queued > 0 && (
+          <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--warn-ink)]">
+            <WifiOff className="h-3 w-3" />
+            {queued} {lang === "es" ? "eventos RF a sincronizar" : "RF events to sync"}
+          </p>
+        )}
+      </div>
+
+      {actions.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+            {lang === "es" ? "¿Qué debo hacer?" : "What should I do?"}
+          </p>
+          {actions.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              className="flex w-full min-h-11 flex-col items-start rounded-[1.15rem] bg-[var(--field-bg)] px-3 py-2.5 text-left shadow-sm"
+              onClick={() => {
+                navigateWmsSection(a.section, { waveId: a.waveId, orderId: a.orderId });
+                onNavigate(a.section);
+              }}
+            >
+              <span className="text-sm text-[var(--ink)]">{lang === "es" ? a.titleEs : a.titleEn}</span>
+              <span className="mt-1 text-[11px] font-semibold text-[var(--accent)]">
+                {lang === "es" ? a.actionEs : a.actionEn}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => onNavigate("rf")}
+        className="flex min-h-14 w-full flex-col items-start justify-center rounded-[1.15rem] bg-[#0f172a] px-3 py-3 text-left text-white shadow-sm"
+      >
+        <span className="inline-flex items-center gap-1.5 text-sm font-semibold">
+          <ScanBarcode className="h-4 w-4 text-amber-300" />
+          {lang === "es" ? "Pistola RF / PDA" : "RF / PDA gun"}
+        </span>
+        <span className="mt-1 text-[11px] text-white/70">
+          SCAN LOCATION → SCAN SKU → CONFIRM QTY → COMPLETE
+        </span>
+      </button>
+
       <WmsAisleTraceCard lang={lang} siteId={siteId} />
       <WmsShiftCloseCard lang={lang} snap={snap} siteId={siteId} />
 

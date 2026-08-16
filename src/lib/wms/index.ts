@@ -28,6 +28,10 @@ export * from "./slot-fix";
 export * from "./uom";
 export * from "./lots";
 export * from "./order-state";
+export * from "./audit";
+export * from "./offline-queue";
+export * from "./offline-apply";
+export * from "./tower";
 
 import { buildWmsSeed } from "./seed";
 import { normalizeWmsSnapshot, snapshotLooksUsable } from "./normalize";

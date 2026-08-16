@@ -382,6 +382,23 @@ export interface StockMovement {
   note: string;
 }
 
+/** Bitácora append-only. No se borra desde la UI. */
+export interface WmsAuditLog {
+  id: string;
+  actorId: string | null;
+  organizationId: string;
+  warehouseId: string | null;
+  action: string;
+  entity: string;
+  entityId: string;
+  beforeData: Record<string, unknown> | null;
+  afterData: Record<string, unknown> | null;
+  timestamp: string;
+  reason: string;
+  deviceId: string | null;
+  correlationId: string;
+}
+
 export interface WmsSnapshot {
   org: WmsOrg;
   /** true = semilla local de almacén, no es el Data Hub de producción */
@@ -405,6 +422,7 @@ export interface WmsSnapshot {
   superAssignments: SuperAssignment[];
   mermaEvents: MermaEvent[];
   slotFixes: SlotFix[];
+  auditLogs: WmsAuditLog[];
 }
 
 export const CATEGORY_LABEL: Record<CategoryCode, { es: string; en: string }> = {

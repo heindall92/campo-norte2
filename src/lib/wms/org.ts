@@ -26,6 +26,7 @@ export function scopeSnapshotToOrg(snap: WmsSnapshot, orgId: string): WmsSnapsho
     outbound: snap.outbound.filter((o) => siteIds.has(o.siteId)),
     costs: snap.costs.filter((c) => siteIds.has(c.siteId)),
     pickWaves: snap.pickWaves.filter((w) => siteIds.has(w.siteId)),
+    auditLogs: (snap.auditLogs ?? []).filter((a) => !a.warehouseId || siteIds.has(a.warehouseId)),
     carriers: snap.carriers.filter((c) => c.orgId === orgId),
     movements: snap.movements.filter((m) => {
       const slotId = m.toSlotId ?? m.fromSlotId;

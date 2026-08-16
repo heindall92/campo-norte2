@@ -49,6 +49,7 @@ export function normalizeWmsSnapshot(snap: WmsSnapshot): WmsSnapshot {
       : [],
     mermaEvents: Array.isArray(snap.mermaEvents) ? snap.mermaEvents : [],
     slotFixes: Array.isArray(snap.slotFixes) ? snap.slotFixes : [],
+    auditLogs: Array.isArray(snap.auditLogs) ? snap.auditLogs : [],
   };
 }
 

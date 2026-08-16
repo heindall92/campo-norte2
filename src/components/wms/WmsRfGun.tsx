@@ -2,10 +2,19 @@ import { Badge, Card } from "@/components/CrmChrome";
 import { useAuth } from "@/lib/auth";
 import type { Lang } from "@/lib/i18n";
 import {
+  appendAuditLog,
+  applyOfflineRfEvent,
   applyRfScan,
   assertCanPick,
   buildRfQueue,
   confirmRfTask,
+  enqueueOfflineEvent,
+  loadWmsSnapshot,
+  localDeviceId,
+  pendingOfflineEvents,
+  readOfflineQueue,
+  saveWmsSnapshot,
+  syncOfflineQueue,
   nextFloorTicket,
   operatorByCode,
   operatorForAppUser,
@@ -21,7 +30,7 @@ import {
   type RfStep,
 } from "@/lib/wms";
 import { cn } from "@/lib/utils";
-import { Check, MapPin, Package, ScanLine, UserRound, X } from "lucide-react";
+import { Check, MapPin, Package, ScanLine, UserRound, WifiOff, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { WmsMermaCard, WmsSlotFixCard, WmsSuperFinishCard } from "./WmsFloorBoard";
 import { WmsJornadaCard } from "./WmsJornadaCard";
@@ -64,6 +73,39 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [closeCue, setCloseCue] = useState<CloseCueInput | null>(null);
+  const [online, setOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
+  const [queued, setQueued] = useState(() => pendingOfflineEvents().length);
+
+  useEffect(() => {
+    const ping = () => setOnline(typeof navigator === "undefined" ? true : navigator.onLine);
+    const flush = () => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) return;
+      const actor = operatorId || matched?.id || null;
+      syncOfflineQueue(
+        readOfflineQueue(),
+        (ev) => {
+          const current = loadWmsSnapshot();
+          const applied = applyOfflineRfEvent(current, ev, actor);
+          if (!applied.ok) return { ok: false, reason: applied.reason };
+          saveWmsSnapshot(applied.snap);
+          return { ok: true };
+        },
+        true,
+      );
+      persist(loadWmsSnapshot());
+      setQueued(pendingOfflineEvents().length);
+    };
+    const onOnline = () => {
+      ping();
+      flush();
+    };
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", ping);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", ping);
+    };
+  }, [matched?.id, operatorId, persist]);
 
   useEffect(() => {
     if (session) return;
@@ -114,13 +156,51 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
         return;
       }
     }
-    const result = confirmRfTask(snap, session, operatorId || matched?.id || null);
+    const actor = operatorId || matched?.id || null;
+    const deviceId = localDeviceId();
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      enqueueOfflineEvent({
+        id: `off-${session.task.id}-${session.task.lineId ?? "x"}-${Date.now()}`,
+        at: new Date().toISOString(),
+        kind: session.task.kind === "putaway" ? "putaway" : session.task.kind === "count" ? "count" : "confirm_pick",
+        entity: session.task.kind,
+        entityId: session.task.lineId ?? session.task.id,
+        payload: {
+          qty: session.qty,
+          sscc: session.sscc,
+          from: session.fromCode,
+          to: session.toCode,
+          siteId: session.task.siteId,
+          taskId: session.task.id,
+          deviceId,
+        },
+        correlationId: `rf-${session.task.id}`,
+      });
+      setQueued(pendingOfflineEvents().length);
+      setOkMsg(lang === "es" ? "Sin red: evento en cola. No se ha tocado el stock." : "Offline: event queued. Stock was not changed.");
+      setFeedback(null);
+      return;
+    }
+    const result = confirmRfTask(snap, session, actor);
     if (!result.ok) {
       setOkMsg(null);
       setFeedback(lang === "es" ? "No se pudo confirmar: revisa los escaneos" : "Could not confirm: check scans");
       return;
     }
-    persist(result.snap);
+    persist(
+      appendAuditLog(result.snap, {
+        actorId: actor,
+        warehouseId: session.task.siteId,
+        action: "rf_confirm",
+        entity: session.task.kind,
+        entityId: session.task.lineId ?? session.task.id,
+        beforeData: { step: session.step },
+        afterData: { qty: session.qty, sscc: session.sscc },
+        reason: session.task.labelEs,
+        deviceId,
+        correlationId: `rf-${session.task.id}`,
+      }),
+    );
     const nextQueue = buildRfQueue(
       result.snap,
       siteId,
@@ -165,9 +245,19 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
         </h2>
         <p className="mt-1 max-w-2xl text-sm text-[var(--ink-muted)]">
           {lang === "es"
-            ? "Te identificas con tu código de operario. El ticket manda súper, pasillo, hueco y cantidad. El aparato no te asigna él solo."
-            : "You identify with your operator code. The ticket sends store, aisle, slot and qty. The device does not assign you by itself."}
+            ? "SCAN LOCATION → SCAN SKU/SSCC → CONFIRM QTY → COMPLETE. Sin red el evento se guarda; al volver se aplica o queda en conflicto. El aparato no te asigna él solo."
+            : "SCAN LOCATION → SCAN SKU/SSCC → CONFIRM QTY → COMPLETE. Offline events are queued; on reconnect they apply or conflict. The device does not assign you by itself."}
         </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <RfFlowSteps step={session?.step ?? "from"} lang={lang} />
+          <Badge tone={online ? "good" : "warn"}>{online ? "online" : "offline"}</Badge>
+          {queued > 0 && (
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--warn-ink)]">
+              <WifiOff className="h-3.5 w-3.5" />
+              {queued} {lang === "es" ? "en cola" : "queued"}
+            </span>
+          )}
+        </div>
       </header>
 
       <div className="flex flex-wrap gap-2">
@@ -448,5 +538,33 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
       )}
       <WmsSlotFixCard lang={lang} siteId={siteId} />
     </div>
+  );
+}
+
+const FLOW_STEPS: { id: RfStep | "complete"; es: string; en: string }[] = [
+  { id: "from", es: "1 · Location", en: "1 · Location" },
+  { id: "sscc", es: "2 · SKU / SSCC", en: "2 · SKU / SSCC" },
+  { id: "qty", es: "3 · Qty", en: "3 · Qty" },
+  { id: "complete", es: "4 · Complete", en: "4 · Complete" },
+];
+
+function RfFlowSteps({ step, lang }: { step: RfStep; lang: Lang }) {
+  const current = step === "to" ? "sscc" : step === "ready" ? "complete" : step;
+  return (
+    <ol className="flex flex-wrap gap-1.5">
+      {FLOW_STEPS.map((s) => (
+        <li
+          key={s.id}
+          className={cn(
+            "rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide",
+            s.id === current
+              ? "bg-amber-500 text-slate-950"
+              : "bg-[var(--field-bg)] text-[var(--ink-muted)]",
+          )}
+        >
+          {lang === "es" ? s.es : s.en}
+        </li>
+      ))}
+    </ol>
   );
 }

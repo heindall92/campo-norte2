@@ -922,6 +922,7 @@ export function buildWmsSeed(): WmsSnapshot {
     superAssignments: [],
     mermaEvents: [],
     slotFixes: [],
+    auditLogs: [],
   };
 }
 
