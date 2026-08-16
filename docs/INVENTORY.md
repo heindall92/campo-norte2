@@ -19,6 +19,7 @@ Unidad de ATP / ledger = **balance** por `(org, sku, lote, ubicación)` + **tran
 | `inventory_transactions` | ledger | 16 tipos: RECEIPT … RELEASE |
 | `inventory_reservations` | holds de ATP | Distinto de `reservations` (hold de palet) y de `mps_reservations` (viajes). |
 | `inventory_adjustments` / `inventory_counts` | auditoría de merma/conteo | Apuntan al `txId` |
+| `countSessions` / `countLines` | oleada 4 | Encima de `planCycleCounts`. Semilla vacía |
 
 ### Regla de available
 
