@@ -25,6 +25,9 @@ export * from "./floor";
 export * from "./merma";
 export * from "./voice";
 export * from "./slot-fix";
+export * from "./uom";
+export * from "./lots";
+export * from "./order-state";
 
 import { buildWmsSeed } from "./seed";
 import { normalizeWmsSnapshot, snapshotLooksUsable } from "./normalize";
