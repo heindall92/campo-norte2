@@ -94,6 +94,7 @@ create table if not exists public.wms_inventory_transactions (
   to_location_id text,
   qty numeric not null,
   counted_qty numeric,
+  bucket text check (bucket in ('on_hand', 'blocked', 'quarantined')),
   uom text not null default 'ud',
   reason text not null default '',
   ref_type text,
