@@ -47,6 +47,7 @@ export * from "./receiving";
 export * from "./replenishment";
 export * from "./packing";
 export * from "./shipping";
+export * from "./dock";
 
 import { buildWmsSeed } from "./seed";
 import { normalizeWmsSnapshot, snapshotLooksUsable } from "./normalize";

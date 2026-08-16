@@ -1,4 +1,5 @@
 import { applyTxToSnapshot, findBalance, ledgerLocationForPallet, locationOfPallet } from "./inventory-core";
+import { recordDockEventForOrder } from "./dock";
 import { isSsccTaken } from "./packing";
 import { markShipmentPacked, markShipmentShipped, markShipmentStaged } from "./shipping";
 import type { OutboundOrder, Pallet, PickLine, Slot, WmsSnapshot } from "./types";
@@ -498,7 +499,8 @@ export function stageOrderToDock(
     next = led.snap;
   }
   const staged = markShipmentStaged(next, order.id, at);
-  return { ok: true, snap: staged.ok ? staged.snap : next };
+  const withShip = staged.ok ? staged.snap : next;
+  return { ok: true, snap: recordDockEventForOrder(withShip, order.id, "load", at, operatorId) };
 }
 
 /**
@@ -581,5 +583,6 @@ export function shipOutboundOrder(
     next = led.snap;
   }
   const shipped = markShipmentShipped(next, orderId, at);
-  return { ok: true, snap: shipped.ok ? shipped.snap : next };
+  const withShip = shipped.ok ? shipped.snap : next;
+  return { ok: true, snap: recordDockEventForOrder(withShip, orderId, "departure", at, operatorId) };
 }

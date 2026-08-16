@@ -73,6 +73,12 @@ export function scopeSnapshotToOrg(snap: WmsSnapshot, orgId: string): WmsSnapsho
       const order = snap.outbound.find((o) => o.id === ship.orderId);
       return order ? siteIds.has(order.siteId) : false;
     }),
+    docks: (snap.docks ?? []).filter((d) => siteIds.has(d.warehouseId)),
+    dockAppointments: (snap.dockAppointments ?? []).filter((a) => siteIds.has(a.warehouseId)),
+    dockEvents: (snap.dockEvents ?? []).filter((e) => {
+      const appt = (snap.dockAppointments ?? []).find((a) => a.id === e.appointmentId);
+      return appt ? siteIds.has(appt.warehouseId) : false;
+    }),
     memberships: (snap.memberships ?? []).filter((m) => m.organizationId === orgId),
     carriers: snap.carriers.filter((c) => c.orgId === orgId),
     movements: snap.movements.filter((m) => {
@@ -156,6 +162,12 @@ export function scopeSnapshotToWarehouse(snap: WmsSnapshot, siteId: string): Wms
       if (!ship) return false;
       const order = scoped.outbound.find((o) => o.id === ship.orderId);
       return order ? siteIds.has(order.siteId) : false;
+    }),
+    docks: (scoped.docks ?? []).filter((d) => siteIds.has(d.warehouseId)),
+    dockAppointments: (scoped.dockAppointments ?? []).filter((a) => siteIds.has(a.warehouseId)),
+    dockEvents: (scoped.dockEvents ?? []).filter((e) => {
+      const appt = (scoped.dockAppointments ?? []).find((a) => a.id === e.appointmentId);
+      return appt ? siteIds.has(appt.warehouseId) : false;
     }),
   };
 }

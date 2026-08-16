@@ -452,6 +452,40 @@ export interface TrackingEvent {
   source: TrackingEventSource;
 }
 
+/** Muelle físico escrito. capacity null = no hay cupo configurado; no se inventa 1. */
+export interface Dock {
+  id: string;
+  warehouseId: string;
+  code: string;
+  name: string;
+  capacity: number | null;
+  createdAt: string;
+}
+
+export const DOCK_EVENT_KINDS = ["arrival", "check_in", "assignment", "load", "unload", "departure"] as const;
+export type DockEventKind = (typeof DOCK_EVENT_KINDS)[number];
+
+export interface DockAppointment {
+  id: string;
+  dockId: string;
+  warehouseId: string;
+  orderId: string | null;
+  asnId: string | null;
+  windowStart: string;
+  windowEnd: string;
+  cancelledAt: string | null;
+  createdAt: string;
+}
+
+export interface DockEvent {
+  id: string;
+  appointmentId: string;
+  kind: DockEventKind;
+  at: string;
+  note: string;
+  operatorId: string | null;
+}
+
 /** El patrón o un técnico asigna un súper (pedido) al código del operario. */
 export interface SuperAssignment {
   id: string;
@@ -538,6 +572,10 @@ export interface WmsSnapshot {
   /** Expediciones. Vacío en semilla: se abren al embalar/cargar/expedir. */
   shipments: WmsShipment[];
   trackingEvents: TrackingEvent[];
+  /** Muelles escritos. Vacío en semilla: order.dock sigue siendo texto. */
+  docks: Dock[];
+  dockAppointments: DockAppointment[];
+  dockEvents: DockEvent[];
   superAssignments: SuperAssignment[];
   mermaEvents: MermaEvent[];
   slotFixes: SlotFix[];

@@ -62,6 +62,9 @@ export function normalizeWmsSnapshot(snap: WmsSnapshot): WmsSnapshot {
     packPackages: Array.isArray(snap.packPackages) ? snap.packPackages : [],
     shipments: Array.isArray(snap.shipments) ? snap.shipments : [],
     trackingEvents: Array.isArray(snap.trackingEvents) ? snap.trackingEvents : [],
+    docks: Array.isArray(snap.docks) ? snap.docks : [],
+    dockAppointments: Array.isArray(snap.dockAppointments) ? snap.dockAppointments : [],
+    dockEvents: Array.isArray(snap.dockEvents) ? snap.dockEvents : [],
     countSessions: Array.isArray(snap.countSessions) ? snap.countSessions : [],
     countLines: Array.isArray(snap.countLines) ? snap.countLines : [],
     org: {
