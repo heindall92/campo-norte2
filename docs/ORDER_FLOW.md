@@ -10,7 +10,11 @@ OutboundOrder (pendiente)
   → shipOutboundOrder          tracking null si no se escribe
 ```
 
-Estados del pedido: `pendiente | picking | embalaje | muelle | expedido`.
+Estados del pedido en planta: `pendiente | picking | embalaje | muelle | expedido`.
+
+Máquina del brief (`CREATED → … → SHIPPED | CANCELLED`): `src/lib/wms/order-state.ts`.
+Transición inválida → error. Cada éxito devuelve un registro `{ from, to, event, at }`.
+**No sustituye** el status español en la UI. Mapa: `pendiente=CREATED`, `picking=PICKING`, `embalaje=PACKING`, `muelle=STAGED`, `expedido=SHIPPED`. No se inventa `ALLOCATED` en la semilla.
 
 No hay entidad `Shipment` aparte. No hay allocation ATP: la ola coge palets libres que no estén en otra ola abierta.
 

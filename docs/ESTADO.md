@@ -86,7 +86,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | 13 | IA contextual global + streaming + decay con fecha + detalle score + EN ESTA VISTA + FAB arrastrable | `AiAssistantHost`, `chat-stream.ts`, `coldBy*`, `ViewTotals` leads/reservas/clientes, `DraggableAiFab` |
 | 13b | Streaming también en pestaña Conocimiento | `KnowledgePanel` → `askKnowledgeStream` |
 
-**Verificación automática:** lint, `npm test` (**107**), `npm run build` — limpios.
+**Verificación automática:** lint, `npm test` (**195**), `npm run build` — limpios.
 
 **Decisiones de alcance (no son olvidos):**
 - **Núcleo = viajes + leads.** Todo lo demás deliberado → `docs/FUERA-DE-NUCLEO.md`.
@@ -177,7 +177,9 @@ Leer y revisar (índice: `docs/ARCHITECTURE.md` y `docs/ROADMAP.md`):
 - Producto: `INVENTORY.md`, `ORDER_FLOW.md`, `RECEIVING.md`, `PICKING.md`, `SHIPPING.md`, `API.md`, `DEPLOYMENT.md`, `TESTING.md`
 - Brief 39–44 documentado (semilla coherente, logs, migrations, phases 0–14). **Sin código nuevo.**
 
-**Parar.** No abrir Phase 1 del brief (ni oleada de provider/ledger) hasta que el dueño elija.
+Motores puros (briefs 8–11), **sin cablear UI**: UOM, FEFO, parser GS1 (`src/infrastructure/barcode`), máquina de pedido. Planta sigue con `ud/caja` y `pendiente|picking|…`.
+
+**Parar el resto.** Phase 1 (RLS/ledger) y cablear FEFO/UOM a olas no se abren solos.
 
 ### Plan B — repo público (fecha límite 2026-08-22)
 

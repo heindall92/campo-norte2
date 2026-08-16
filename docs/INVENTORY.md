@@ -20,6 +20,7 @@ Merma (`declareMerma`) baja `qty`. Cycle-count (`confirmCycleCount`) pisa `qty` 
 2. `available = on_hand − held − quarantined`. Hoy `available` no existe.
 3. Un lote es el `lot` del palet. No se inventan lotes extra en la semilla para «llenar» el brief.
 4. Ajuste solo con motivo (conteo, merma, slot-fix). Sin qty negativa.
+5. UOM y FEFO tienen motor puro (`uom.ts`, `lots.ts`) sin cambiar el pick de planta.
 
 ---
 

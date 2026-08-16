@@ -13,9 +13,9 @@ Phase 0 del brief = auditoría. **Hecha.** El código de planta no se ha parado:
 |---|---|---|---|
 | **0** | Audit + architecture | Hecho: `ARCHITECTURE*.md`, `DATABASE*.md`, `MIGRATION_PLAN.md`, este índice | — |
 | **1** | Multi-tenant + Auth + RBAC | Auth/RBAC CRM **existe**. WMS: `org_id` en snapshot, sin RLS de stock | Tras Phase 0 revisada. Un tenant. No inventar org 2 |
-| **2** | Warehouse + Locations + Products + UOM | **Existe** (sites, slots, SKU, uom). Falta persistirlo | Junto al ledger o justo después |
-| **3** | Inventory ledger + balances + lots | Palets + movements JSON. Sin balances | Oleada ledger + extract movements |
-| **4** | Orders + allocation + reservations | Pedidos + olas. **Sin** allocation/holds | Oleada reservas |
+| **2** | Warehouse + Locations + Products + UOM | Sites/slots/SKU hechos. Motor UOM puro (`uom.ts`), no persistido | Ledger + tabla de factores |
+| **3** | Inventory ledger + balances + lots | Palets + `lots.ts` FEFO (sin cablear a la ola) | Extract movements + usar FEFO al asignar |
+| **4** | Orders + allocation + reservations | Pedidos + `order-state.ts` (sin sustituir status ES) | Holds + cablear transiciones |
 | **5** | Receiving + ASN + putaway | ASN plano + putaway zona | Líneas, incidencias, reglas |
 | **6** | Waves + picking + replenishment | Olas + pick **hechos**. Reposición = cara vacía | MIN/MAX encima |
 | **7** | Packing + SSCC + shipping | Load unit + ship. Sin SSCC gen / shipments | Adapter mock + registro SSCC |

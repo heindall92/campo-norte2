@@ -92,3 +92,6 @@ No hay `src/modules/` todavía. No se crean carpetas vacías en Phase 0.
 | [DEPLOYMENT.md](./DEPLOYMENT.md) | Vercel + Supabase |
 | [TESTING.md](./TESTING.md) | Vitest, gates por fase |
 | [ROADMAP.md](./ROADMAP.md) | Phases 0–14 del brief vs oleadas |
+| [UOM.md](./UOM.md) | Conversiones y unidad base |
+| [LOTS.md](./LOTS.md) | FIFO / FEFO / LIFO / MANUAL |
+| [BARCODE.md](./BARCODE.md) | Parser GS1 desacoplado |
