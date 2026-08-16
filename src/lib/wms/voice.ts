@@ -1,6 +1,6 @@
-import { nextFloorTicket, type FloorTicket } from "./floor";
+import { LOAD_KIND_VOICE, nextFloorTicket, type FloorTicket } from "./floor";
 import { confirmPick, type ConfirmPickError, type ConfirmPickResult } from "./picking";
-import type { PickPack, Sku, WmsSnapshot } from "./types";
+import type { LoadUnitKind, PickPack, Sku, WmsSnapshot } from "./types";
 
 /** Preferencia del aparato: si los auriculares dictan solos. No es telemetría. */
 export const VOICE_HEADSET_PREF_KEY = "cn-wms-headset-on";
@@ -127,6 +127,7 @@ export interface VoicePrompt {
 export type VoiceTicket = Pick<FloorTicket, "storeName" | "aisle" | "slotCode" | "skuName" | "skuId" | "qty"> & {
   pickPack?: PickPack;
   stockInSlot?: number | null;
+  loadKind?: LoadUnitKind | null;
 };
 
 export function slotMatchesTake(stockInSlot: number | null | undefined, takeQty: number): boolean {
@@ -168,8 +169,15 @@ export function buildVoicePrompt(ticket: VoiceTicket, lang: "es" | "en" = "es"):
       : `${family.familyEn}, aisle ${aisleRangeLabel(family)} on the floor`
     : null;
 
+  const kindStep = ticket.loadKind
+    ? lang === "es"
+      ? `Tómalo en ${LOAD_KIND_VOICE[ticket.loadKind].es}`
+      : `Take it on a ${LOAD_KIND_VOICE[ticket.loadKind].en}`
+    : null;
+
   const steps = [
     ticket.storeName ? (lang === "es" ? `Súper ${ticket.storeName}` : `Store ${ticket.storeName}`) : null,
+    kindStep,
     familyStep,
     lang === "es" ? `Pasillo ${ticket.aisle}` : `Aisle ${ticket.aisle}`,
     lang === "es" ? `Hueco ${ticket.slotCode}` : `Slot ${ticket.slotCode}`,
@@ -227,7 +235,68 @@ export type CloseCueInput = {
   storeName: string;
   orderCode: string;
   dockAisle: string;
+  loadKind?: LoadUnitKind | null;
 };
+
+export function buildFinishAskPrompt(
+  input: CloseCueInput,
+  lang: "es" | "en" = "es",
+): ClosePrompt {
+  const store = input.storeName.trim();
+  const kind = input.loadKind;
+  const unitWord =
+    kind === "caja"
+      ? lang === "es"
+        ? "cajas o box"
+        : "boxes"
+      : kind === "carro"
+        ? lang === "es"
+          ? "carros"
+          : "roll cages"
+        : kind === "palet"
+          ? lang === "es"
+            ? "palets"
+            : "pallets"
+          : lang === "es"
+            ? "unidades"
+            : "units";
+  const steps =
+    lang === "es"
+      ? [
+          store ? `Has finalizado el súper ${store}` : `Has finalizado el pedido ${input.orderCode}`,
+          `¿Cuántos ${unitWord} has hecho?`,
+        ]
+      : [
+          store ? `You finished store ${store}` : `You finished order ${input.orderCode}`,
+          `How many ${unitWord} did you make?`,
+        ];
+  return { text: `${steps.join(". ")}.`, steps, dockAisle: input.dockAisle };
+}
+
+export function buildLabelDockPrompt(
+  input: CloseCueInput & { units: number; labels: number },
+  lang: "es" | "en" = "es",
+): ClosePrompt {
+  const store = input.storeName.trim();
+  const dock = input.dockAisle.trim();
+  const steps =
+    lang === "es"
+      ? [
+          store ? `Súper ${store} finalizado` : `Pedido ${input.orderCode} finalizado`,
+          `${input.units} ${input.loadKind === "caja" ? "box" : input.loadKind === "carro" ? "carros" : "palets"}`,
+          `Imprime ${input.labels} etiquetas`,
+          input.loadKind === "palet" ? "Una por cada lado de cada palet" : "Pégalas a cada unidad",
+          dock ? `En pantalla, deja el súper en el muelle ${dock}` : "En pantalla, deja el súper en el muelle que marca",
+        ]
+      : [
+          store ? `Store ${store} finished` : `Order ${input.orderCode} finished`,
+          `${input.units} units`,
+          `Print ${input.labels} labels`,
+          input.loadKind === "palet" ? "One per side of each pallet" : "Stick one on each unit",
+          dock ? `On screen, leave the store on dock ${dock}` : "On screen, leave the store on the dock shown",
+        ];
+  return { text: `${steps.join(". ")}.`, steps, dockAisle: dock };
+}
 
 /** Al terminar el súper el aparato dice fleje, etiqueta escrita y pasillo de muelle. */
 export function buildClosePrompt(input: CloseCueInput, lang: "es" | "en" = "es"): ClosePrompt {
@@ -272,6 +341,7 @@ export function remainderLabel(
 
 export type VoiceCue =
   | { kind: "ticket"; prompt: VoicePrompt; ticket: FloorTicket; remaining: number | null }
+  | { kind: "ask_units"; prompt: ClosePrompt; remaining: number | null }
   | { kind: "close"; prompt: ClosePrompt; remaining: number | null };
 
 /**
@@ -289,7 +359,7 @@ export function voiceCueAfterMark(
   if (next) {
     return { kind: "ticket", prompt: buildVoicePrompt(next, lang), ticket: next, remaining };
   }
-  return { kind: "close", prompt: buildClosePrompt(last, lang), remaining };
+  return { kind: "ask_units", prompt: buildFinishAskPrompt(last, lang), remaining };
 }
 
 export function speakVoiceCue(cue: VoiceCue, lang: "es" | "en" = "es"): boolean {
@@ -304,6 +374,7 @@ export type VoiceCommand =
   | { kind: "repeat_slot" }
   | { kind: "article" }
   | { kind: "confirm"; qty: number }
+  | { kind: "count"; qty: number }
   | { kind: "unknown" };
 
 const SPOKEN_NUMBERS: Record<string, number> = {
@@ -373,6 +444,11 @@ export function parseVoiceCommand(utterance: string): VoiceCommand {
   if (confirm) {
     const qty = parseSpokenQty(confirm[1] ?? "");
     if (qty != null && qty > 0) return { kind: "confirm", qty };
+  }
+  const counted = text.match(/^(\d+|[a-z]+)(?:\s+(palets?|cajas?|box|carros?|unidades?))?$/);
+  if (counted) {
+    const qty = parseSpokenQty(counted[1] ?? "");
+    if (qty != null && qty > 0) return { kind: "count", qty };
   }
   return { kind: "unknown" };
 }

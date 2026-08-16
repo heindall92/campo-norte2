@@ -10,6 +10,7 @@ import {
   operatorByCode,
   operatorForAppUser,
   confirmVoicePick,
+  declareUnitsMade,
   remainingOnPallet,
   reportSlotMismatch,
   voiceCueAfterMark,
@@ -22,7 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Check, MapPin, Package, ScanLine, UserRound, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { WmsMermaCard, WmsSlotFixCard } from "./WmsFloorBoard";
+import { WmsMermaCard, WmsSlotFixCard, WmsSuperFinishCard } from "./WmsFloorBoard";
 import { WmsJornadaCard } from "./WmsJornadaCard";
 import { WmsVoiceHeadset } from "./WmsVoiceHeadset";
 import { useWmsLive } from "./useWmsLive";
@@ -403,7 +404,40 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
           }}
         />
       )}
-      {!floorTicket && closeCue && <WmsVoiceHeadset lang={lang} close={closeCue} />}
+      {!floorTicket && closeCue && (() => {
+        const order = snap.outbound.find((o) => o.code === closeCue.orderCode);
+        const assignment =
+          operatorId && order
+            ? snap.superAssignments.find((a) => a.operatorId === operatorId && a.orderId === order.id)
+            : null;
+        const cue = { ...closeCue, loadKind: closeCue.loadKind ?? assignment?.loadKind ?? null };
+        if (assignment?.unitsMade != null) {
+          return (
+            <WmsVoiceHeadset
+              lang={lang}
+              labelCue={{ ...cue, units: assignment.unitsMade, labels: assignment.labelsPrinted }}
+            />
+          );
+        }
+        return (
+          <WmsVoiceHeadset
+            lang={lang}
+            askUnits={cue}
+            onUnitsSaid={(n) => {
+              if (!operatorId || !order) return;
+              const result = declareUnitsMade(snap, operatorId, order.id, n);
+              if (result.ok) persist(result.snap);
+            }}
+          />
+        );
+      })()}
+      {!floorTicket && (
+        <WmsSuperFinishCard
+          lang={lang}
+          operatorId={operatorId || matched?.id || null}
+          orderId={closeCue ? snap.outbound.find((o) => o.code === closeCue.orderCode)?.id : undefined}
+        />
+      )}
       {task?.kind === "pick" && (
         <WmsMermaCard
           lang={lang}

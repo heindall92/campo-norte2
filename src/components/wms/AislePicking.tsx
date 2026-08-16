@@ -12,6 +12,7 @@ import {
   nextOpenLine,
   operatorForAppUser,
   confirmVoicePick,
+  declareUnitsMade,
   remainingOnPallet,
   reportSlotMismatch,
   voiceCueAfterMark,
@@ -46,7 +47,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { WmsLoadUnitCard, WmsMermaCard, WmsSlotFixCard } from "./WmsFloorBoard";
+import { WmsLoadUnitCard, WmsMermaCard, WmsSlotFixCard, WmsSuperFinishCard } from "./WmsFloorBoard";
 import { WmsJornadaCard } from "./WmsJornadaCard";
 import { WmsAisleGuideCard, WmsVoiceHeadset } from "./WmsVoiceHeadset";
 import { useWmsLive } from "./useWmsLive";
@@ -424,12 +425,17 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
   function lineCloseCue(): (CloseCueInput & { palletId?: string | null; pickPack?: PickPack }) | null {
     if (!line) return null;
     const order = snap.outbound.find((o) => o.code === line.orderCode);
+    const assignment =
+      wave?.operatorId && order
+        ? snap.superAssignments.find((a) => a.operatorId === wave.operatorId && a.orderId === order.id)
+        : null;
     return {
       storeName: order?.customer ?? line.orderCode,
       orderCode: line.orderCode,
       dockAisle: order?.dock ?? "",
       palletId: line.palletId,
       pickPack: line.pickPack ?? "caja",
+      loadKind: assignment?.loadKind ?? null,
     };
   }
 
@@ -713,6 +719,7 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                             qty: line.qty,
                             pickPack: line.pickPack ?? "caja",
                             stockInSlot: remainingOnPallet(snap, line.palletId),
+                            loadKind: ticket?.loadKind ?? null,
                           }}
                           remaining={remainingOnPallet(snap, line.palletId)}
                           onConfirmOk={applyVoiceOk}
@@ -874,29 +881,58 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
           ) : (
             <Card title={lang === "es" ? "Ola completada" : "Wave complete"}>
               {(() => {
-                const fallback =
-                  closeCue ??
-                  (() => {
-                    const code = wave.lines[0]?.orderCode;
-                    const order = code ? snap.outbound.find((o) => o.code === code) : undefined;
-                    if (!order) return null;
-                    return { storeName: order.customer, orderCode: order.code, dockAisle: order.dock };
-                  })();
-                return fallback ? (
+                const code = wave.lines[0]?.orderCode;
+                const order = code ? snap.outbound.find((o) => o.code === code) : undefined;
+                const assignment =
+                  wave.operatorId && order
+                    ? snap.superAssignments.find((a) => a.operatorId === wave.operatorId && a.orderId === order.id)
+                    : null;
+                const fallback = closeCue
+                  ? { ...closeCue, loadKind: closeCue.loadKind ?? assignment?.loadKind ?? null }
+                  : order
+                    ? {
+                        storeName: order.customer,
+                        orderCode: order.code,
+                        dockAisle: order.dock,
+                        loadKind: assignment?.loadKind ?? null,
+                      }
+                    : null;
+                if (!fallback) return null;
+                if (assignment?.unitsMade != null) {
+                  return (
+                    <div className="mb-3">
+                      <WmsVoiceHeadset
+                        lang={lang}
+                        labelCue={{
+                          ...fallback,
+                          units: assignment.unitsMade,
+                          labels: assignment.labelsPrinted,
+                        }}
+                        remaining={lastRemaining}
+                      />
+                    </div>
+                  );
+                }
+                return (
                   <div className="mb-3">
                     <WmsVoiceHeadset
                       lang={lang}
-                      close={fallback}
+                      askUnits={fallback}
                       remaining={lastRemaining}
                       autoSpeak={Boolean(closeCue)}
+                      onUnitsSaid={(n) => {
+                        if (!wave.operatorId || !order) return;
+                        const result = declareUnitsMade(snap, wave.operatorId, order.id, n);
+                        if (result.ok) setSnap(result.snap);
+                      }}
                     />
                   </div>
-                ) : null;
+                );
               })()}
               <p className="mb-3 text-sm text-[var(--ink-muted)]">
                 {lang === "es"
-                  ? "Todas las líneas cerradas. Fleja, escribe la etiqueta y deja la unidad en el pasillo de muelle. Embala cajas sueltas y expede solo lo picado."
-                  : "All lines closed. Strap, write the label and leave the unit on the dock aisle. Pack loose cases and ship only what was picked."}
+                  ? "Súper finalizado. Di cuántos palets has hecho. Se imprimen dos etiquetas por palet (una por lado). En pantalla, déjalo en el muelle. Luego te asignan el siguiente súper."
+                  : "Store finished. Say how many pallets you made. Two labels print per pallet (one per side). On screen, leave it on the dock. Then you get the next store."}
               </p>
               <div className="flex flex-wrap gap-2">
                 {[...new Set(wave.lines.map((l) => l.orderCode))].map((code) => {
@@ -980,7 +1016,16 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
               </div>
             </Card>
           )}
-          {!line && <WmsLoadUnitCard lang={lang} />}
+          {!line && (
+            <>
+              <WmsSuperFinishCard
+                lang={lang}
+                operatorId={wave.operatorId ?? matched?.id ?? null}
+                orderId={snap.outbound.find((o) => o.code === wave.lines[0]?.orderCode)?.id}
+              />
+              <WmsLoadUnitCard lang={lang} />
+            </>
+          )}
         </div>
       </div>
     </div>

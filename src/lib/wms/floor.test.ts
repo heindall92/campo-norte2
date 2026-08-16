@@ -2,15 +2,21 @@ import { describe, expect, it } from "vitest";
 import {
   assignSuperToOperator,
   aisleTraces,
+  buildFinishAskPrompt,
   buildWmsSeed,
   confirmPick,
+  declareUnitsMade,
+  labelCountForUnits,
   labelLoadUnit,
   nextFloorTicket,
   nextOpenLine,
   openLoadUnit,
   operatorByCode,
+  parseVoiceCommand,
   placeLoadUnitOnDock,
   strapLoadUnit,
+  superLabelFaces,
+  superSideLabelsHtml,
 } from "@/lib/wms";
 
 describe("fase 15 · asignación de súper y rastro de pasillo", () => {
@@ -109,5 +115,62 @@ describe("fase 15 · asignación de súper y rastro de pasillo", () => {
     expect(placed.snap.loadUnits[0]?.status).toBe("en_muelle");
     expect(placed.snap.loadUnits[0]?.dockSlotId).toBe(dock.id);
     expect(placeLoadUnitOnDock(placed.snap, unit.id, "Z-99-01-1").ok).toBe(false);
+  });
+});
+
+describe("fase 20 · súper en box/palet/carro y etiquetas por lado", () => {
+  it("asigna cómo tomar el súper, independiente del pedido", () => {
+    const snap = buildWmsSeed();
+    const order = snap.outbound.find((o) => o.code === "OUT-SEV-8841")!;
+    const assigned = assignSuperToOperator(snap, order.id, "OP-1903", "Sofía", "2026-08-15T10:00:00.000Z", "palet");
+    expect(assigned.ok).toBe(true);
+    if (!assigned.ok) return;
+    expect(assigned.snap.superAssignments[0]?.loadKind).toBe("palet");
+    const ticket = nextFloorTicket(assigned.snap, "op-08");
+    expect(ticket?.loadKind).toBe("palet");
+  });
+
+  it("2 palets piden 4 etiquetas, una por cada lado", () => {
+    expect(labelCountForUnits("palet", 2)).toBe(4);
+    expect(labelCountForUnits("palet", 3)).toBe(6);
+    expect(labelCountForUnits("caja", 4)).toBe(4);
+    expect(superLabelFaces("palet", 2).map((f) => `${f.unitIndex}${f.side}`)).toEqual(["1A", "1B", "2A", "2B"]);
+    expect(parseVoiceCommand("2").kind).toBe("count");
+    expect(parseVoiceCommand("cuatro")).toEqual({ kind: "count", qty: 4 });
+    const ask = buildFinishAskPrompt(
+      { storeName: "Tienda CN · Dos Hermanas", orderCode: "OUT-SEV-8841", dockAisle: "M-05", loadKind: "palet" },
+      "es",
+    );
+    expect(ask.text).toContain("finalizado");
+    expect(ask.text).toContain("palets");
+  });
+
+  it("al decir 2 palets el sistema deja 4 etiquetas imprimibles sin inventar SSCC", () => {
+    const snap = buildWmsSeed();
+    const order = snap.outbound.find((o) => o.code === "OUT-SEV-8841")!;
+    const assigned = assignSuperToOperator(snap, order.id, "OP-1903", "Luis", "2026-08-15T10:00:00.000Z", "palet");
+    expect(assigned.ok).toBe(true);
+    if (!assigned.ok) return;
+    const ticket = nextFloorTicket(assigned.snap, "op-08")!;
+    const pallet = assigned.snap.pallets.find((p) => p.id === ticket.line.palletId)!;
+    const picked = confirmPick(assigned.snap, ticket.waveId, ticket.line.id, {
+      slotCode: ticket.slotCode,
+      sscc: pallet.sscc,
+      qty: ticket.qty,
+    });
+    expect(picked.ok).toBe(true);
+    if (!picked.ok) return;
+    const done = declareUnitsMade(picked.snap, "op-08", order.id, 2);
+    expect(done.ok).toBe(true);
+    if (!done.ok) return;
+    expect(done.labels).toBe(4);
+    expect(done.snap.superAssignments[0]?.unitsMade).toBe(2);
+    const html = superSideLabelsHtml(done.snap, "op-08", order.id, "es");
+    expect(html).toBeTruthy();
+    expect(html).toContain("Lado A");
+    expect(html).toContain("Lado B");
+    expect(html).toContain(order.customer);
+    expect(html).toContain(order.dock);
+    expect(html).not.toMatch(/00384\d{13}/);
   });
 });

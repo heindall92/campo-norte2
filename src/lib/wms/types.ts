@@ -350,6 +350,12 @@ export interface SuperAssignment {
   operatorId: string;
   assignedBy: string | null;
   at: string;
+  /** Cómo tomar el súper: box, palet o carro. Lo dice quien asigna; no se deduce del pedido. */
+  loadKind: LoadUnitKind | null;
+  /** Palets/cajas/carros que dice el operario al terminar. null = aún no ha dicho. */
+  unitsMade: number | null;
+  /** Etiquetas a imprimir. En palet: 2 por unidad (una por lado). */
+  labelsPrinted: number;
 }
 
 export interface CostLine {

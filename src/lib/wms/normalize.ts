@@ -39,7 +39,14 @@ export function normalizeWmsSnapshot(snap: WmsSnapshot): WmsSnapshot {
     pickWaves: (snap.pickWaves ?? []).map(normalizeWave),
     operators: ensureShiftRoster((snap.operators ?? []).map(normalizeOperator), ROSTER_PRIMARY_SITE),
     loadUnits: Array.isArray(snap.loadUnits) ? snap.loadUnits : [],
-    superAssignments: Array.isArray(snap.superAssignments) ? snap.superAssignments : [],
+    superAssignments: Array.isArray(snap.superAssignments)
+      ? snap.superAssignments.map((a) => ({
+          ...a,
+          loadKind: a.loadKind ?? null,
+          unitsMade: a.unitsMade ?? null,
+          labelsPrinted: a.labelsPrinted ?? 0,
+        }))
+      : [],
     mermaEvents: Array.isArray(snap.mermaEvents) ? snap.mermaEvents : [],
     slotFixes: Array.isArray(snap.slotFixes) ? snap.slotFixes : [],
   };

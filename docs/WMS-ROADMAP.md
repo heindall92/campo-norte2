@@ -120,6 +120,12 @@
 - El resto en el hueco sale del palet real; no se inventa el desglose de cajas pequeñas
 - Preferencia de auriculares on/off en el aparato (local); no es telemetría
 
+## Fase 20 — Súper en box/palet/carro y etiquetas por lado (esta entrega)
+- Al identificar al operario, se le asigna el súper y si lo toma en box, palet o carro (lo dice quien asigna)
+- Al picar el último producto, la voz pregunta cuántos palets (o box/carros) ha hecho
+- 2 palets → 4 etiquetas (una por cada lado). Se imprimen con súper, muelle y lado; sin SSCC inventado
+- En pantalla deja el súper en el muelle. Luego le asignan el siguiente súper y oye pasillo y hueco
+
 ## Fase 19 — Faltante de hueco y mandos de voz (esta entrega)
 - Si el hueco no coincide (merma, cogió de más, roto, picó mal), el operario avisa desde el aparato; el jefe cuadra la cuenta en el sistema
 - El aparato dice cuántas hay en el hueco para que el operario compruebe

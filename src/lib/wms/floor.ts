@@ -21,7 +21,9 @@ export type FloorError =
   | "unit_missing"
   | "label_required"
   | "dock_slot"
-  | "lines_used";
+  | "lines_used"
+  | "kind_required"
+  | "invalid_units";
 
 export type FloorResult =
   | { ok: true; snap: WmsSnapshot; operatorId?: string; waveId?: string; unitId?: string }
@@ -49,6 +51,7 @@ export interface FloorTicket {
   /** Stock del palet en el hueco. null si no hay palet. No se inventa. */
   stockInSlot: number | null;
   sscc: string;
+  loadKind: LoadUnitKind | null;
 }
 
 export function storeNameOf(order: OutboundOrder | undefined): string {
@@ -71,6 +74,7 @@ export function nextFloorTicket(snap: WmsSnapshot, operatorId: string): FloorTic
       if (!slot || !sku) continue;
       if (blocked.has(slot.id) || slot.status === "bloqueado") continue;
       const pallet = line.palletId ? snap.pallets.find((p) => p.id === line.palletId) : null;
+      const assignment = snap.superAssignments.find((a) => a.operatorId === operatorId && a.orderId === order?.id);
       return {
         line,
         waveId: wave.id,
@@ -85,6 +89,7 @@ export function nextFloorTicket(snap: WmsSnapshot, operatorId: string): FloorTic
         pickPack: line.pickPack ?? "caja",
         stockInSlot: pallet?.qty ?? null,
         sscc: pallet?.sscc ?? "",
+        loadKind: assignment?.loadKind ?? null,
       };
     }
   }
@@ -192,6 +197,7 @@ export function assignSuperToOperator(
   operatorCode: string,
   assignedBy: string | null = null,
   at = new Date().toISOString(),
+  loadKind: LoadUnitKind | null = null,
 ): FloorResult {
   if (!operatorCode.trim()) return { ok: false, error: "code_required" };
   const operator = operatorByCode(snap, operatorCode);
@@ -224,6 +230,9 @@ export function assignSuperToOperator(
     operatorId: operator.id,
     assignedBy: assignedBy?.trim() || null,
     at,
+    loadKind,
+    unitsMade: null,
+    labelsPrinted: 0,
   };
   return {
     ok: true,
@@ -343,3 +352,161 @@ export const LOAD_KIND_LABEL: Record<LoadUnitKind, { es: string; en: string }> =
   caja: { es: "Caja / box", en: "Case / box" },
   carro: { es: "Carro", en: "Roll cage" },
 };
+
+export const LOAD_KIND_VOICE: Record<LoadUnitKind, { es: string; en: string }> = {
+  palet: { es: "palet", en: "pallet" },
+  caja: { es: "box", en: "box" },
+  carro: { es: "carro", en: "roll cage" },
+};
+
+/** Palet: una etiqueta por cada lado. Box y carro: una por unidad. */
+export function sidesPerUnit(kind: LoadUnitKind): number {
+  return kind === "palet" ? 2 : 1;
+}
+
+export function labelCountForUnits(kind: LoadUnitKind, units: number): number {
+  return Math.max(0, units) * sidesPerUnit(kind);
+}
+
+export function assignmentForOperatorOrder(
+  snap: WmsSnapshot,
+  operatorId: string,
+  orderId: string,
+): SuperAssignment | null {
+  return snap.superAssignments.find((a) => a.operatorId === operatorId && a.orderId === orderId) ?? null;
+}
+
+export interface SuperLabelFace {
+  unitIndex: number;
+  units: number;
+  side: "A" | "B";
+  sideLabel: string;
+}
+
+export function superLabelFaces(kind: LoadUnitKind, units: number, lang: "es" | "en" = "es"): SuperLabelFace[] {
+  const sides = sidesPerUnit(kind);
+  const faces: SuperLabelFace[] = [];
+  for (let i = 1; i <= units; i += 1) {
+    for (let s = 0; s < sides; s += 1) {
+      const side = s === 0 ? "A" : "B";
+      faces.push({
+        unitIndex: i,
+        units,
+        side,
+        sideLabel:
+          sides === 1
+            ? lang === "es"
+              ? "Una cara"
+              : "One face"
+            : lang === "es"
+              ? `Lado ${side}`
+              : `Side ${side}`,
+      });
+    }
+  }
+  return faces;
+}
+
+/**
+ * El operario dice cuántos palets/box/carros ha hecho.
+ * 2 palets → 4 etiquetas (una por lado). No se inventa SSCC.
+ */
+export function declareUnitsMade(
+  snap: WmsSnapshot,
+  operatorId: string,
+  orderId: string,
+  units: number,
+  at = new Date().toISOString(),
+): FloorResult & { labels?: number } {
+  if (!Number.isFinite(units) || units < 1 || !Number.isInteger(units)) {
+    return { ok: false, error: "invalid_units" };
+  }
+  const assignment = assignmentForOperatorOrder(snap, operatorId, orderId);
+  if (!assignment) return { ok: false, error: "order_missing" };
+  if (!assignment.loadKind) return { ok: false, error: "kind_required" };
+  const labels = labelCountForUnits(assignment.loadKind, units);
+  let next: FloorResult = {
+    ok: true,
+    snap: {
+      ...snap,
+      superAssignments: snap.superAssignments.map((a) =>
+        a.id === assignment.id ? { ...a, unitsMade: units, labelsPrinted: labels } : a,
+      ),
+    },
+    operatorId,
+  };
+  const opened = openLoadUnit(next.snap, orderId, assignment.loadKind, operatorId, at);
+  if (opened.ok) {
+    next = { ...opened, operatorId };
+  } else if (opened.error !== "nothing_picked" && opened.error !== "lines_used") {
+    return opened;
+  }
+  return { ...next, labels };
+}
+
+function escHtml(v: string): string {
+  return v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/** Etiquetas de súper para imprimir. Datos del pedido y del lado; sin SSCC inventado. */
+export function superSideLabelsHtml(
+  snap: WmsSnapshot,
+  operatorId: string,
+  orderId: string,
+  lang: "es" | "en" = "es",
+): string | null {
+  const assignment = assignmentForOperatorOrder(snap, operatorId, orderId);
+  const order = snap.outbound.find((o) => o.id === orderId);
+  if (!assignment?.loadKind || !assignment.unitsMade || !order) return null;
+  const kind = assignment.loadKind;
+  const faces = superLabelFaces(kind, assignment.unitsMade, lang);
+  const site = snap.sites.find((s) => s.id === order.siteId);
+  const kindLabel = LOAD_KIND_LABEL[kind][lang];
+  const cards = faces
+    .map((f) => {
+      return `<article class="label">
+        <p class="org">${escHtml(snap.org.legalName)}</p>
+        <h1>${escHtml(order.customer)}</h1>
+        <p class="meta">${escHtml(order.code)} · ${escHtml(site?.city ?? "")}</p>
+        <p class="kind">${escHtml(kindLabel)} ${f.unitIndex}/${f.units}</p>
+        <p class="side">${escHtml(f.sideLabel)}</p>
+        <p class="dock">${lang === "es" ? "Muelle" : "Dock"} ${escHtml(order.dock)}</p>
+        <p class="hint">${lang === "es" ? "Pegar en este lado. Sin SSCC inventado." : "Stick on this side. No invented SSCC."}</p>
+      </article>`;
+    })
+    .join("");
+  const title = lang === "es" ? "Etiquetas de súper" : "Store labels";
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"/><title>${escHtml(title)} ${escHtml(order.code)}</title>
+<style>
+  body{font-family:ui-sans-serif,system-ui,sans-serif;color:#0f172a;margin:12px;background:#e2e8f0}
+  h1{font-size:22px;margin:4px 0 8px}
+  .sheet{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .label{background:#fff;border:2px solid #0f172a;border-radius:8px;padding:16px 18px;min-height:220px;break-inside:avoid}
+  .org{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#475569;margin:0}
+  .meta,.hint{color:#475569;font-size:12px}
+  .kind{font-size:18px;font-weight:700;margin:12px 0 0}
+  .side{font-size:28px;font-weight:800;margin:4px 0}
+  .dock{font-size:16px;font-weight:600}
+  @media print{body{margin:8mm;background:#fff}.label{box-shadow:none}}
+</style></head><body>
+  <div class="sheet">${cards}</div>
+</body></html>`;
+}
+
+export function openSuperSideLabelsPrint(
+  snap: WmsSnapshot,
+  operatorId: string,
+  orderId: string,
+  lang: "es" | "en" = "es",
+): boolean {
+  if (typeof window === "undefined") return false;
+  const html = superSideLabelsHtml(snap, operatorId, orderId, lang);
+  if (!html) return false;
+  const popup = window.open("", "_blank", "noopener,noreferrer,width=820,height=900");
+  if (!popup) return false;
+  popup.document.write(html);
+  popup.document.close();
+  popup.focus();
+  popup.print();
+  return true;
+}

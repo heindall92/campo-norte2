@@ -11,7 +11,7 @@ Este repositorio (`campo-norte2`) publica el ecosistema SaaS WMS. La base CRM/WM
 
 ---
 
-## Fases 2–19 (esta rama)
+## Fases 2–20 (esta rama)
 
 Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, movimientos en vivo, inventario cíclico, alertas, economía unitaria, planificación de turnos, onboarding, carriers, pistola RF y **operación diaria** (CRUD, prioridades, fichaje).
 
@@ -80,6 +80,7 @@ Cómo probar fase 2:
 18. **Pistola / Picar** → auriculares: pasillo, hueco, cajas o unidades del contenedor. **Pasillos** → guía 8–37 (droguería, leche 28, cerveza 29, agua 31–32…). El twin sigue en A/B/C.
 19. Al **confirmar picado** el aparato dicta el siguiente ticket. Si no queda línea: fleja, escribe la etiqueta y deja en el pasillo de muelle. **Repetir** o quitar auriculares. El resto en el hueco es el stock del palet.
 20. Si el hueco **no coincide**, **No coincide** avisa al jefe. En **Torre / Expedición** el jefe escribe la cuenta (merma, de más, roto, picó mal). El aparato dice «En el hueco hay N» y el operario responde **«N ok»**. Mandos: sube, baja, acelera, atrás, artículo.
+21. Al asignar el súper se elige **box / palet / carro**. Al terminar, di **2** (o 3, 4…): 2 palets = **4 etiquetas** (una por lado). **Imprimir**, pegar, dejar en el **muelle** de la pantalla. Luego te asignan el siguiente súper.
 
 ---
 

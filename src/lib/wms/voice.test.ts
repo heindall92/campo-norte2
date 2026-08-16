@@ -43,6 +43,7 @@ describe("fase 17 · voz de auriculares y guía de pasillos", () => {
     expect(voice.text).toContain(order.customer);
     expect(voice.text).toMatch(/En el hueco hay \d+/);
     expect(voice.text).toMatch(/Di \d+ ok/);
+    if (ticket.loadKind) expect(voice.text).toMatch(/Tómalo en/);
 
     const inner = buildVoicePrompt({ ...ticket, pickPack: "contenedor", qty: 4, stockInSlot: 4 }, "es");
     expect(inner.text).toContain("Del contenedor, tomar 4");
@@ -106,10 +107,10 @@ describe("fase 18 · ciclo de voz tras marcar", () => {
       expect(cue.prompt.text).toContain(next.slotCode);
       expect(cue.ticket.line.id).toBe(next.line.id);
     } else {
-      expect(cue.kind).toBe("close");
-      if (cue.kind !== "close") return;
-      expect(cue.prompt.text).toContain("Fleja");
-      expect(cue.prompt.text).toContain(first.dockAisle);
+      expect(cue.kind).toBe("ask_units");
+      if (cue.kind !== "ask_units") return;
+      expect(cue.prompt.text).toMatch(/finalizado/i);
+      expect(cue.prompt.text).toMatch(/cuántos/i);
     }
     expect(remainingOnPallet(picked.snap, first.line.palletId)).toBe(pallet.qty - first.qty);
   });

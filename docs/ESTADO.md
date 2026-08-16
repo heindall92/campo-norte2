@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-15 · Cloud Agent · WMS fase 19: faltante de hueco y mandos de voz
+**Última actualización:** 2026-08-15 · Cloud Agent · WMS fase 20: súper en box/palet/carro y etiquetas por lado
 
 ---
 
@@ -163,7 +163,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–19 hechas. La 19: el aparato dice el stock del hueco; «N ok» pica y sigue; sube/baja/acelera/atrás/artículo. Si no coincide, avisa al jefe y el hueco se cuadra en el sistema (sin ir a la oficina). El twin sigue en A/B/C. Sin SKU inventados.
+Fases 8–20 hechas. La 20: al asignar el súper se dice box/palet/carro; al terminar, el operario dice cuántos palets hizo (2 → 4 etiquetas, una por lado); deja el súper en el muelle de la pantalla y recibe el siguiente. Sin SSCC inventado.
 
 Siguiente: layout numérico en el snapshot cuando se confirme; ZKTeco y flota cuando existan.
 

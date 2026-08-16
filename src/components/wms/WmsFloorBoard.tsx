@@ -10,7 +10,9 @@ import {
   fixSlotCount,
   labelLoadUnit,
   mermaToday,
+  declareUnitsMade,
   openLoadUnit,
+  openSuperSideLabelsPrint,
   pendingSlotFixes,
   placeLoadUnitOnDock,
   SLOT_FIX_REASON_LABEL,
@@ -22,7 +24,7 @@ import {
   type SlotFixError,
   type SlotFixReason,
 } from "@/lib/wms";
-import { Footprints, MapPin, PackageX, Tag, UserRound, Wrench } from "lucide-react";
+import { Footprints, MapPin, PackageX, Printer, Tag, UserRound, Wrench } from "lucide-react";
 import { useState } from "react";
 import { useWmsLive } from "./useWmsLive";
 
@@ -37,6 +39,8 @@ const FLOOR_ERR: Record<FloorError, { es: string; en: string }> = {
   label_required: { es: "Escribe el código de la etiqueta que pegas", en: "Type the label you stick" },
   dock_slot: { es: "Ese hueco no es un muelle real de este centro", en: "That slot is not a real dock here" },
   lines_used: { es: "Esas líneas ya están en una unidad", en: "Those lines are already in a unit" },
+  kind_required: { es: "Di si va en box, palet o carro", en: "Say if it goes on a box, pallet or cage" },
+  invalid_units: { es: "Di cuántos palets, box o carros has hecho", en: "Say how many pallets, boxes or cages you made" },
 };
 
 const KINDS: LoadUnitKind[] = ["palet", "caja", "carro"];
@@ -47,6 +51,7 @@ export function WmsAssignSuperCard({ lang }: { lang: Lang }) {
   const canAssign = user?.role === "admin" || user?.role === "ops";
   const [orderId, setOrderId] = useState("");
   const [code, setCode] = useState("");
+  const [loadKind, setLoadKind] = useState<LoadUnitKind>("palet");
   const [msg, setMsg] = useState<string | null>(null);
   const openOrders = snap.outbound.filter((o) => o.status !== "expedido");
 
@@ -74,15 +79,15 @@ export function WmsAssignSuperCard({ lang }: { lang: Lang }) {
       title={lang === "es" ? "Asignar súper al operario" : "Assign store to operator"}
       subtitle={
         lang === "es"
-          ? "Patrón o técnico. El código de operario (OP-1903), no el número del aparato."
-          : "Lead or technician. Operator code (OP-1903), not the device number."
+          ? "Patrón o técnico. Código de operario y si lo toma en box, palet o carro. Independiente del pedido."
+          : "Lead or technician. Operator code and whether they take it on a box, pallet or cage. Independent of the order."
       }
     >
       <form
-        className="grid gap-2 md:grid-cols-[1fr_10rem_auto]"
+        className="grid gap-2 md:grid-cols-[1fr_10rem_8rem_auto]"
         onSubmit={(e) => {
           e.preventDefault();
-          const result = assignSuperToOperator(snap, orderId, code, user?.name ?? null);
+          const result = assignSuperToOperator(snap, orderId, code, user?.name ?? null, new Date().toISOString(), loadKind);
           if (!result.ok) {
             setMsg(FLOOR_ERR[result.error][lang]);
             return;
@@ -112,6 +117,17 @@ export function WmsAssignSuperCard({ lang }: { lang: Lang }) {
           placeholder="OP-1903"
           className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
         />
+        <select
+          value={loadKind}
+          onChange={(e) => setLoadKind(e.target.value as LoadUnitKind)}
+          className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+        >
+          {KINDS.map((k) => (
+            <option key={k} value={k}>
+              {LOAD_KIND_LABEL[k][lang]}
+            </option>
+          ))}
+        </select>
         <button type="submit" className="rounded-full bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white">
           {lang === "es" ? "Asignar" : "Assign"}
         </button>
@@ -122,6 +138,9 @@ export function WmsAssignSuperCard({ lang }: { lang: Lang }) {
           {snap.superAssignments[0].assignedBy ?? (lang === "es" ? "Técnico" : "Tech")} →{" "}
           {snap.operators.find((o) => o.id === snap.superAssignments[0]!.operatorId)?.code} ·{" "}
           {snap.outbound.find((o) => o.id === snap.superAssignments[0]!.orderId)?.customer}
+          {snap.superAssignments[0].loadKind
+            ? ` · ${LOAD_KIND_LABEL[snap.superAssignments[0].loadKind][lang]}`
+            : ""}
         </p>
       )}
     </Card>
@@ -310,6 +329,112 @@ export function WmsLoadUnitCard({ lang }: { lang: Lang }) {
           );
         })}
       </ul>
+    </Card>
+  );
+}
+
+export function WmsSuperFinishCard({
+  lang,
+  operatorId,
+  orderId,
+}: {
+  lang: Lang;
+  operatorId: string | null;
+  orderId?: string | null;
+}) {
+  const { snap, commit } = useWmsLive();
+  const assignment =
+    operatorId && orderId
+      ? snap.superAssignments.find((a) => a.operatorId === operatorId && a.orderId === orderId)
+      : operatorId
+        ? snap.superAssignments.find((a) => a.operatorId === operatorId)
+        : null;
+  const order = assignment ? snap.outbound.find((o) => o.id === assignment.orderId) : null;
+  const [units, setUnits] = useState(assignment?.unitsMade ?? 2);
+  const [msg, setMsg] = useState<string | null>(null);
+  if (!assignment || !order || !operatorId) return null;
+
+  return (
+    <Card
+      title={lang === "es" ? "Súper finalizado · etiquetas" : "Store finished · labels"}
+      subtitle={
+        lang === "es"
+          ? "Di cuántos palets (o box/carros) has hecho. En palet se imprimen dos etiquetas por unidad, una por lado."
+          : "Say how many pallets (or boxes/cages) you made. Pallets print two labels each, one per side."
+      }
+    >
+      <p className="mb-2 text-sm font-medium">
+        {order.customer}
+        {assignment.loadKind ? ` · ${LOAD_KIND_LABEL[assignment.loadKind][lang]}` : ""}
+        <span className="mt-0.5 block text-xs text-[var(--ink-muted)]">
+          {lang === "es" ? "Muelle" : "Dock"} {order.dock}
+        </span>
+      </p>
+      <form
+        className="mb-3 flex flex-wrap items-end gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const result = declareUnitsMade(snap, operatorId, order.id, units);
+          if (!result.ok) {
+            setMsg(FLOOR_ERR[result.error][lang]);
+            return;
+          }
+          commit(result.snap);
+          setMsg(null);
+        }}
+      >
+        <label className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+          {lang === "es" ? "Unidades hechas" : "Units made"}
+          <input
+            type="number"
+            min={1}
+            value={units}
+            onChange={(e) => setUnits(Number(e.target.value))}
+            className="mt-1 block w-24 rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+          />
+        </label>
+        <button type="submit" className="rounded-full bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white">
+          {lang === "es" ? "Dicho" : "Said"}
+        </button>
+        {[2, 3, 4].map((n) => (
+          <button
+            key={n}
+            type="button"
+            className="rounded-full border border-[var(--glass-border)] px-3 py-2 text-sm font-semibold"
+            onClick={() => {
+              const result = declareUnitsMade(snap, operatorId, order.id, n);
+              if (!result.ok) {
+                setMsg(FLOOR_ERR[result.error][lang]);
+                return;
+              }
+              commit(result.snap);
+              setUnits(n);
+              setMsg(null);
+            }}
+          >
+            {n}
+          </button>
+        ))}
+      </form>
+      {assignment.unitsMade != null && (
+        <p className="mb-3 text-sm">
+          {assignment.unitsMade} {assignment.loadKind ? LOAD_KIND_LABEL[assignment.loadKind][lang] : ""} ·{" "}
+          {assignment.labelsPrinted} {lang === "es" ? "etiquetas" : "labels"}
+        </p>
+      )}
+      {assignment.unitsMade != null && (
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white"
+          onClick={() => openSuperSideLabelsPrint(snap, operatorId, order.id, lang)}
+        >
+          <Printer className="h-4 w-4" />
+          {lang === "es"
+            ? `Imprimir ${assignment.labelsPrinted} etiquetas`
+            : `Print ${assignment.labelsPrinted} labels`}
+        </button>
+      )}
+      {msg && <p className="mt-2 text-xs font-semibold text-[var(--danger)]">{msg}</p>}
     </Card>
   );
 }

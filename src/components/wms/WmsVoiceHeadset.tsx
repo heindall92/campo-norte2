@@ -5,6 +5,8 @@ import {
   aisleRangeLabel,
   buildArticlePrompt,
   buildClosePrompt,
+  buildFinishAskPrompt,
+  buildLabelDockPrompt,
   buildSlotRepeatPrompt,
   buildVoicePrompt,
   bumpVoiceRate,
@@ -37,7 +39,7 @@ import { useWmsLive } from "./useWmsLive";
 type HeadsetTicket = Pick<
   FloorTicket,
   "storeName" | "aisle" | "slotCode" | "skuName" | "skuId" | "qty" | "pickPack"
-> & { stockInSlot?: number | null };
+> & { stockInSlot?: number | null; loadKind?: FloorTicket["loadKind"] };
 
 function browserSpeechRecognition(): { start: () => void; stop: () => void; lang: string; onresult: ((ev: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null } | null {
   if (typeof window === "undefined") return null;
@@ -57,20 +59,26 @@ export function WmsVoiceHeadset({
   lang,
   ticket,
   close,
+  askUnits,
+  labelCue,
   remaining,
   pickPack,
   autoSpeak = true,
   onConfirmOk,
   onReportMismatch,
+  onUnitsSaid,
 }: {
   lang: Lang;
   ticket?: HeadsetTicket;
   close?: CloseCueInput;
+  askUnits?: CloseCueInput;
+  labelCue?: CloseCueInput & { units: number; labels: number };
   remaining?: number | null;
   pickPack?: PickPack;
   autoSpeak?: boolean;
   onConfirmOk?: (qty: number) => void;
   onReportMismatch?: () => void;
+  onUnitsSaid?: (qty: number) => void;
 }) {
   const [headsetOn, setHeadsetOn] = useState(loadHeadsetOn);
   const [prefs, setPrefs] = useState(loadVoicePrefs);
@@ -79,9 +87,11 @@ export function WmsVoiceHeadset({
   const recRef = useRef<ReturnType<typeof browserSpeechRecognition>>(null);
   const voice = useMemo(() => {
     if (ticket) return { kind: "ticket" as const, ...buildVoicePrompt(ticket, lang) };
+    if (labelCue) return { kind: "labels" as const, ...buildLabelDockPrompt(labelCue, lang) };
+    if (askUnits) return { kind: "ask_units" as const, ...buildFinishAskPrompt(askUnits, lang) };
     if (close) return { kind: "close" as const, ...buildClosePrompt(close, lang) };
     return null;
-  }, [ticket, close, lang]);
+  }, [ticket, close, askUnits, labelCue, lang]);
   const family = ticket ? familyForSku(ticket.skuId) : null;
   const pack = pickPack ?? ticket?.pickPack ?? "caja";
   const left = remainderLabel(remaining ?? ticket?.stockInSlot, pack, lang);
@@ -119,7 +129,12 @@ export function WmsVoiceHeadset({
       return;
     }
     if (cmd.kind === "confirm") {
-      onConfirmOk?.(cmd.qty);
+      if (ticket) onConfirmOk?.(cmd.qty);
+      else onUnitsSaid?.(cmd.qty);
+      return;
+    }
+    if (cmd.kind === "count") {
+      onUnitsSaid?.(cmd.qty);
     }
   }
 
