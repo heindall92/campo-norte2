@@ -1,5 +1,8 @@
+import { WMS_DEMO_NOW } from "./alerts";
 import { dockWindowFor } from "./carriers";
+import { classifyLotAlert, compareLotsFefo, lotFromPallet } from "./lots";
 import { recommendedFleetKind } from "./picking";
+import { availableQty } from "./reservations";
 import { pickPackForSku } from "./voice";
 import type { OutboundOrder, Pallet, PickWave, Sku, Slot, WmsSnapshot } from "./types";
 
@@ -32,22 +35,28 @@ function palletsInOpenWaves(snap: WmsSnapshot): Set<string> {
 
 function pickCandidates(snap: WmsSnapshot, siteId: string): Array<{ slot: Slot; pallet: Pallet; sku: Sku }> {
   const used = palletsInOpenWaves(snap);
+  const nowMs = Date.parse(WMS_DEMO_NOW);
   const rows: Array<{ slot: Slot; pallet: Pallet; sku: Sku }> = [];
   for (const slot of snap.slots) {
     if (slot.siteId !== siteId || !slot.pickFace || !slot.palletId) continue;
     if (used.has(slot.palletId)) continue;
     const pallet = snap.pallets.find((p) => p.id === slot.palletId && p.status !== "expedido");
-    if (!pallet || pallet.qty < 1) continue;
+    if (!pallet || availableQty(snap, pallet.id) < 1) continue;
+    const lot = lotFromPallet(pallet);
+    const alert = classifyLotAlert(lot, nowMs);
+    if (alert === "EXPIRED" || alert === "BLOCKED") continue;
     const sku = snap.skus.find((s) => s.id === pallet.skuId);
     if (!sku) continue;
     rows.push({ slot, pallet, sku });
   }
+  rows.sort((a, b) => compareLotsFefo(lotFromPallet(a.pallet), lotFromPallet(b.pallet)));
   return rows;
 }
 
 /**
  * Abre una ola a partir de un pedido de expedición.
- * Las líneas salen de palets reales en cara de picking, no se inventan.
+ * Candidatos = palets reales en cara de picking, no caducados ni en cuarentena,
+ * ordenados FEFO (reloj `WMS_DEMO_NOW`). No reserva hold al abrir.
  */
 export function openWaveFromOrder(
   snap: WmsSnapshot,

@@ -35,6 +35,14 @@ function timeOr(iso: string | null, fallback: number): number {
   return Number.isNaN(t) ? fallback : t;
 }
 
+/** FEFO: menor expiry; sin fecha al final; empate = FIFO por receivedAt. */
+export function compareLotsFefo(a: LotCandidate, b: LotCandidate): number {
+  const ae = a.expiry ? timeOr(a.expiry, Number.POSITIVE_INFINITY) : Number.POSITIVE_INFINITY;
+  const be = b.expiry ? timeOr(b.expiry, Number.POSITIVE_INFINITY) : Number.POSITIVE_INFINITY;
+  if (ae !== be) return ae - be;
+  return timeOr(a.receivedAt, 0) - timeOr(b.receivedAt, 0);
+}
+
 /**
  * Elige un lote. MANUAL no elige: hay que pasar `manualId`.
  * FEFO: menor `expiry` entre no bloqueados y no caducados; sin expiry van al final.
@@ -55,11 +63,7 @@ export function selectLot(
   if (!open.length) return null;
 
   const sorted = [...open].sort((a, b) => {
-    if (policy === "FEFO") {
-      const ae = a.expiry ? timeOr(a.expiry, Number.POSITIVE_INFINITY) : Number.POSITIVE_INFINITY;
-      const be = b.expiry ? timeOr(b.expiry, Number.POSITIVE_INFINITY) : Number.POSITIVE_INFINITY;
-      if (ae !== be) return ae - be;
-    }
+    if (policy === "FEFO") return compareLotsFefo(a, b);
     const ar = timeOr(a.receivedAt, 0);
     const br = timeOr(b.receivedAt, 0);
     if (policy === "LIFO") return br - ar;
