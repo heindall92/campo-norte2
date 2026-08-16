@@ -3,7 +3,7 @@
 ## Hoy
 
 ```bash
-npm test          # vitest run   — planta + inventory + RBAC/tenant + productividad/costes/alertas
+npm test          # vitest run   — 243 (planta + inventory + RBAC/tenant + FEFO ola + productividad/costes/alertas)
 npm run lint      # oxlint
 npm run build     # tsc -b && vite build   (= typecheck + bundle)
 ```

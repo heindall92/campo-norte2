@@ -14,7 +14,7 @@ Phase 0 del brief = auditoría. **Hecha.** El código de planta no se ha parado:
 | **0** | Audit + architecture | Hecho: `ARCHITECTURE*.md`, `DATABASE*.md`, `MIGRATION_PLAN.md`, este índice | — |
 | **1** | Multi-tenant + Auth + RBAC | Auth CRM + roles WMS (`rbac.ts`) + SQL tenant/RLS no aplicado | Un tenant. No inventar org 2 |
 | **2** | Warehouse + Locations + Products + UOM | Sites/slots + proyección tenant + UOM puro | Extraer locations a Postgres + factores |
-| **3** | Inventory ledger + balances + lots | Motor `inventory-core.ts` + semilla + SQL no aplicado. FEFO sin cablear a la ola | Aplicar SQL + FEFO al asignar |
+| **3** | Inventory ledger + balances + lots | Motor `inventory-core.ts` + semilla + SQL no aplicado. FEFO al abrir ola | Aplicar SQL + holds |
 | **4** | Orders + allocation + reservations | Pedidos + `order-state.ts` (sin sustituir status ES) | Holds + cablear transiciones |
 | **5** | Receiving + ASN + putaway | ASN plano + putaway zona | Líneas, incidencias, reglas |
 | **6** | Waves + picking + replenishment | Olas + pick **hechos**. Reposición = cara vacía | MIN/MAX encima |

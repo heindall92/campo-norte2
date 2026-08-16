@@ -55,11 +55,11 @@ docs(wms): …
 
 ### Oleada 1 — Una sola verdad en el cliente
 
-**Qué:** `WmsLiveProvider` en `main.tsx`. `useWmsLive` lee contexto. `WmsSites` deja el LS a mano.
+**Hecho (2026-08-16).** `WmsLiveProvider` en `main.tsx` (dentro de `AuthProvider`). `useWmsLive` lee contexto. `WmsSites` y el flush RF usan el snap vivo.
 
-**Qué no:** Postgres, reservas, nuevas pantallas, mover carpetas.
+**Qué no:** Postgres (eso es oleada 2), reservas, nuevas pantallas, mover carpetas.
 
-**DoD:** dos paneles ven el mismo stock tras un pick; tests de dominio intactos; 184+ verdes.
+**DoD:** dos paneles ven el mismo stock tras un pick; tests de dominio intactos; 243 verdes.
 
 **Riesgo si se salta:** cualquier ledger remoto se pisa entre pistola y torre.
 
@@ -67,11 +67,11 @@ docs(wms): …
 
 ### Oleada 2 — Ledger Postgres + RLS
 
-**Qué:** `supabase/wms-schema.sql` (orgs, members, sites, ledgers, movements extract, audit). Hidratar/push con `revision`. Demo (`forceLocalHub`) sigue en LS. Torre muestra `local | Postgres · revisión N`.
+**Código cableado (2026-08-16).** `persist.ts`: hidratar/push con `revision`. Demo (`forceLocalHub`) sigue en LS. Badge `local | Postgres · rev N`. SQL tenant/ledger **no aplicado** en prod: sin F5 real contra Postgres hasta la migration.
 
-**Qué no:** 30 tablas relacionales. Segunda org. Mezclar tesorería.
+**Qué no:** 30 tablas relacionales. Segunda org. Mezclar tesorería. Subir la semilla demo automáticamente.
 
-**DoD:** con Supabase real y usuario de equipo, el snapshot sobrevive un F5; conflicto de revisión recarga remoto; sin backend la demo no se rompe; RLS no deja leer otro `org_id` (aunque no exista fila).
+**DoD parcial:** sin backend la demo no se rompe; conflicto de revisión recarga remoto (cliente). RLS y supervivencia F5 exigen aplicar `20260816060000_create_wms_tenant_rbac.sql`.
 
 ---
 

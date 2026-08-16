@@ -34,7 +34,7 @@ Apertura de semilla: un RECEIPT por palet con qty > 0. Expedido = RECEIPT + SHIP
 
 `movements[]` sigue siendo la bitácora de planta (RF/UI). No sustituye al ledger.
 
-`Sku` ya trae `uom`, `unitsPerPallet`, `minStock`, `maxStock`, `abc`. **min/max no disparan reposición.** UOM/FEFO siguen sin cablear a `openWaveFromOrder`.
+`Sku` ya trae `uom`, `unitsPerPallet`, `minStock`, `maxStock`, `abc`. **min/max no disparan reposición.** FEFO sí filtra y ordena al abrir ola. UOM **no** convierte qty de línea.
 
 ---
 
@@ -44,7 +44,7 @@ Apertura de semilla: un RECEIPT por palet con qty > 0. Expedido = RECEIPT + SHIP
 2. `available = on_hand − allocated − blocked − quarantined`.
 3. Un lote es el `lot` del palet. No se inventan lotes extra.
 4. Ajuste solo con motivo (conteo, merma, slot-fix, edición de palet). Sin qty negativa salvo flag.
-5. UOM y FEFO tienen motor puro (`uom.ts`, `lots.ts`) sin cambiar el pick de planta.
+5. UOM sigue puro (`uom.ts`). FEFO ordena candidatos al abrir ola; no reserva hold.
 6. `serial_numbers` vacío: no fabricar series.
 
 ---

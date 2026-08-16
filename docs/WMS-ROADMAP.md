@@ -138,7 +138,7 @@
 - El motor de planta (fases 1–20) no se ha reescrito
 
 ## Siguiente (tras revisión humana)
-- Oleada 1: estado WMS compartido (`WmsLiveProvider`)
-- Oleada 2–3: ledger Postgres + reservas de stock
+- Oleadas 1–2 hechas en cliente (provider + persist cableado; SQL no aplicado)
+- Oleada 3: reservas de stock al abrir ola
 - Briefs 15–27 (replenishment, receiving, QC, putaway, slotting, packing, SSCC, shipping, carriers, dock, yard, returns, cycle sessions) — un módulo por oleada
 - Layout numérico 8–37 / SKU cerveza-vino / ZKTeco / telemetría flota: solo con dato real

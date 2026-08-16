@@ -3,7 +3,7 @@
 Decisiones. El inventario crudo está en [`ARCHITECTURE_AUDIT.md`](./ARCHITECTURE_AUDIT.md).
 El destino de carpetas está en [`TARGET_ARCHITECTURE.md`](./TARGET_ARCHITECTURE.md).
 
-**Estado:** Phase 0 (documentado). Motor de planta en fases 1–20. Sin ledger WMS en Postgres.
+**Estado:** Phase 0 (documentado). Motor de planta en fases 1–20. Ledger WMS cableado en cliente; SQL Postgres **no aplicado**.
 
 ---
 
@@ -64,9 +64,10 @@ Correctness > integridad > seguridad > operabilidad > mantenibilidad > rendimien
 
 ```
 UI (MpsCrmApp + components/wms)
-  → useWmsLive() por panel   ← deuda: copias distintas
+  → WmsLiveProvider (main.tsx) → useWmsLive()
   → funciones de dominio
   → localStorage cn-wms-hub-v8
+  → (prod) wms_ledgers si hay Supabase; SQL no aplicado
 
 UI CRM
   → DataHubProvider único

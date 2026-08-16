@@ -2,7 +2,7 @@
 
 ```
 OutboundOrder (pendiente)
-  → openWaveFromOrder          palets reales en pick face
+  → openWaveFromOrder          palets reales en pick face, FEFO, sin caducados
   → PickWave (abierta / en_curso)
   → confirmPick | skip | shortage
   → packPickLine / LoadUnit    fleje + etiqueta escrita
@@ -16,7 +16,7 @@ Máquina del brief (`CREATED → … → SHIPPED | CANCELLED`): `src/lib/wms/ord
 Transición inválida → error. Cada éxito devuelve un registro `{ from, to, event, at }`.
 **No sustituye** el status español en la UI. Mapa: `pendiente=CREATED`, `picking=PICKING`, `embalaje=PACKING`, `muelle=STAGED`, `expedido=SHIPPED`. No se inventa `ALLOCATED` en la semilla.
 
-No hay entidad `Shipment` aparte. No hay allocation ATP: la ola coge palets libres que no estén en otra ola abierta.
+No hay entidad `Shipment` aparte. No hay allocation ATP: la ola coge palets libres de cara de picking, no caducados ni en cuarentena, ordenados FEFO, que no estén en otra ola abierta. Sin hold al abrir.
 
 El súper lo asigna el patrón al **código de operario** (`OP-1903` = Jorge Peña), no al número del aparato. Ticket: súper + pasillo + hueco + cantidad.
 
