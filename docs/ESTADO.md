@@ -86,7 +86,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | 13 | IA contextual global + streaming + decay con fecha + detalle score + EN ESTA VISTA + FAB arrastrable | `AiAssistantHost`, `chat-stream.ts`, `coldBy*`, `ViewTotals` leads/reservas/clientes, `DraggableAiFab` |
 | 13b | Streaming también en pestaña Conocimiento | `KnowledgePanel` → `askKnowledgeStream` |
 
-**Verificación automática:** lint (warnings previos), `npm test` (**221** + inventory-core), `npm run build` — gate al cerrar la oleada.
+**Verificación automática:** lint (warnings previos), `npm test` (**232**), `npm run build` — limpios.
 
 **Decisiones de alcance (no son olvidos):**
 - **Núcleo = viajes + leads.** Todo lo demás deliberado → `docs/FUERA-DE-NUCLEO.md`.

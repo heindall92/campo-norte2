@@ -389,6 +389,7 @@ export function applyInventoryTx(
     toLocationId: toId,
     qty: input.type === "COUNT" ? qty : input.qty,
     countedQty: input.type === "COUNT" ? (counted as number) : null,
+    bucket: input.type === "ADJUSTMENT" ? (input.bucket ?? "on_hand") : null,
     uom: input.uom ?? "ud",
     reason: input.reason ?? "",
     refType: input.refType ?? null,
@@ -422,6 +423,7 @@ export function projectBalances(
       toLocationId: tx.toLocationId,
       qty: tx.type === "COUNT" ? tx.countedQty ?? 0 : tx.qty,
       countedQty: tx.countedQty,
+      bucket: tx.bucket ?? undefined,
       uom: tx.uom,
       reason: tx.reason,
       refType: tx.refType,
@@ -766,4 +768,21 @@ export function findBalance(
 export function ledgerAvailableAt(snap: WmsSnapshot, pallet: Pallet): number | null {
   const row = findBalance(snap, pallet.skuId, pallet.lot || null, locationOfPallet(pallet));
   return row ? availableOf(row) : null;
+}
+
+/** Ubicación del balance con stock de pipeline; no el hueco vacío tras un pick. */
+export function ledgerLocationForPallet(snap: WmsSnapshot, pallet: Pallet): string {
+  const current = locationOfPallet(pallet);
+  const here = findBalance(snap, pallet.skuId, pallet.lot || null, current);
+  const pipeline = (b: InventoryBalance) => b.onHand + b.picked + b.packed + b.staged;
+  if (here && pipeline(here) > 0) return current;
+  const last = [...(snap.inventoryTransactions ?? [])]
+    .reverse()
+    .find((t) => t.palletId === pallet.id && (t.fromLocationId || t.toLocationId));
+  if (last?.fromLocationId) return last.fromLocationId;
+  if (last?.toLocationId) return last.toLocationId;
+  const row = (snap.inventoryBalances ?? []).find(
+    (b) => b.skuId === pallet.skuId && (b.lot ?? "") === (pallet.lot || "") && pipeline(b) > 0,
+  );
+  return row?.locationId ?? current;
 }

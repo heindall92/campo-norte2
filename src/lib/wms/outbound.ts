@@ -1,4 +1,4 @@
-import { applyTxToSnapshot, findBalance, locationOfPallet } from "./inventory-core";
+import { applyTxToSnapshot, findBalance, ledgerLocationForPallet, locationOfPallet } from "./inventory-core";
 import type { OutboundOrder, Pallet, PickLine, Slot, WmsSnapshot } from "./types";
 
 export type OutboundOpError =
@@ -465,7 +465,7 @@ export function stageOrderToDock(
     ),
   };
   for (const pallet of take) {
-    const loc = pallet.slotId ?? locationOfPallet(pallet);
+    const loc = ledgerLocationForPallet(next, pallet);
     const bal = findBalance(next, pallet.skuId, pallet.lot || null, loc);
     const qty = bal ? bal.picked + bal.packed : 0;
     if (qty < 1) continue;
@@ -550,7 +550,7 @@ export function shipOutboundOrder(
     shipQty.set(pallet.id, { pallet, qty: (prev?.qty ?? 0) + line.qtyPicked });
   }
   for (const { pallet, qty } of shipQty.values()) {
-    const loc = pallet.slotId ?? locationOfPallet(pallet);
+    const loc = ledgerLocationForPallet(next, pallet);
     const led = applyTxToSnapshot(next, {
       type: "SHIP",
       skuId: pallet.skuId,

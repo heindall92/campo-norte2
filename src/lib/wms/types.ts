@@ -544,6 +544,8 @@ export interface InventoryTransaction {
   toLocationId: string | null;
   qty: number;
   countedQty: number | null;
+  /** Cubo de ADJUSTMENT. Sin esto el replay suma a on_hand y rompe el ledger. */
+  bucket: "on_hand" | "blocked" | "quarantined" | null;
   uom: string;
   reason: string;
   refType: string | null;
