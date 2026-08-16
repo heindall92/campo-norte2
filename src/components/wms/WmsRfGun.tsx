@@ -9,11 +9,9 @@ import {
   buildRfQueue,
   confirmRfTask,
   enqueueOfflineEvent,
-  loadWmsSnapshot,
   localDeviceId,
   pendingOfflineEvents,
   readOfflineQueue,
-  saveWmsSnapshot,
   syncOfflineQueue,
   nextFloorTicket,
   operatorByCode,
@@ -55,7 +53,7 @@ const STEP_LABEL: Record<RfStep, { es: string; en: string }> = {
 
 export function WmsRfGunPanel({ lang }: { lang: Lang }) {
   const { user } = useAuth();
-  const { snap, commit: persist } = useWmsLive();
+  const { snap, commit: persist, getSnap } = useWmsLive();
   const [siteId, setSiteId] = useState(snap.sites[0]?.id ?? "");
   const matched = operatorForAppUser(snap, user);
   const isFloor = user?.role === "guide";
@@ -84,15 +82,13 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
       syncOfflineQueue(
         readOfflineQueue(),
         (ev) => {
-          const current = loadWmsSnapshot();
-          const applied = applyOfflineRfEvent(current, ev, actor);
+          const applied = applyOfflineRfEvent(getSnap(), ev, actor);
           if (!applied.ok) return { ok: false, reason: applied.reason };
-          saveWmsSnapshot(applied.snap);
+          persist(applied.snap);
           return { ok: true };
         },
         true,
       );
-      persist(loadWmsSnapshot());
       setQueued(pendingOfflineEvents().length);
     };
     const onOnline = () => {
@@ -105,7 +101,7 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", ping);
     };
-  }, [matched?.id, operatorId, persist]);
+  }, [getSnap, matched?.id, operatorId, persist]);
 
   useEffect(() => {
     if (session) return;

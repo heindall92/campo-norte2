@@ -1,4 +1,4 @@
-import type { UserRole } from "@/lib/auth/types";
+import type { AppUser, UserRole } from "@/lib/auth/types";
 import { belongsToOrg } from "./org";
 import {
   mapCrmRoleToWms,
@@ -7,6 +7,7 @@ import {
   type WmsRole,
 } from "./rbac";
 import type { WmsMembership } from "./rbac";
+import { seedMemberships } from "./tenant";
 import type { WmsSnapshot } from "./types";
 
 export type WmsActor = {
@@ -42,6 +43,26 @@ export function actorFromMembership(row: WmsMembership, crmRole: UserRole | "pen
     orgId: row.organizationId,
     warehouseIds: row.warehouseIds,
     userId: row.userId,
+  };
+}
+
+/**
+ * Actor de la sesión CRM. Membership manda; si no hay fila, mapeo CRM.
+ * Un guide sin membership queda acotado a Sevilla, como Jorge: no se inventa Huelva.
+ */
+export function actorFromAppUser(snap: WmsSnapshot, user: AppUser | null): WmsActor | null {
+  if (!user) return null;
+  const rows = snap.memberships?.length ? snap.memberships : seedMemberships(snap.org.id);
+  const membership =
+    rows.find((m) => m.userId === user.id) ??
+    rows.find((m) => m.email.toLowerCase() === user.email.toLowerCase());
+  if (membership) return actorFromMembership(membership, user.role);
+  return {
+    role: user.role,
+    wmsRoles: [...mapCrmRoleToWms(user.role)],
+    orgId: snap.org.id,
+    warehouseIds: user.role === "guide" ? ["site-sev"] : "*",
+    userId: user.id,
   };
 }
 

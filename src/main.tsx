@@ -5,15 +5,18 @@ import App from "./App.tsx";
 import { AuthProvider } from "@/lib/auth";
 import { NotificationsProvider } from "@/lib/notifications";
 import { DataHubProvider } from "@/lib/data";
+import { WmsLiveProvider } from "@/components/wms/useWmsLive";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthProvider>
-      <NotificationsProvider>
-        <DataHubProvider>
-          <App />
-        </DataHubProvider>
-      </NotificationsProvider>
+      <WmsLiveProvider>
+        <NotificationsProvider>
+          <DataHubProvider>
+            <App />
+          </DataHubProvider>
+        </NotificationsProvider>
+      </WmsLiveProvider>
     </AuthProvider>
   </StrictMode>,
 );

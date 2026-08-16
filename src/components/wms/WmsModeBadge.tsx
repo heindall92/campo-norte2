@@ -1,19 +1,28 @@
 import { Badge } from "@/components/CrmChrome";
-import { isDemoMode, runtimeMode, supabaseConfigured } from "@/lib/runtime";
+import { isDemoMode, supabaseConfigured } from "@/lib/runtime";
 import type { Lang } from "@/lib/i18n";
+import { useWmsLive } from "./useWmsLive";
 
 export function WmsModeBadge({ lang }: { lang: Lang }) {
-  const mode = runtimeMode();
+  const { snap, persistMode } = useWmsLive();
   const demo = isDemoMode();
+  const revision = snap.ledgerRevision ?? 0;
+  const store = persistMode === "postgres" ? "Postgres" : "local";
+  const authNote =
+    demo && supabaseConfigured()
+      ? lang === "es"
+        ? " · Auth listo"
+        : " · Auth ready"
+      : "";
   return (
-    <Badge tone={demo ? "warn" : "good"}>
+    <Badge tone={demo ? "warn" : persistMode === "postgres" ? "good" : "warn"}>
       {demo
         ? lang === "es"
-          ? `DEMO · semilla${supabaseConfigured() ? " (Auth listo, Hub local)" : ""}`
-          : `DEMO · seed${supabaseConfigured() ? " (Auth ready, local hub)" : ""}`
+          ? `DEMO · ${store} · rev ${revision}${authNote}`
+          : `DEMO · ${store} · rev ${revision}${authNote}`
         : lang === "es"
-          ? `PRODUCCIÓN · ${mode}`
-          : `PRODUCTION · ${mode}`}
+          ? `PRODUCCIÓN · ${store} · rev ${revision}`
+          : `PRODUCTION · ${store} · rev ${revision}`}
     </Badge>
   );
 }

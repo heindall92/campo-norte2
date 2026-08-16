@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { actorFromMembership, authorizeWms, authorizeWmsWrite, can, type WmsActor } from "./permissions";
+import { actorFromAppUser, actorFromMembership, authorizeWms, authorizeWmsWrite, can, type WmsActor } from "./permissions";
 import {
   CRM_TO_WMS_ROLES,
   permissionsForRole,
@@ -58,6 +58,43 @@ describe("RBAC WMS", () => {
     expect(authorizeWms(snap, actor("guide"), "stock.write", "site-sev").ok).toBe(true);
     expect(authorizeWms(snap, actor("ops"), "ship", "site-sev").ok).toBe(true);
     expect(can(actor("pending"), "stock.read")).toBe(false);
+  });
+
+  it("resuelve el actor de sesión por membership y no inventa almacenes", () => {
+    const snap = buildWmsSeed();
+    expect(actorFromAppUser(snap, null)).toBeNull();
+    const sofia = actorFromAppUser(snap, {
+      id: "local-sofia",
+      email: "sofia@camponorte.demo",
+      name: "Sofía Navarro",
+      role: "admin",
+      roleLabel: "Dirección",
+      avatarInitial: "S",
+      provider: "local",
+    });
+    expect(sofia?.wmsRoles).toEqual(["ADMIN"]);
+    expect(sofia?.warehouseIds).toBe("*");
+    const jorge = actorFromAppUser(snap, {
+      id: "local-jorge",
+      email: "jorge@camponorte.demo",
+      name: "Jorge Peña",
+      role: "guide",
+      roleLabel: "Planta",
+      avatarInitial: "J",
+      provider: "local",
+    });
+    expect(jorge?.warehouseIds).toEqual(["site-sev"]);
+    const extraGuide = actorFromAppUser(snap, {
+      id: "local-otro",
+      email: "otro@camponorte.demo",
+      name: "Otro",
+      role: "guide",
+      roleLabel: "Planta",
+      avatarInitial: "O",
+      provider: "local",
+    });
+    expect(extraGuide?.warehouseIds).toEqual(["site-sev"]);
+    expect(extraGuide?.wmsRoles).toEqual(["PICKER"]);
   });
 
   it("otro org no entra; Jorge no escribe en Huelva", () => {
@@ -149,5 +186,15 @@ describe("persistencia ledger", () => {
     });
     expect(ok.ok).toBe(true);
     if (ok.ok) expect(ok.revision).toBe(1);
+
+    const afterTx = prepareLedgerPush({
+      snap: { ...snap, ledgerRevision: 1 },
+      actor: actor("ops"),
+      expectedRevision: 0,
+      requireActor: true,
+      remote: true,
+    });
+    expect(afterTx.ok).toBe(true);
+    if (afterTx.ok) expect(afterTx.revision).toBe(1);
   });
 });
