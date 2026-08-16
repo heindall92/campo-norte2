@@ -9,6 +9,7 @@ import {
 } from "./movements";
 import { confirmCycleCount, planCycleCounts, type CycleCountError, type CycleCountTask } from "./cycle-count";
 import type { ConfirmPickError } from "./picking";
+import { palletCanPick, palletCanPutaway } from "./receiving";
 import type { Operator, WmsSnapshot } from "./types";
 
 export type RfTaskKind = "pick" | "putaway" | "replenish" | "count";
@@ -83,6 +84,11 @@ export function buildRfQueue(snap: WmsSnapshot, siteId?: string, operatorId?: st
     const slot = snap.slots.find((s) => s.id === line.slotId);
     const pallet = line.palletId ? snap.pallets.find((p) => p.id === line.palletId) : null;
     if (!slot || !pallet) continue;
+    if (!palletCanPick(pallet)) continue;
+    const order = snap.outbound.find((o) => o.code === line.orderCode);
+    const store = order?.customer ?? line.orderCode;
+    const takeEs = line.pickPack === "contenedor" ? `del contenedor tomar ${line.qty}` : `tomar ${line.qty} cajas`;
+    const takeEn = line.pickPack === "contenedor" ? `from container take ${line.qty}` : `take ${line.qty} cases`;
     tasks.push({
       id: `pick-${wave.id}-${line.id}`,
       kind: "pick",
@@ -94,13 +100,13 @@ export function buildRfQueue(snap: WmsSnapshot, siteId?: string, operatorId?: st
       qty: line.qty,
       waveId: wave.id,
       lineId: line.id,
-      labelEs: `Picar ${skuName(line.skuId)} · ${slot.code}`,
-      labelEn: `Pick ${skuName(line.skuId)} · ${slot.code}`,
+      labelEs: `Súper ${store} · pasillo ${slot.aisle} · ${slot.code} · ${takeEs}`,
+      labelEn: `Store ${store} · aisle ${slot.aisle} · ${slot.code} · ${takeEn}`,
     });
   }
 
   for (const pallet of snap.pallets) {
-    if (pallet.status !== "muelle") continue;
+    if (!palletCanPutaway(pallet)) continue;
     if (siteId && pallet.siteId !== siteId) continue;
     const from = pallet.slotId ? snap.slots.find((s) => s.id === pallet.slotId) : null;
     const to = suggestPutawaySlot(snap, pallet);

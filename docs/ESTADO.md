@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-15 · Cloud Agent · WMS fase 13: embalaje y manifiesto de muelle
+**Última actualización:** 2026-08-16 · Cloud Agent · oleada 10 dock calendar
 
 ---
 
@@ -86,7 +86,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | 13 | IA contextual global + streaming + decay con fecha + detalle score + EN ESTA VISTA + FAB arrastrable | `AiAssistantHost`, `chat-stream.ts`, `coldBy*`, `ViewTotals` leads/reservas/clientes, `DraggableAiFab` |
 | 13b | Streaming también en pestaña Conocimiento | `KnowledgePanel` → `askKnowledgeStream` |
 
-**Verificación automática:** lint, `npm test` (**107**), `npm run build` — limpios.
+**Verificación automática:** lint (warnings previos), `npm test` (**261**), `npm run build` — limpios.
 
 **Decisiones de alcance (no son olvidos):**
 - **Núcleo = viajes + leads.** Todo lo demás deliberado → `docs/FUERA-DE-NUCLEO.md`.
@@ -155,6 +155,34 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | **Aurora — IA global/stream** | `AiAssistantHost.tsx`, `chat-stream.ts`, `askKnowledgeStream`, FAB `DraggableAiFab` |
 | **Aurora — decay fecha / vistas** | `coldByDate/Label`, ViewTotals leads·reservas·clientes, toggle detalle score |
 | **Fuera de núcleo (memoria)** | `docs/FUERA-DE-NUCLEO.md` |
+| **Phase 0 — auditoría** | `docs/ARCHITECTURE_AUDIT.md` |
+| **Phase 0 — arquitectura objetivo** | `docs/TARGET_ARCHITECTURE.md` |
+| **Phase 0 — plan SQL** | `docs/DATABASE_PLAN.md` |
+| **Phase 0 — plan de migración** | `docs/MIGRATION_PLAN.md` |
+| **Phase 0 — índice arquitectura** | `docs/ARCHITECTURE.md` |
+| **Phase 0 — roadmap brief 0–14** | `docs/ROADMAP.md` |
+| **Brief 28 — auditoría** | `docs/AUDIT.md`, `src/lib/wms/audit.ts` |
+| **Brief 29 — RF offline** | `src/lib/wms/offline-queue.ts`, `offline-apply.ts`, `WmsRfGun.tsx` |
+| **Brief 30 — torre** | `src/lib/wms/tower.ts`, `WmsTowerOps.tsx` |
+| **Brief 34 — copilot** | `src/lib/wms/copilot.ts`, `WmsCopilot.tsx` |
+| **Brief 35 — seguridad** | `permissions.ts`, `runtime.ts`, SQL RLS no aplicado |
+| **Brief 36 — tests** | `ops-critical.test.ts`, `copilot.test.ts` |
+| **Brief 38 — demo/prod** | `resolveRuntimeMode` · semilla vs Supabase |
+| **Brief 31 — productividad** | `src/lib/wms/productivity.ts` |
+| **Brief 32 — costes** | `src/lib/wms/costs.ts` |
+| **Brief 33 — alertas** | `src/lib/wms/alert-engine.ts` |
+| **Briefs 6–7 — inventory** | `src/lib/wms/inventory-core.ts`, SQL `20260816053000_create_wms_inventory_core.sql` (no aplicado) |
+| **Briefs 4–5 — tenant/RBAC** | `rbac.ts`, `tenant.ts`, `persist.ts`, SQL `20260816060000_create_wms_tenant_rbac.sql` (no aplicado) |
+| **Oleadas 1–2 — estado + ledger** | `WmsLiveProvider` en `main.tsx`. Push remoto cableado; demo en LS. SQL no aplicado. |
+| **FEFO al abrir ola** | `openWaveFromOrder` filtra caducado/cuarentena y ordena por expiry (`WMS_DEMO_NOW`) |
+| **Oleada 3 — holds** | Hold ALLOCATE al abrir ola; consume al picar; release al omitir; merma recorta |
+| **Oleada 4 — counts** | Sesión + líneas sobre `planCycleCounts`. Desvío = movimiento `ajuste` + audit |
+| **Oleada 5 — receiving/QC** | `asnLines` + incidencias + QC. Palet en cuarentena no pica. Semilla sin líneas inventadas |
+| **Oleada 6 — putaway/slotting** | Ranking zona/capacidad/familia/FEFO/% pasillo. Recomendación no mueve. Semilla sin reglas |
+| **Oleada 7 — MIN/MAX** | `max(0, máx−actual)` si actual < mín. AUTO no mueve sin operario. Pick face vacío se mantiene |
+| **Oleada 8 — packing/SSCC** | Estaciones y bultos escritos. Registro SSCC único. Generar solo con prefijo. Etiqueta sin tracking |
+| **Oleada 9 — shipping/mock** | `shipments` PACKED→STAGED→LOADED→SHIPPED. MockCarrierAdapter etiquetado. Expedir sin tracking válido |
+| **Oleada 10 — dock calendar** | Muelles escritos. Citas + eventos. Cupo 1 solo si está escrito; si no, no se inventa |
 | **Aurora playbook futuros** | `docs/AURORA-CONOCIMIENTO.md` |
 
 ---
@@ -163,9 +191,35 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–13 hechas en esta rama: operación diaria, jornada, olas, recepción ASN, RF, móvil, putaway por zona, conteo firmado, expedición de lo picado, embalaje de cajas sueltas y manifiesto de muelle. `main` ya publica en Vercel.
+Fases 8–20 + Phase 0 + briefs 28–38 + 31–33 + 6–7 + 4–5 + oleadas 1–10 + FEFO en esta rama.
 
-Siguiente: terminal ZKTeco físico y APIs de flota cuando existan. Tablas WMS en Postgres cuando haya stock real.
+**Plan de oleadas:** **14** (0–13) en `docs/MIGRATION_PLAN.md`. Hechas: 0–10. Siguientes: 11 yard, 12 returns, 13 mover carpetas.
+
+**Oleada 10 hecha:** `docks` / citas / eventos semilla `[]`. Dos pedidos no chocan en el mismo muelle **si** capacity=1 está escrita; si capacity es null, no se inventa el cupo. Yard todavía no.
+
+**Siguiente (UNA):** oleada 11 — yard. Sin telemetría de camión. No reutilizar `fleet[]`. Semilla sin visitas inventadas.
+
+**4–5 Multi-tenant + Postgres:** `organization → warehouses → zones/locations`. 11 roles WMS. `authorizeWms` / `actorFromAppUser`. SQL no aplicado. Un org.
+
+**6–7 Inventory core / balance:** `applyInventoryTx` es la única mutación de stock. `available = on_hand − allocated − blocked − quarantined`. Semilla = RECEIPT de palets reales (sin seriales). SQL no aplicado. UOM **sigue sin cablear** a la ola.
+
+**31 Productividad:** l/h, u/h, ped/h, accuracy, distancia estimada, min/tarea. Por picker/packer/carretilla/turno/zona/almacén. Código, no nombre.
+
+**32 Costes:** cost/order|line|pallet|pick|ship. Estructura labor/carrier/handling/storage. No es tesorería del Hub.
+
+**33 Alertas:** motor tipado (LOW_STOCK… CARRIER_DELAY) con severity/status/entity/acción. `resolved_at` solo si el hueco ya está cuadrado.
+
+**34 Copilot:** cinco preguntas sobre el snapshot. `finding/evidence/confidence/recommendation/optional_action`. Confirmación obligatoria. No LLM.
+
+**35 Seguridad:** `authorizeWms` (org + almacén + RBAC). SQL `wms_site_members` no aplicado. Demo ≠ prod. Sin secretos en git.
+
+**36 Tests:** holds, escasez, doble reserva, revisión, lote caducado, escaneo duplicado, transición inválida, permisos, putaway, FEFO, conteo, devolución.
+
+**37 UX:** identidad igual. Badge DEMO/PROD, footnotes de decisión, a11y RF, empty del copilot. Sin gráfico decorativo. Quitado delta 2.1% inventado.
+
+**38 Demo/prod:** `VITE_RUNTIME_MODE`. Demo = semilla sin infra. Prod = Supabase + auth estricta.
+
+UOM **sigue sin cablear** a la ola. Ledger Postgres no se aplica solo (código sí; migration no). Holds al abrir ola: **sí** (olas nuevas; semilla histórica sin hold).
 
 ### Plan B — repo público (fecha límite 2026-08-22)
 

@@ -1,3 +1,20 @@
+# Seguridad — Campo Norte
+
+WMS y CRM. La auditoría CRM (hallazgos 1–6) sigue debajo. Decisiones WMS:
+
+- Roles de menú: `admin` Dirección, `ops` Almacén, `booking` Office, `guide` Planta, `pending` sin acceso.
+- Stock hoy en el navegador: **cualquiera con la demo ve el snapshot local**. RLS de almacén: SQL `wms_site_members` **no aplicado**.
+- Autorización de dominio: `authorizeWms(snap, actor, perm, warehouseId)` con roles WMS (ADMIN…VIEWER). El frontend no basta. En prod, `authorizeWmsWrite` exige actor y `save_wms_ledger` chequea RBAC en SQL.
+- Un tenant: `org-camponorte`. Aislamiento de centro: `scopeSnapshotToWarehouse` + `warehouseIds` del actor.
+- Service role nunca en `VITE_*`. Demo ≠ producción: `VITE_RUNTIME_MODE=production` o `VITE_STRICT_AUTH`.
+- Credenciales `sofia@camponorte.demo` / `norte2026` **no** se usan en prod.
+- Mutaciones: `audit_logs` en cliente. `operationId` servidor pendiente de ledger.
+- IA no escribe huecos ni expediciones (confirmación obligatoria).
+
+Pendiente WMS (no es olvido de la auditoría CRM): ledger, RLS stock, tests de políticas WMS, trazas de picking.
+
+---
+
 # Auditoría de seguridad — Campo Norte Growth OS
 
 > Revisión interna del entorno de demostración antes de exponerlo.

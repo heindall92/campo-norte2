@@ -3,7 +3,7 @@ import { proposeReplenishments } from "./movements";
 
 export const WMS_DEMO_NOW = "2026-08-15T11:00:00.000Z";
 
-export type WmsAlertKind = "bateria" | "caducidad" | "cut_off" | "pick_face" | "bloqueo";
+export type WmsAlertKind = "bateria" | "caducidad" | "cut_off" | "pick_face" | "bloqueo" | "merma" | "faltante";
 export type WmsAlertSeverity = "info" | "warn" | "critical";
 
 export interface WmsAlert {
@@ -105,6 +105,43 @@ export function computeWmsAlerts(
       detailEn: "Do not assign putaway or picking until released",
       siteId: slot.siteId,
       entityId: slot.id,
+    });
+  }
+
+  for (const fix of snap.slotFixes) {
+    if (fix.status !== "pendiente" || !inSite(fix.siteId)) continue;
+    const slot = snap.slots.find((s) => s.id === fix.slotId);
+    const sku = snap.skus.find((s) => s.id === fix.skuId);
+    alerts.push({
+      id: `falt-${fix.id}`,
+      kind: "faltante",
+      severity: "warn",
+      titleEs: `Faltante en hueco ${slot?.code ?? fix.slotId}`,
+      titleEn: `Slot shortage ${slot?.code ?? fix.slotId}`,
+      detailEs: `Sistema ${fix.systemQty} · ticket ${fix.takeQty} · ${sku?.name ?? "artículo"}. El jefe tiene que cuadrar el hueco; el operario no va a la oficina.`,
+      detailEn: `System ${fix.systemQty} · ticket ${fix.takeQty} · ${sku?.name ?? "item"}. The lead must fix the slot; the picker does not walk to the office.`,
+      siteId: fix.siteId,
+      entityId: fix.id,
+    });
+  }
+
+  for (const event of snap.mermaEvents) {
+    if (!inSite(event.siteId)) continue;
+    if (event.at.slice(0, 10) !== now.toISOString().slice(0, 10)) continue;
+    const sku = snap.skus.find((s) => s.id === event.skuId);
+    const from = event.fromSlotId ? snap.slots.find((s) => s.id === event.fromSlotId) : null;
+    const reason =
+      event.reason === "caida" ? { es: "caída", en: "dropped" } : event.reason === "rota" ? { es: "rota", en: "broken" } : { es: event.note || "otra", en: event.note || "other" };
+    alerts.push({
+      id: `merma-${event.id}`,
+      kind: "merma",
+      severity: "warn",
+      titleEs: `Merma declarada · ${event.qty} ${sku?.name ?? event.skuId}`,
+      titleEn: `Declared shrink · ${event.qty} ${sku?.name ?? event.skuId}`,
+      detailEs: `${from?.code ?? "hueco"} · ${reason.es}. Si no se declara, coger otra caja deja un faltante invisible.`,
+      detailEn: `${from?.code ?? "slot"} · ${reason.en}. If undeclared, taking another case leaves a hidden shortage.`,
+      siteId: event.siteId,
+      entityId: event.id,
     });
   }
 

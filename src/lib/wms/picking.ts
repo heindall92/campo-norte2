@@ -1,4 +1,7 @@
+import { applyTxToSnapshot, locationOfPallet } from "./inventory-core";
 import { codesEqual } from "./location";
+import { palletCanPick } from "./receiving";
+import { availableQty, consumeReservation, holdForLine, releaseHoldsForLine } from "./reservations";
 import type { FleetKind, PickLine, PickWave, StockMovement, WmsSnapshot } from "./types";
 
 export function nextOpenLine(wave: PickWave): PickLine | null {
@@ -22,7 +25,9 @@ export type ConfirmPickError =
   | "wrong_slot"
   | "wrong_sscc"
   | "invalid_qty"
-  | "pallet_missing";
+  | "pallet_missing"
+  | "slot_blocked"
+  | "pallet_quarantined";
 
 export type ConfirmPickResult =
   | { ok: true; snap: WmsSnapshot }
@@ -53,16 +58,23 @@ export function confirmPick(
   if (!slot || !codesEqual(slot.code, input.slotCode)) {
     return { ok: false, error: "wrong_slot" };
   }
+  if (slot.status === "bloqueado") {
+    return { ok: false, error: "slot_blocked" };
+  }
 
   const pallet = line.palletId ? snap.pallets.find((p) => p.id === line.palletId) : null;
   if (!pallet) return { ok: false, error: "pallet_missing" };
+  if (!palletCanPick(pallet)) return { ok: false, error: "pallet_quarantined" };
   if (input.sscc.trim() !== pallet.sscc) return { ok: false, error: "wrong_sscc" };
-  if (!Number.isFinite(input.qty) || input.qty < 1 || input.qty > line.qty) {
+  if (!Number.isFinite(input.qty) || input.qty < 1 || input.qty > line.qty || input.qty > pallet.qty) {
     return { ok: false, error: "invalid_qty" };
   }
+  const hold = holdForLine(snap, line.id);
+  const pickCap = availableQty(snap, pallet.id) + (hold?.qty ?? 0);
+  if (input.qty > pickCap) return { ok: false, error: "invalid_qty" };
 
   const nextLines = wave.lines.map((l) => {
-    if (l.id === line.id) return { ...l, status: "picada" as const, qtyPicked: input.qty, qtyPacked: 0 };
+    if (l.id === line.id) return { ...l, status: "picada" as const, qtyPicked: input.qty, qtyPacked: 0, cartonSscc: null };
     if (l.status === "pendiente" && l.sequence === line.sequence + 1) {
       return { ...l, status: "en_curso" as const };
     }
@@ -113,17 +125,53 @@ export function confirmPick(
     o.id === wave.operatorId ? { ...o, movesToday: o.movesToday + 1 } : o,
   );
 
-  return {
-    ok: true,
-    snap: {
-      ...snap,
-      pickWaves: snap.pickWaves.map((w) => (w.id === nextWave.id ? nextWave : w)),
-      slots: nextSlots,
-      pallets: nextPallets,
-      movements: [movement, ...snap.movements],
-      operators: nextOperators,
-    },
+  const physical: WmsSnapshot = {
+    ...snap,
+    pickWaves: snap.pickWaves.map((w) => (w.id === nextWave.id ? nextWave : w)),
+    slots: nextSlots,
+    pallets: nextPallets,
+    movements: [movement, ...snap.movements],
+    operators: nextOperators,
   };
+  const led = applyTxToSnapshot(physical, {
+    type: "PICK",
+    skuId: line.skuId,
+    lot: pallet.lot || null,
+    fromLocationId: locationOfPallet(pallet),
+    qty: input.qty,
+    reason: nextWave.code,
+    refType: "pick_line",
+    refId: line.id,
+    palletId: pallet.id,
+    actorId: wave.operatorId,
+    at,
+    id: `itx-PICK-${line.id}-${at}`,
+  });
+  if (!led.ok) return { ok: false, error: "invalid_qty" };
+  let next = led.snap;
+  if (hold) {
+    const consumed = consumeReservation(next, hold.id);
+    if (consumed.ok) next = consumed.snap;
+    const leftover = hold.qty - input.qty;
+    if (leftover > 0) {
+      const rest = applyTxToSnapshot(next, {
+        type: "DEALLOCATE",
+        skuId: line.skuId,
+        lot: pallet.lot || null,
+        fromLocationId: locationOfPallet(pallet),
+        qty: leftover,
+        reason: `${nextWave.code} leftover`,
+        refType: "reservation",
+        refId: hold.id,
+        palletId: pallet.id,
+        actorId: wave.operatorId,
+        at,
+        id: `itx-DEALLOC-LEFT-${hold.id}`,
+      });
+      if (rest.ok) next = rest.snap;
+    }
+  }
+  return { ok: true, snap: next };
 }
 
 function closeLine(
@@ -144,7 +192,7 @@ function closeLine(
   }
 
   const nextLines = wave.lines.map((l) => {
-    if (l.id === line.id) return { ...l, status, qtyPicked, qtyPacked: 0 };
+    if (l.id === line.id) return { ...l, status, qtyPicked, qtyPacked: 0, cartonSscc: null };
     if (l.status === "pendiente" && l.sequence === line.sequence + 1) {
       return { ...l, status: "en_curso" as const };
     }
@@ -161,26 +209,30 @@ function closeLine(
 
   return {
     ok: true,
-    snap: {
-      ...snap,
-      pickWaves: snap.pickWaves.map((w) => (w.id === nextWave.id ? nextWave : w)),
-      movements: [
-        {
-          id: `mv-${status}-${line.id}`,
-          at,
-          type: "ajuste",
-          skuId: line.skuId,
-          palletId: line.palletId,
-          fromSlotId: line.slotId,
-          toSlotId: null,
-          qty: qtyPicked,
-          operatorId: wave.operatorId,
-          fleetId: wave.fleetId,
-          note,
-        },
-        ...snap.movements,
-      ],
-    },
+    snap: releaseHoldsForLine(
+      {
+        ...snap,
+        pickWaves: snap.pickWaves.map((w) => (w.id === nextWave.id ? nextWave : w)),
+        movements: [
+          {
+            id: `mv-${status}-${line.id}`,
+            at,
+            type: "ajuste",
+            skuId: line.skuId,
+            palletId: line.palletId,
+            fromSlotId: line.slotId,
+            toSlotId: null,
+            qty: qtyPicked,
+            operatorId: wave.operatorId,
+            fleetId: wave.fleetId,
+            note,
+          },
+          ...snap.movements,
+        ],
+      },
+      line.id,
+      line.palletId,
+    ),
   };
 }
 

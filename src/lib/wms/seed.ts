@@ -1,8 +1,11 @@
+import { seedInventoryCore } from "./inventory-core";
+import { seedMemberships } from "./tenant";
 import { slotRecordId } from "./location";
 import { generateSiteSlots } from "./onboard";
 import { CAMPO_NORTE_ORG } from "./org";
 import { dockWindowFor } from "./carriers";
 import { ensureShiftRoster } from "./roster";
+import { WMS_DEMO_NOW } from "./alerts";
 import {
   SYSTEM_CATEGORIES,
   type Carrier,
@@ -913,11 +916,39 @@ export function buildWmsSeed(): WmsSnapshot {
     operators: ensureShiftRoster(OPERATORS),
     clockPunches: [],
     inbound: INBOUND,
+    asnLines: [],
+    asnIncidents: [],
     outbound: OUTBOUND,
     carriers: CARRIERS,
     costs: COSTS,
     movements: MOVEMENTS,
     pickWaves,
+    loadUnits: [],
+    superAssignments: [],
+    mermaEvents: [],
+    slotFixes: [],
+    auditLogs: [],
+    reservations: [],
+    countSessions: [],
+    countLines: [],
+    slottingRules: [],
+    slottingRecommendations: [],
+    replenishTasks: [],
+    packStations: [],
+    packPackages: [],
+    shipments: [],
+    trackingEvents: [],
+    docks: [],
+    dockAppointments: [],
+    dockEvents: [],
+    ...seedInventoryCore({
+      orgId: CAMPO_NORTE_ORG.id,
+      skus: SKUS,
+      pallets,
+      now: WMS_DEMO_NOW,
+    }),
+    ledgerRevision: 0,
+    memberships: seedMemberships(CAMPO_NORTE_ORG.id),
   };
 }
 
@@ -983,6 +1014,8 @@ function buildPickWaves(slots: Slot[], pallets: Pallet[]): PickWave[] {
       qty: [6, 4, 12, 8, 3, 10, 5, 7][i] ?? 4,
       qtyPicked: 0,
       qtyPacked: 0,
+      cartonSscc: null,
+      pickPack: "caja" as const,
       slotId: slot.id,
       palletId: slot.palletId,
       status: "pendiente" as const,
@@ -1034,6 +1067,8 @@ function buildPickWaves(slots: Slot[], pallets: Pallet[]): PickWave[] {
             qty: 4 + i,
             qtyPicked: i < 2 ? 4 + i : 0,
             qtyPacked: 0,
+            cartonSscc: null,
+      pickPack: "caja" as const,
             slotId: slot.id,
             palletId: slot.palletId,
             status: (i < 2 ? "picada" : i === 2 ? "en_curso" : "pendiente") as PickWave["lines"][number]["status"],
@@ -1061,6 +1096,8 @@ function buildPickWaves(slots: Slot[], pallets: Pallet[]): PickWave[] {
           qty: pallet?.qty ?? 40,
           qtyPicked: 0,
           qtyPacked: 0,
+          cartonSscc: null,
+      pickPack: "caja" as const,
           slotId: slot.id,
           palletId: slot.palletId,
           status: "pendiente" as const,
@@ -1088,6 +1125,8 @@ function buildPickWaves(slots: Slot[], pallets: Pallet[]): PickWave[] {
           qty: 3 + i,
           qtyPicked: 0,
           qtyPacked: 0,
+          cartonSscc: null,
+      pickPack: "caja" as const,
           slotId: slot.id,
           palletId: slot.palletId,
           status: "pendiente" as const,

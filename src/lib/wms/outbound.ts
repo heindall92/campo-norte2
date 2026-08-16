@@ -1,3 +1,7 @@
+import { applyTxToSnapshot, findBalance, ledgerLocationForPallet, locationOfPallet } from "./inventory-core";
+import { recordDockEventForOrder } from "./dock";
+import { isSsccTaken } from "./packing";
+import { markShipmentPacked, markShipmentShipped, markShipmentStaged } from "./shipping";
 import type { OutboundOrder, Pallet, PickLine, Slot, WmsSnapshot } from "./types";
 
 export type OutboundOpError =
@@ -9,7 +13,8 @@ export type OutboundOpError =
   | "dock_full"
   | "not_packed"
   | "invalid_qty"
-  | "line_missing";
+  | "line_missing"
+  | "sscc_taken";
 
 export type OutboundOpResult =
   | { ok: true; snap: WmsSnapshot }
@@ -185,7 +190,7 @@ export function buildLoadManifest(snap: WmsSnapshot, orderId: string): LoadManif
       kind: "caja",
       skuId: line.skuId,
       qty: line.qtyPacked,
-      sscc: null,
+      sscc: line.cartonSscc,
       slotCode: slot?.code ?? null,
       lineId: line.id,
     });
@@ -230,32 +235,57 @@ export function packPickedLines(
   const nextStatus =
     fill.order.status === "muelle" || fill.fullPalletsToStage.length ? fill.order.status : "embalaje";
 
-  return {
-    ok: true,
-    snap: {
-      ...snap,
-      pickWaves,
-      movements: [
-        {
-          id: `mv-pack-${orderId}-${at}`,
-          at,
-          type: "salida",
-          skuId: fill.unpackedCases[0]!.skuId,
-          palletId: null,
-          fromSlotId: null,
-          toSlotId: null,
-          qty: packedQty,
-          operatorId,
-          fleetId: null,
-          note: `Embalaje ${fill.order.code} · ${packedQty} ud. picadas`,
-        },
-        ...snap.movements,
-      ],
-      outbound: snap.outbound.map((o) =>
-        o.id === orderId ? { ...o, status: nextStatus as OutboundOrder["status"] } : o,
-      ),
-    },
+  let next: WmsSnapshot = {
+    ...snap,
+    pickWaves,
+    movements: [
+      {
+        id: `mv-pack-${orderId}-${at}`,
+        at,
+        type: "salida",
+        skuId: fill.unpackedCases[0]!.skuId,
+        palletId: null,
+        fromSlotId: null,
+        toSlotId: null,
+        qty: packedQty,
+        operatorId,
+        fleetId: null,
+        note: `Embalaje ${fill.order.code} · ${packedQty} ud. picadas`,
+      },
+      ...snap.movements,
+    ],
+    outbound: snap.outbound.map((o) =>
+      o.id === orderId ? { ...o, status: nextStatus as OutboundOrder["status"] } : o,
+    ),
   };
+  for (const line of fill.unpackedCases) {
+    const delta = line.qtyPicked - (line.qtyPacked ?? 0);
+    const pallet = palletOf(snap, line.palletId);
+    if (delta < 1 || !pallet) continue;
+    const led = applyTxToSnapshot(next, {
+      type: "PACK",
+      skuId: line.skuId,
+      lot: pallet.lot || null,
+      fromLocationId: locationOfPallet(pallet),
+      qty: delta,
+      reason: `pack ${fill.order.code}`,
+      refType: "pick_line",
+      refId: line.id,
+      palletId: pallet.id,
+      actorId: operatorId,
+      at,
+      id: `itx-PACK-${line.id}-${at}`,
+    });
+    if (!led.ok) return { ok: false, error: "invalid_qty" };
+    next = led.snap;
+  }
+  const packed = markShipmentPacked(next, orderId, at);
+  return { ok: true, snap: packed.ok ? packed.snap : next };
+}
+
+function cleanCartonSscc(value: string | null | undefined): string | null {
+  const t = value?.trim() ?? "";
+  return t.length ? t : null;
 }
 
 export function packPickLine(
@@ -263,6 +293,7 @@ export function packPickLine(
   waveId: string,
   lineId: string,
   qty: number,
+  cartonSscc?: string | null,
 ): OutboundOpResult {
   const wave = snap.pickWaves.find((w) => w.id === waveId);
   const line = wave?.lines.find((l) => l.id === lineId);
@@ -271,17 +302,120 @@ export function packPickLine(
   if (!Number.isFinite(qty) || qty < 0 || qty > line.qtyPicked) {
     return { ok: false, error: "invalid_qty" };
   }
-  return {
-    ok: true,
-    snap: {
-      ...snap,
-      pickWaves: snap.pickWaves.map((w) =>
-        w.id === waveId
-          ? { ...w, lines: w.lines.map((l) => (l.id === lineId ? { ...l, qtyPacked: qty } : l)) }
-          : w,
-      ),
-    },
+  const sscc = qty < 1 ? null : cartonSscc === undefined ? line.cartonSscc : cleanCartonSscc(cartonSscc);
+  if (sscc && isSsccTaken(snap, sscc, { lineId: line.id })) return { ok: false, error: "sscc_taken" };
+  const physical: WmsSnapshot = {
+    ...snap,
+    pickWaves: snap.pickWaves.map((w) =>
+      w.id === waveId
+        ? {
+            ...w,
+            lines: w.lines.map((l) =>
+              l.id === lineId ? { ...l, qtyPacked: qty, cartonSscc: sscc } : l,
+            ),
+          }
+        : w,
+    ),
   };
+  const delta = qty - (line.qtyPacked ?? 0);
+  const pallet = palletOf(snap, line.palletId);
+  const withPacked = (nextSnap: WmsSnapshot): OutboundOpResult => {
+    const order = snap.outbound.find((o) => o.code === line.orderCode);
+    if (!order) return { ok: true, snap: nextSnap };
+    const packed = markShipmentPacked(nextSnap, order.id);
+    return { ok: true, snap: packed.ok ? packed.snap : nextSnap };
+  };
+  if (delta < 1 || !pallet) return { ok: true, snap: physical };
+  const led = applyTxToSnapshot(physical, {
+    type: "PACK",
+    skuId: line.skuId,
+    lot: pallet.lot || null,
+    fromLocationId: locationOfPallet(pallet),
+    qty: delta,
+    reason: `pack line ${line.id}`,
+    refType: "pick_line",
+    refId: line.id,
+    palletId: pallet.id,
+    at: new Date().toISOString(),
+    id: `itx-PACK-${line.id}`,
+  });
+  if (!led.ok) return { ok: false, error: "invalid_qty" };
+  return withPacked(led.snap);
+}
+
+/** HTML del manifiesto para imprimir. No inventa SSCC ni tracking. */
+export function loadManifestPrintHtml(
+  snap: WmsSnapshot,
+  manifest: LoadManifest,
+  lang: "es" | "en" = "es",
+): string {
+  const site = snap.sites.find((s) => s.id === manifest.order.siteId);
+  const skuName = (id: string) => snap.skus.find((s) => s.id === id)?.name ?? id;
+  const esc = (v: string) =>
+    v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const rows = manifest.rows
+    .map((r) => {
+      const kind = r.kind === "pallet" ? (lang === "es" ? "Palet" : "Pallet") : lang === "es" ? "Caja" : "Case";
+      return `<tr>
+        <td>${esc(kind)}</td>
+        <td>${esc(skuName(r.skuId))}</td>
+        <td>${esc(r.sscc ?? (lang === "es" ? "sin SSCC" : "no SSCC"))}</td>
+        <td>${esc(r.slotCode ?? "—")}</td>
+        <td style="text-align:right">${r.qty}</td>
+      </tr>`;
+    })
+    .join("");
+  const title = lang === "es" ? "Manifiesto de muelle" : "Dock manifest";
+  const tracking = manifest.tracking ?? (lang === "es" ? "sin tracking" : "no tracking");
+  const carrier = manifest.carrierName ?? (lang === "es" ? "sin carrier" : "no carrier");
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"/><title>${esc(title)} ${esc(manifest.order.code)}</title>
+<style>
+  body{font-family:ui-sans-serif,system-ui,sans-serif;color:#0f172a;margin:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  p,td,th{font-size:13px}
+  table{width:100%;border-collapse:collapse;margin-top:16px}
+  th,td{border-bottom:1px solid #cbd5e1;padding:6px 4px;text-align:left}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#475569}
+  .meta{color:#475569}
+  @media print{body{margin:12mm}}
+</style></head><body>
+  <h1>${esc(title)}</h1>
+  <p class="meta">${esc(snap.org.legalName)} · ${esc(site?.name ?? site?.city ?? "")}</p>
+  <p><strong>${esc(manifest.order.code)}</strong> · ${esc(manifest.order.customer)} · ${esc(manifest.dock)}</p>
+  <p class="meta">${esc(carrier)} · ${esc(tracking)}
+    · ${manifest.palletCount} ${lang === "es" ? "palets" : "pallets"}
+    · ${manifest.caseCount} ${lang === "es" ? "cajas" : "cases"}</p>
+  <table>
+    <thead><tr>
+      <th>${lang === "es" ? "Tipo" : "Kind"}</th>
+      <th>SKU</th>
+      <th>SSCC</th>
+      <th>${lang === "es" ? "Hueco" : "Slot"}</th>
+      <th style="text-align:right">${lang === "es" ? "Cant." : "Qty"}</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <p class="meta">${lang === "es"
+    ? "Solo figura lo picado y embalado o cargado. El SSCC y el tracking vacíos no se rellenan solos."
+    : "Only picked and packed or staged goods. Empty SSCC and tracking are not filled in."}</p>
+</body></html>`;
+}
+
+export function openLoadManifestPrint(
+  snap: WmsSnapshot,
+  orderId: string,
+  lang: "es" | "en" = "es",
+): boolean {
+  if (typeof window === "undefined") return false;
+  const manifest = buildLoadManifest(snap, orderId);
+  if (!manifest || !manifest.rows.length) return false;
+  const popup = window.open("", "_blank", "noopener,noreferrer,width=720,height=900");
+  if (!popup) return false;
+  popup.document.write(loadManifestPrintHtml(snap, manifest, lang));
+  popup.document.close();
+  popup.focus();
+  popup.print();
+  return true;
 }
 
 /**
@@ -333,18 +467,40 @@ export function stageOrderToDock(
     });
   });
 
-  return {
-    ok: true,
-    snap: {
-      ...snap,
-      slots,
-      pallets,
-      movements,
-      outbound: snap.outbound.map((o) =>
-        o.id === order.id && o.status !== "expedido" ? { ...o, status: "muelle" as const } : o,
-      ),
-    },
+  let next: WmsSnapshot = {
+    ...snap,
+    slots,
+    pallets,
+    movements,
+    outbound: snap.outbound.map((o) =>
+      o.id === order.id && o.status !== "expedido" ? { ...o, status: "muelle" as const } : o,
+    ),
   };
+  for (const pallet of take) {
+    const loc = ledgerLocationForPallet(next, pallet);
+    const bal = findBalance(next, pallet.skuId, pallet.lot || null, loc);
+    const qty = bal ? bal.picked + bal.packed : 0;
+    if (qty < 1) continue;
+    const led = applyTxToSnapshot(next, {
+      type: "STAGE",
+      skuId: pallet.skuId,
+      lot: pallet.lot || null,
+      fromLocationId: loc,
+      qty,
+      reason: `stage ${order.code}`,
+      refType: "order",
+      refId: order.id,
+      palletId: pallet.id,
+      actorId: operatorId,
+      at,
+      id: `itx-STAGE-${pallet.id}-${at}`,
+    });
+    if (!led.ok) return { ok: false, error: "invalid_qty" };
+    next = led.snap;
+  }
+  const staged = markShipmentStaged(next, order.id, at);
+  const withShip = staged.ok ? staged.snap : next;
+  return { ok: true, snap: recordDockEventForOrder(withShip, order.id, "load", at, operatorId) };
 }
 
 /**
@@ -390,16 +546,43 @@ export function shipOutboundOrder(
     });
   }
 
-  return {
-    ok: true,
-    snap: {
-      ...snap,
-      slots,
-      pallets,
-      movements,
-      outbound: snap.outbound.map((o) =>
-        o.id === orderId ? { ...o, status: "expedido" as const } : o,
-      ),
-    },
+  let next: WmsSnapshot = {
+    ...snap,
+    slots,
+    pallets,
+    movements,
+    outbound: snap.outbound.map((o) =>
+      o.id === orderId ? { ...o, status: "expedido" as const } : o,
+    ),
   };
+  const shipQty = new Map<string, { pallet: Pallet; qty: number }>();
+  for (const line of fulfillment.lines) {
+    if (line.status !== "picada" || line.qtyPicked < 1 || !line.palletId) continue;
+    const pallet = palletOf(snap, line.palletId);
+    if (!pallet) continue;
+    const prev = shipQty.get(pallet.id);
+    shipQty.set(pallet.id, { pallet, qty: (prev?.qty ?? 0) + line.qtyPicked });
+  }
+  for (const { pallet, qty } of shipQty.values()) {
+    const loc = ledgerLocationForPallet(next, pallet);
+    const led = applyTxToSnapshot(next, {
+      type: "SHIP",
+      skuId: pallet.skuId,
+      lot: pallet.lot || null,
+      fromLocationId: loc,
+      qty,
+      reason: `ship ${fulfillment.order.code}`,
+      refType: "order",
+      refId: orderId,
+      palletId: pallet.id,
+      actorId: operatorId,
+      at,
+      id: `itx-SHIP-${pallet.id}-${at}`,
+    });
+    if (!led.ok) return { ok: false, error: "invalid_qty" };
+    next = led.snap;
+  }
+  const shipped = markShipmentShipped(next, orderId, at);
+  const withShip = shipped.ok ? shipped.snap : next;
+  return { ok: true, snap: recordDockEventForOrder(withShip, orderId, "departure", at, operatorId) };
 }

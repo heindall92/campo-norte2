@@ -1,7 +1,7 @@
 import { hoursFromPunches, lastPunch } from "./clock";
 import { pinsMatch } from "./fingerprint";
 import { WMS_DEMO_NOW } from "./alerts";
-import type { Operator, ShiftCode, WmsSnapshot } from "./types";
+import type { ClockMethod, ClockPunch, Operator, ShiftCode, StockMovement, WmsSnapshot } from "./types";
 
 /** Ventanas de turno (hora local del centro). No se inventan horas extra. */
 export const SHIFT_WINDOW: Record<ShiftCode, { start: string; end: string; plannedHours: number }> = {
@@ -87,4 +87,87 @@ export function assertCanPick(
     if (!pinsMatch(pin, op.pinHash)) return { ok: false, error: "pin_mismatch" };
   }
   return { ok: true };
+}
+
+export interface ShiftCloseOperator {
+  operator: Operator;
+  punches: ClockPunch[];
+  hoursWorked: number;
+  clockedIn: boolean;
+  lastKind: "entrada" | "salida" | null;
+  method: ClockMethod | null;
+}
+
+export interface ShiftClose {
+  siteId: string;
+  day: string;
+  operators: ShiftCloseOperator[];
+  punchesTotal: number;
+  hoursTotal: number;
+  stillIn: number;
+  movements: StockMovement[];
+  inboundMoves: number;
+  outboundMoves: number;
+  transfers: number;
+  adjustments: number;
+}
+
+function movementAtSite(snap: WmsSnapshot, move: StockMovement, siteId: string): boolean {
+  const from = move.fromSlotId ? snap.slots.find((s) => s.id === move.fromSlotId) : null;
+  const to = move.toSlotId ? snap.slots.find((s) => s.id === move.toSlotId) : null;
+  if (from?.siteId === siteId || to?.siteId === siteId) return true;
+  const op = move.operatorId ? snap.operators.find((o) => o.id === move.operatorId) : null;
+  return op?.siteId === siteId;
+}
+
+/**
+ * Cierre de jornada: solo fichajes y movimientos del día.
+ * No inventa horas, operarios ni KPIs de productividad.
+ */
+export function buildShiftClose(
+  snap: WmsSnapshot,
+  siteId: string,
+  dayIso = WMS_DEMO_NOW,
+): ShiftClose {
+  const day = dayIso.slice(0, 10);
+  const punches = snap.clockPunches.filter((p) => p.siteId === siteId && p.at.slice(0, 10) === day);
+  const byOp = new Map<string, ClockPunch[]>();
+  for (const punch of punches) {
+    const list = byOp.get(punch.operatorId) ?? [];
+    list.push(punch);
+    byOp.set(punch.operatorId, list);
+  }
+  const operators: ShiftCloseOperator[] = [...byOp.entries()]
+    .flatMap(([operatorId, list]) => {
+      const operator = snap.operators.find((o) => o.id === operatorId);
+      if (!operator) return [];
+      const last = lastPunch(list, operatorId);
+      const row: ShiftCloseOperator = {
+        operator,
+        punches: list.slice().sort((a, b) => a.at.localeCompare(b.at)),
+        hoursWorked: hoursFromPunches(list, operatorId, dayIso, dayIso),
+        clockedIn: last?.kind === "entrada",
+        lastKind: last?.kind ?? null,
+        method: last?.method ?? null,
+      };
+      return [row];
+    })
+    .sort((a, b) => a.operator.name.localeCompare(b.operator.name));
+
+  const movements = snap.movements.filter(
+    (m) => m.at.slice(0, 10) === day && movementAtSite(snap, m, siteId),
+  );
+  return {
+    siteId,
+    day,
+    operators,
+    punchesTotal: punches.length,
+    hoursTotal: Math.round(operators.reduce((s, o) => s + o.hoursWorked, 0) * 10) / 10,
+    stillIn: operators.filter((o) => o.clockedIn).length,
+    movements,
+    inboundMoves: movements.filter((m) => m.type === "entrada").length,
+    outboundMoves: movements.filter((m) => m.type === "salida").length,
+    transfers: movements.filter((m) => m.type === "traslado").length,
+    adjustments: movements.filter((m) => m.type === "ajuste" || m.type === "inventario").length,
+  };
 }

@@ -1,13 +1,14 @@
 import { Badge, Card } from "@/components/CrmChrome";
 import type { Lang } from "@/lib/i18n";
 import {
+  buildShiftClose,
   clockInOrOut,
   enrollOperatorPin,
   ingestAdapterPunch,
   operatorJornada,
   type WmsSnapshot,
 } from "@/lib/wms";
-import { Clock, Fingerprint, LogIn, LogOut } from "lucide-react";
+import { ClipboardCheck, Clock, Fingerprint, LogIn, LogOut } from "lucide-react";
 import { useState } from "react";
 
 const CLOCK_ERR: Record<string, { es: string; en: string }> = {
@@ -169,6 +170,89 @@ export function WmsJornadaCard({
         </button>
       </form>
       {msg && <p className="mt-2 text-xs font-semibold text-[var(--danger)]">{msg}</p>}
+    </Card>
+  );
+}
+
+export function WmsShiftCloseCard({
+  lang,
+  snap,
+  siteId,
+}: {
+  lang: Lang;
+  snap: WmsSnapshot;
+  siteId?: string;
+}) {
+  const sid = siteId ?? snap.sites[0]?.id ?? "";
+  const close = buildShiftClose(snap, sid);
+  const site = snap.sites.find((s) => s.id === sid);
+
+  return (
+    <Card
+      title={lang === "es" ? "Cierre de jornada" : "Shift close"}
+      subtitle={`${site?.city ?? sid} · ${close.day} · ${
+        lang === "es"
+          ? "solo fichajes y movimientos de ese día"
+          : "only punches and movements from that day"
+      }`}
+    >
+      <div className="mb-3 flex flex-wrap gap-2">
+        <Badge tone={close.stillIn ? "warn" : "good"}>
+          {close.stillIn
+            ? lang === "es"
+              ? `${close.stillIn} aún dentro`
+              : `${close.stillIn} still in`
+            : lang === "es"
+              ? "Nadie dentro"
+              : "Nobody in"}
+        </Badge>
+        <Badge tone="brand">
+          <Clock className="mr-1 inline h-3 w-3" />
+          {close.hoursTotal.toFixed(1)} h
+        </Badge>
+        <Badge tone="neutral">
+          {close.punchesTotal} {lang === "es" ? "fichajes" : "punches"}
+        </Badge>
+        <Badge tone="neutral">
+          <ClipboardCheck className="mr-1 inline h-3 w-3" />
+          {close.movements.length} {lang === "es" ? "movimientos" : "moves"}
+        </Badge>
+      </div>
+      <p className="mb-3 text-xs text-[var(--ink-muted)]">
+        {lang === "es"
+          ? `Entradas ${close.inboundMoves} · salidas ${close.outboundMoves} · traslados ${close.transfers} · ajustes ${close.adjustments}. Sin fichaje no hay horas.`
+          : `Inbound ${close.inboundMoves} · outbound ${close.outboundMoves} · transfers ${close.transfers} · adjustments ${close.adjustments}. No punch, no hours.`}
+      </p>
+      {close.operators.length === 0 ? (
+        <p className="text-sm text-[var(--ink-muted)]">
+          {lang === "es"
+            ? "Hoy no hay fichajes en este centro."
+            : "No clock punches at this site today."}
+        </p>
+      ) : (
+        <ul className="space-y-2 text-sm">
+          {close.operators.map((row) => (
+            <li
+              key={row.operator.id}
+              className="flex items-center justify-between gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2"
+            >
+              <span>
+                <span className="font-medium text-[var(--ink)]">{row.operator.name}</span>
+                <span className="mt-0.5 block text-xs text-[var(--ink-muted)]">
+                  {row.operator.code} · {row.punches.length}{" "}
+                  {lang === "es" ? "marcas" : "marks"}
+                  {row.method ? ` · ${row.method}` : ""}
+                </span>
+              </span>
+              <span className="flex items-center gap-2">
+                <Badge tone={row.clockedIn ? "warn" : "good"}>
+                  {row.hoursWorked.toFixed(1)} h
+                </Badge>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </Card>
   );
 }

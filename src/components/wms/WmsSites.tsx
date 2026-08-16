@@ -4,17 +4,15 @@ import {
   CAMPO_NORTE_ORG,
   occupancyByZone,
   onboardSite,
-  loadWmsSnapshot,
-  saveWmsSnapshot,
   ZONE_LABEL,
   type WarehouseZone,
-  type WmsSnapshot,
 } from "@/lib/wms";
 import { Building2, Check, MapPin, Plus, Warehouse } from "lucide-react";
 import { useState } from "react";
+import { useWmsLive } from "./useWmsLive";
 
 export function WmsSitesPanel({ lang }: { lang: Lang }) {
-  const [snap, setSnap] = useState(() => loadWmsSnapshot());
+  const { snap, commit } = useWmsLive();
   const [city, setCity] = useState("");
   const [region, setRegion] = useState("");
   const [country, setCountry] = useState("ES");
@@ -24,11 +22,6 @@ export function WmsSitesPanel({ lang }: { lang: Lang }) {
   const [zone, setZone] = useState<WarehouseZone>("seco");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
-
-  function persist(next: WmsSnapshot) {
-    saveWmsSnapshot(next);
-    setSnap(next);
-  }
 
   function submit() {
     const result = onboardSite(snap, {
@@ -53,7 +46,7 @@ export function WmsSitesPanel({ lang }: { lang: Lang }) {
       setFeedback(err);
       return;
     }
-    persist(result.snap);
+    commit(result.snap);
     setFeedback(null);
     setOkMsg(
       lang === "es"

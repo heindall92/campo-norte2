@@ -1,6 +1,19 @@
 import { closeAsnIfLocated } from "./catalog";
+import { applyTxToSnapshot, locationOfPallet } from "./inventory-core";
 import { codesEqual } from "./location";
-import type { Pallet, Slot, StockMovement, WarehouseZone, WmsSnapshot } from "./types";
+import { palletCanPutaway } from "./receiving";
+import { WMS_DEMO_NOW } from "./alerts";
+import type { InventoryTxType, Pallet, Slot, StockMovement, WmsSnapshot } from "./types";
+
+export {
+  addSlottingRule,
+  openSlottingRecommendation,
+  PUTAWAY_REASON_LABEL,
+  rankPutawayCandidates,
+  suggestPutawaySlot,
+  travelPctBetween,
+  zoneForCategory,
+} from "./slotting";
 
 export type LiveMoveError =
   | "pallet_missing"
@@ -10,7 +23,15 @@ export type LiveMoveError =
   | "slot_occupied"
   | "slot_blocked"
   | "same_slot"
-  | "not_on_dock";
+  | "not_on_dock"
+  | "same_site"
+  | "pallet_shipped"
+  | "pallet_in_wave"
+  | "stock_negative"
+  | "qc_pending"
+  | "pallet_quarantined"
+  | "rec_missing"
+  | "rec_accepted";
 
 export type LiveMoveResult =
   | { ok: true; snap: WmsSnapshot }
@@ -23,6 +44,7 @@ export type TransferInput = {
   operatorId?: string | null;
   fleetId?: string | null;
   note?: string;
+  ledgerType?: Extract<InventoryTxType, "PUTAWAY" | "MOVE" | "REPLENISH">;
 };
 
 function findSlot(snap: WmsSnapshot, code: string, siteId?: string): Slot | undefined {
@@ -98,39 +120,25 @@ function relocate(
     fleetId: input.fleetId ?? null,
     note: input.note ?? `${from.code} → ${to.code}`,
   };
-  return { ok: true, snap: appendMove(snap, movement, nextSlots, nextPallets) };
-}
-
-/** Zona preferida según categoría del SKU. Categorías de usuario caen en seco. */
-export function zoneForCategory(category: string): WarehouseZone {
-  if (category === "frescos" || category === "perecederos") return "fresco";
-  if (category === "congelados") return "congelado";
-  return "seco";
-}
-
-/**
- * Primer hueco libre del centro que encaja con la zona del SKU.
- * No inventa ocupación: solo huecos `libre` sin palet, fuera de muelle.
- */
-export function suggestPutawaySlot(snap: WmsSnapshot, pallet: Pallet): Slot | null {
-  const sku = snap.skus.find((s) => s.id === pallet.skuId);
-  const preferred = sku ? zoneForCategory(sku.category) : "seco";
-  const free = snap.slots.filter(
-    (s) =>
-      s.siteId === pallet.siteId &&
-      s.status === "libre" &&
-      !s.palletId &&
-      s.zone !== "muelle" &&
-      s.zone !== "crossdock",
-  );
-  const ranked = [...free].sort((a, b) => {
-    const zoneA = a.zone === preferred ? 0 : 1;
-    const zoneB = b.zone === preferred ? 0 : 1;
-    if (zoneA !== zoneB) return zoneA - zoneB;
-    if (a.pickFace !== b.pickFace) return a.pickFace ? 1 : -1;
-    return a.code.localeCompare(b.code);
+  const physical = appendMove(snap, movement, nextSlots, nextPallets);
+  if (pallet.qty < 1) return { ok: true, snap: physical };
+  const led = applyTxToSnapshot(physical, {
+    type: input.ledgerType ?? (type === "entrada" ? "PUTAWAY" : "MOVE"),
+    skuId: pallet.skuId,
+    lot: pallet.lot || null,
+    fromLocationId: from.id,
+    toLocationId: to.id,
+    qty: pallet.qty,
+    reason: movement.note,
+    refType: "pallet",
+    refId: pallet.id,
+    palletId: pallet.id,
+    actorId: input.operatorId ?? null,
+    at,
+    id: `itx-MOVE-${pallet.id}-${at}`,
   });
-  return ranked[0] ?? null;
+  if (!led.ok) return { ok: false, error: "stock_negative" };
+  return { ok: true, snap: led.snap };
 }
 
 /** Ubica un palet de muelle y cierra el ASN si ya no queda ninguno suyo en muelle. */
@@ -161,6 +169,30 @@ export function putawayReceivedPallet(
   return { ok: true, snap: closed.snap };
 }
 
+/** Confirma una recomendación de slotting. Sin este paso el palet no se mueve. */
+export function acceptSlottingRecommendation(
+  snap: WmsSnapshot,
+  recId: string,
+  operatorId: string | null,
+  fleetId: string | null = null,
+  at = WMS_DEMO_NOW,
+): LiveMoveResult {
+  const rec = (snap.slottingRecommendations ?? []).find((r) => r.id === recId);
+  if (!rec) return { ok: false, error: "rec_missing" };
+  if (rec.acceptedAt) return { ok: false, error: "rec_accepted" };
+  const moved = putawayReceivedPallet(snap, rec.palletId, rec.toCode, operatorId, fleetId, at);
+  if (!moved.ok) return moved;
+  return {
+    ok: true,
+    snap: {
+      ...moved.snap,
+      slottingRecommendations: (moved.snap.slottingRecommendations ?? []).map((r) =>
+        r.id === recId ? { ...r, acceptedAt: at, acceptedBy: operatorId } : r,
+      ),
+    },
+  };
+}
+
 /** Putaway: palet en muelle → hueco de almacén. */
 export function confirmPutaway(
   snap: WmsSnapshot,
@@ -169,8 +201,10 @@ export function confirmPutaway(
 ): LiveMoveResult {
   const pallet = snap.pallets.find((p) => p.sscc === input.sscc.trim());
   if (!pallet) return { ok: false, error: "pallet_missing" };
+  if (pallet.status === "cuarentena") return { ok: false, error: "pallet_quarantined" };
   const from = pallet.slotId ? snap.slots.find((s) => s.id === pallet.slotId) : undefined;
   if (!from || from.zone !== "muelle") return { ok: false, error: "not_on_dock" };
+  if (!palletCanPutaway(pallet)) return { ok: false, error: "qc_pending" };
   if (!codesEqual(from.code, input.fromSlotCode)) return { ok: false, error: "wrong_from" };
   const to = findSlot(snap, input.toSlotCode, pallet.siteId);
   if (!to) return { ok: false, error: "to_missing" };
@@ -238,6 +272,100 @@ export function proposeReplenishments(snap: WmsSnapshot): ReplenishmentProposal[
   return proposals;
 }
 
+/**
+ * Traslado de un palet real a un hueco libre de otro centro.
+ * No fabrica mercancía ni huecos; el destino lo elige quien mueve.
+ */
+export function transferPalletBetweenSites(
+  snap: WmsSnapshot,
+  input: {
+    palletId: string;
+    destSiteId: string;
+    toSlotCode: string;
+    operatorId?: string | null;
+    fleetId?: string | null;
+    note?: string;
+  },
+  at = new Date().toISOString(),
+): LiveMoveResult {
+  const pallet = snap.pallets.find((p) => p.id === input.palletId);
+  if (!pallet) return { ok: false, error: "pallet_missing" };
+  if (pallet.status === "expedido") return { ok: false, error: "pallet_shipped" };
+  if (pallet.siteId === input.destSiteId) return { ok: false, error: "same_site" };
+  if (pallet.status === "picking" || pallet.status === "muelle") {
+    return { ok: false, error: "pallet_in_wave" };
+  }
+  const reserved = snap.pickWaves.some(
+    (w) =>
+      w.status !== "cerrada" &&
+      w.lines.some(
+        (l) =>
+          l.palletId === pallet.id &&
+          (l.status === "pendiente" || l.status === "en_curso"),
+      ),
+  );
+  if (reserved) return { ok: false, error: "pallet_in_wave" };
+
+  const dest = snap.sites.find((s) => s.id === input.destSiteId);
+  if (!dest) return { ok: false, error: "to_missing" };
+  const to = findSlot(snap, input.toSlotCode, input.destSiteId);
+  if (!to) return { ok: false, error: "to_missing" };
+  if (to.status === "bloqueado") return { ok: false, error: "slot_blocked" };
+  if (to.palletId) return { ok: false, error: "slot_occupied" };
+
+  const from = pallet.slotId ? snap.slots.find((s) => s.id === pallet.slotId) : undefined;
+  const nextSlots = snap.slots.map((s) => {
+    if (from && s.id === from.id) return vacate(s);
+    if (s.id === to.id) return occupy(s, pallet);
+    return s;
+  });
+  const nextPallets = snap.pallets.map((p) =>
+    p.id === pallet.id
+      ? {
+          ...p,
+          siteId: input.destSiteId,
+          slotId: to.id,
+          status: to.zone === "muelle" ? ("muelle" as const) : ("en_ubicacion" as const),
+        }
+      : p,
+  );
+  const fromSite = snap.sites.find((s) => s.id === pallet.siteId);
+  const movement: StockMovement = {
+    id: `mv-hub-${pallet.id}-${at}`,
+    at,
+    type: "traslado",
+    skuId: pallet.skuId,
+    palletId: pallet.id,
+    fromSlotId: from?.id ?? null,
+    toSlotId: to.id,
+    qty: pallet.qty,
+    operatorId: input.operatorId ?? null,
+    fleetId: input.fleetId ?? null,
+    note:
+      input.note ??
+      `Inter-centro ${fromSite?.code ?? pallet.siteId} ${from?.code ?? "—"} → ${dest.code} ${to.code}`,
+  };
+  const physical = appendMove(snap, movement, nextSlots, nextPallets);
+  if (pallet.qty < 1) return { ok: true, snap: physical };
+  const led = applyTxToSnapshot(physical, {
+    type: "MOVE",
+    skuId: pallet.skuId,
+    lot: pallet.lot || null,
+    fromLocationId: from?.id ?? locationOfPallet(pallet),
+    toLocationId: to.id,
+    qty: pallet.qty,
+    reason: movement.note,
+    refType: "pallet",
+    refId: pallet.id,
+    palletId: pallet.id,
+    actorId: input.operatorId ?? null,
+    at,
+    id: `itx-HUB-${pallet.id}-${at}`,
+  });
+  if (!led.ok) return { ok: false, error: "stock_negative" };
+  return { ok: true, snap: led.snap };
+}
+
 export function applyReplenishment(
   snap: WmsSnapshot,
   proposal: ReplenishmentProposal,
@@ -258,6 +386,7 @@ export function applyReplenishment(
       fleetId,
       operatorId,
       note: `Reposición pick face ${to.code}`,
+      ledgerType: "REPLENISH",
     },
     at,
   );

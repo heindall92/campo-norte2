@@ -11,7 +11,7 @@ Este repositorio (`campo-norte2`) publica el ecosistema SaaS WMS. La base CRM/WM
 
 ---
 
-## Fases 2–13 (esta rama)
+## Fases 2–20 (esta rama)
 
 Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, movimientos en vivo, inventario cíclico, alertas, economía unitaria, planificación de turnos, onboarding, carriers, pistola RF y **operación diaria** (CRUD, prioridades, fichaje).
 
@@ -28,7 +28,7 @@ Modelo de ubicación `Pasillo-Bahía-Nivel-Posición`, digital twin, picado, mov
 | Palets | SSCC, lote, caducidad, hueco · **alta / edición** |
 | Flota eléctrica | Torito, montacargas, retráctil; batería **solo reporte real** |
 | Recepción | ASN crear / recepcionar / **ubicar y cerrar** cuando no queda palet en muelle |
-| Expedición | Pedido · ola · **embalar cajas** · **cargar muelle** · manifiesto · tracking manual |
+| Expedición | Pedido · ola · **embalar por línea** · **imprimir manifiesto** · **cargar muelle** · tracking manual |
 | Operarios | Cupo 25/25/25 (plazas vacantes) · CRUD · PIN / fichaje |
 | Centros | Alta de hub: ciudad y layout que escriba el usuario |
 | Pistola RF | Cola derivada del snapshot: hueco → SSCC → confirmar |
@@ -72,8 +72,15 @@ Cómo probar fase 2:
 10. **Operarios** → cobertura mañana/tarde/noche. **Cubrir huecos** mueve excedente (picker noche + carretillero tarde). Lo que queda es contratar.
 11. **Costes** o **Tesorería** → P&L 3PL del hub (€/palet y contribución).
 12. **Centros** → escribe ciudad y pasillos reales (sin presets). Luego **Pasillos / huecos**.
-13. **Expedición** → elige carrier; el tracking se escribe a mano. Tras picar: **Cargar** palets enteros y **Expedir**.
+13. **Expedición** → elige carrier; el tracking se escribe a mano. Tras picar: **Embalar línea** (SSCC opcional), **Imprimir** manifiesto, **Cargar** palets enteros y **Expedir**.
 14. **Pistola RF** → escanea el hueco y el SSCC de la cola; si no coinciden, no confirma.
+15. **Torre** → cierre de jornada: solo horas de fichaje. **Movimientos / Palets** → traslado Sevilla ↔ Huelva a un hueco libre.
+16. **Expedición / Operarios** → el patrón o un técnico asigna el súper con el código `OP-1903`. **Pistola** → entrar con ese código; el ticket dice súper, pasillo, hueco y cantidad. El rastro del pasillo solo avanza al marcar. Palet / caja / carro → flejar → pegar etiqueta → dejar en el muelle que indica la pantalla.
+17. **Picar / Pistola / Movimientos / Torre** → **Declarar merma** si se cae o se rompe. Luego se puede coger otra caja; el hueco ya no miente. Carta de porte no está modelada.
+18. **Pistola / Picar** → auriculares: pasillo, hueco, cajas o unidades del contenedor. **Pasillos** → guía 8–37 (droguería, leche 28, cerveza 29, agua 31–32…). El twin sigue en A/B/C.
+19. Al **confirmar picado** el aparato dicta el siguiente ticket. Si no queda línea: fleja, escribe la etiqueta y deja en el pasillo de muelle. **Repetir** o quitar auriculares. El resto en el hueco es el stock del palet.
+20. Si el hueco **no coincide**, **No coincide** avisa al jefe. En **Torre / Expedición** el jefe escribe la cuenta (merma, de más, roto, picó mal). El aparato dice «En el hueco hay N» y el operario responde **«N ok»**. Mandos: sube, baja, acelera, atrás, artículo.
+21. Al asignar el súper se elige **box / palet / carro**. Al terminar, di **2** (o 3, 4…): 2 palets = **4 etiquetas** (una por lado). **Imprimir**, pegar, dejar en el **muelle** de la pantalla. Luego te asignan el siguiente súper.
 
 ---
 

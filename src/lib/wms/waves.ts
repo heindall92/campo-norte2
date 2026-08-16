@@ -1,5 +1,10 @@
+import { WMS_DEMO_NOW } from "./alerts";
 import { dockWindowFor } from "./carriers";
+import { classifyLotAlert, compareLotsFefo, lotFromPallet } from "./lots";
 import { recommendedFleetKind } from "./picking";
+import { enqueueWaveReplenishments } from "./replenishment";
+import { availableQty, reserveStock } from "./reservations";
+import { pickPackForSku } from "./voice";
 import type { OutboundOrder, Pallet, PickWave, Sku, Slot, WmsSnapshot } from "./types";
 
 export type WaveError =
@@ -31,22 +36,28 @@ function palletsInOpenWaves(snap: WmsSnapshot): Set<string> {
 
 function pickCandidates(snap: WmsSnapshot, siteId: string): Array<{ slot: Slot; pallet: Pallet; sku: Sku }> {
   const used = palletsInOpenWaves(snap);
+  const nowMs = Date.parse(WMS_DEMO_NOW);
   const rows: Array<{ slot: Slot; pallet: Pallet; sku: Sku }> = [];
   for (const slot of snap.slots) {
     if (slot.siteId !== siteId || !slot.pickFace || !slot.palletId) continue;
     if (used.has(slot.palletId)) continue;
     const pallet = snap.pallets.find((p) => p.id === slot.palletId && p.status !== "expedido");
-    if (!pallet || pallet.qty < 1) continue;
+    if (!pallet || availableQty(snap, pallet.id) < pallet.qty) continue;
+    const lot = lotFromPallet(pallet);
+    const alert = classifyLotAlert(lot, nowMs);
+    if (alert === "EXPIRED" || alert === "BLOCKED") continue;
     const sku = snap.skus.find((s) => s.id === pallet.skuId);
     if (!sku) continue;
     rows.push({ slot, pallet, sku });
   }
+  rows.sort((a, b) => compareLotsFefo(lotFromPallet(a.pallet), lotFromPallet(b.pallet)));
   return rows;
 }
 
 /**
  * Abre una ola a partir de un pedido de expedición.
- * Las líneas salen de palets reales en cara de picking, no se inventan.
+ * Candidatos = palets reales en cara de picking, no caducados ni en cuarentena,
+ * ordenados FEFO (reloj `WMS_DEMO_NOW`). Hold de palet al abrir; no ATP de ERP.
  */
 export function openWaveFromOrder(
   snap: WmsSnapshot,
@@ -99,6 +110,8 @@ export function openWaveFromOrder(
       qty: row.pallet.qty,
       qtyPicked: 0,
       qtyPacked: 0,
+      cartonSscc: null,
+      pickPack: pickPackForSku(row.sku),
       slotId: row.slot.id,
       palletId: row.pallet.id,
       status: i === 0 ? ("en_curso" as const) : ("pendiente" as const),
@@ -106,17 +119,30 @@ export function openWaveFromOrder(
     })),
   };
 
-  return {
-    ok: true,
-    waveId,
-    snap: {
-      ...snap,
-      pickWaves: [...snap.pickWaves, wave],
-      outbound: snap.outbound.map((o) =>
-        o.id === order.id && o.status === "pendiente" ? { ...o, status: "picking" as const } : o,
-      ),
-    },
+  let next: WmsSnapshot = {
+    ...snap,
+    pickWaves: [...snap.pickWaves, wave],
+    outbound: snap.outbound.map((o) =>
+      o.id === order.id && o.status === "pendiente" ? { ...o, status: "picking" as const } : o,
+    ),
   };
+  for (const line of wave.lines) {
+    if (!line.palletId) continue;
+    const held = reserveStock(next, {
+      palletId: line.palletId,
+      qty: line.qty,
+      orderCode: line.orderCode,
+      warehouseId: order.siteId,
+      waveId,
+      lineId: line.id,
+      at: WMS_DEMO_NOW,
+    });
+    if (!held.ok) return { ok: false, error: "no_free_pallets" };
+    next = held.snap;
+  }
+
+  next = enqueueWaveReplenishments(next, waveId);
+  return { ok: true, waveId, snap: next };
 }
 
 export function createOutboundOrder(
@@ -174,6 +200,47 @@ export function assignWaveOperator(
     snap: {
       ...snap,
       pickWaves: snap.pickWaves.map((w) => (w.id === waveId ? { ...w, operatorId } : w)),
+    },
+  };
+}
+
+export function waveOrderCodes(wave: PickWave): string[] {
+  return [...new Set(wave.lines.map((l) => l.orderCode))];
+}
+
+/**
+ * Separa una ola mezclada en una ola por pedido.
+ * No inventa líneas: solo reparte las que ya existen.
+ */
+export function splitWaveByOrder(snap: WmsSnapshot, waveId: string): WaveResult {
+  const wave = snap.pickWaves.find((w) => w.id === waveId);
+  if (!wave) return { ok: false, error: "wave_missing" };
+  const codes = waveOrderCodes(wave);
+  if (codes.length < 2) return { ok: true, snap, waveId };
+
+  const created: PickWave[] = codes.map((orderCode) => {
+    const lines = wave.lines
+      .filter((l) => l.orderCode === orderCode)
+      .map((l, i) => ({
+        ...l,
+        id: `${wave.id}-${orderCode}-l${i + 1}`,
+        waveId: `${wave.id}-${orderCode}`,
+        sequence: i + 1,
+      }));
+    return {
+      ...wave,
+      id: `${wave.id}-${orderCode}`,
+      code: `${wave.code}-${orderCode.replace(/[^A-Z0-9]/gi, "").slice(-4)}`,
+      lines,
+    };
+  });
+
+  return {
+    ok: true,
+    waveId: created[0]!.id,
+    snap: {
+      ...snap,
+      pickWaves: snap.pickWaves.flatMap((w) => (w.id === waveId ? created : [w])),
     },
   };
 }

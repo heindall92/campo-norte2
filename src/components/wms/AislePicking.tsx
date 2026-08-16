@@ -8,16 +8,26 @@ import {
   confirmPick,
   markShortage,
   navigateWmsSection,
+  nextFloorTicket,
   nextOpenLine,
   operatorForAppUser,
+  confirmVoicePick,
+  declareUnitsMade,
+  remainingOnPallet,
+  reportSlotMismatch,
+  voiceCueAfterMark,
   orderFulfillment,
   packPickedLines,
   peekWmsFocus,
   shipOutboundOrder,
   skipPickLine,
+  splitWaveByOrder,
   stageOrderToDock,
+  waveOrderCodes,
+  type CloseCueInput,
   type ConfirmPickError,
   type PickGateError,
+  type PickPack,
   type PickWave,
   type Slot,
 } from "@/lib/wms";
@@ -31,12 +41,15 @@ import {
   Package,
   Search,
   SkipForward,
+  Split,
   TriangleAlert,
   Truck,
   UserRound,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { WmsLoadUnitCard, WmsMermaCard, WmsSlotFixCard, WmsSuperFinishCard } from "./WmsFloorBoard";
 import { WmsJornadaCard } from "./WmsJornadaCard";
+import { WmsAisleGuideCard, WmsVoiceHeadset } from "./WmsVoiceHeadset";
 import { useWmsLive } from "./useWmsLive";
 
 const GATE_ERR: Record<PickGateError, { es: string; en: string }> = {
@@ -55,6 +68,8 @@ const PICK_ERROR: Record<ConfirmPickError, { es: string; en: string }> = {
   wrong_sscc: { es: "SSCC incorrecto — escanea la etiqueta del palet", en: "Wrong SSCC — scan pallet label" },
   invalid_qty: { es: "Cantidad no válida", en: "Invalid quantity" },
   pallet_missing: { es: "Palet no localizado en el hueco", en: "Pallet missing in slot" },
+  slot_blocked: { es: "Hueco bloqueado: el jefe tiene que cuadrarlo", en: "Slot blocked: the lead must fix it" },
+  pallet_quarantined: { es: "Palet en cuarentena: no se pica", en: "Pallet in quarantine: do not pick" },
 };
 
 /** Vista pasillo: rack selectivo (montantes azules, 2 palets/bahía, film + SSCC). */
@@ -283,6 +298,7 @@ export function WmsSlotsPanel({ lang }: { lang: Lang }) {
           </select>
         </div>
       </header>
+      <WmsAisleGuideCard lang={lang} />
 
       {hits.length > 0 && (
         <ul className="flex flex-wrap gap-2">
@@ -383,6 +399,8 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
   const [pickPin, setPickPin] = useState("");
   const [shortageQty, setShortageQty] = useState(0);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [closeCue, setCloseCue] = useState<CloseCueInput | null>(null);
+  const [lastRemaining, setLastRemaining] = useState<number | null>(null);
 
   const done = wave?.lines.filter((l) => l.status === "picada").length ?? 0;
   const total = wave?.lines.length ?? 0;
@@ -397,9 +415,35 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
     return true;
   }
 
+  function speakAfterMark(nextSnap: typeof snap, last: CloseCueInput & { palletId?: string | null; pickPack?: PickPack }) {
+    const operatorId = wave?.operatorId ?? matched?.id ?? "";
+    if (!operatorId) return;
+    const cue = voiceCueAfterMark(nextSnap, operatorId, last, lang);
+    setLastRemaining(cue.remaining);
+    setCloseCue(cue.kind === "close" ? { storeName: last.storeName, orderCode: last.orderCode, dockAisle: last.dockAisle } : null);
+  }
+
+  function lineCloseCue(): (CloseCueInput & { palletId?: string | null; pickPack?: PickPack }) | null {
+    if (!line) return null;
+    const order = snap.outbound.find((o) => o.code === line.orderCode);
+    const assignment =
+      wave?.operatorId && order
+        ? snap.superAssignments.find((a) => a.operatorId === wave.operatorId && a.orderId === order.id)
+        : null;
+    return {
+      storeName: order?.customer ?? line.orderCode,
+      orderCode: line.orderCode,
+      dockAisle: order?.dock ?? "",
+      palletId: line.palletId,
+      pickPack: line.pickPack ?? "caja",
+      loadKind: assignment?.loadKind ?? null,
+    };
+  }
+
   function applyConfirm() {
     if (!wave || !line) return;
     if (!gateFloor()) return;
+    const last = lineCloseCue();
     const result = confirmPick(snap, wave.id, line.id, {
       slotCode: scanSlot,
       sscc: scanSscc,
@@ -416,6 +460,60 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
     const nextWave = result.snap.pickWaves.find((w) => w.id === wave.id);
     const nxt = nextWave ? nextOpenLine(nextWave) : null;
     setQty(nxt?.qty ?? 0);
+    if (last) speakAfterMark(result.snap, last);
+  }
+
+  function applyVoiceOk(spokenQty: number) {
+    const operatorId = wave?.operatorId ?? matched?.id ?? "";
+    if (!operatorId || !wave || !line) return;
+    if (!gateFloor()) return;
+    const last = lineCloseCue();
+    const result = confirmVoicePick(snap, operatorId, spokenQty);
+    if (!result.ok) {
+      setFeedback(
+        result.error === "qty_mismatch"
+          ? lang === "es"
+            ? `Di ${line.qty} ok, la cantidad del ticket`
+            : `Say ${line.qty} ok, the ticket qty`
+          : result.error === "slot_short"
+            ? lang === "es"
+              ? "En el hueco no hay tantas. Avisa al jefe."
+              : "The slot does not have that many. Tell the lead."
+            : result.error === "no_ticket"
+              ? lang === "es"
+                ? "No hay ticket abierto"
+                : "No open ticket"
+              : PICK_ERROR[result.error][lang],
+      );
+      return;
+    }
+    setSnap(result.snap);
+    setScanSlot("");
+    setScanSscc("");
+    setFeedback(null);
+    const nextWave = result.snap.pickWaves.find((w) => w.id === wave.id);
+    const nxt = nextWave ? nextOpenLine(nextWave) : null;
+    setQty(nxt?.qty ?? 0);
+    if (last) speakAfterMark(result.snap, last);
+  }
+
+  function applyMismatch() {
+    if (!line || !slot) return;
+    const result = reportSlotMismatch(snap, {
+      slotCode: slot.code,
+      takeQty: line.qty,
+      operatorId: matched?.id ?? wave?.operatorId ?? null,
+    });
+    if (!result.ok) {
+      setFeedback(lang === "es" ? "No se pudo avisar el hueco" : "Could not report the slot");
+      return;
+    }
+    setSnap(result.snap);
+    setFeedback(
+      lang === "es"
+        ? "Aviso al jefe. Sigue al siguiente hueco que te diga el aparato."
+        : "Lead notified. Go to the next slot the device speaks.",
+    );
   }
 
   if (!wave) {
@@ -460,6 +558,23 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
             </option>
           ))}
         </select>
+        {wave && waveOrderCodes(wave).length > 1 && (
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] px-3 py-2 text-sm font-semibold"
+            onClick={() => {
+              const result = splitWaveByOrder(snap, wave.id);
+              if (result.ok) {
+                setSnap(result.snap);
+                setWaveId(result.waveId);
+                setFeedback(null);
+              }
+            }}
+          >
+            <Split className="h-4 w-4" />
+            {lang === "es" ? "Separar por pedido" : "Split by order"}
+          </button>
+        )}
         {!isFloor && wave && (
           <select
             className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
@@ -565,18 +680,56 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
         <div className="space-y-3">
           {slot && line && sku && pallet ? (
             <>
-              <Card title={lang === "es" ? "Siguiente hueco" : "Next slot"}>
-                <div className="mb-3 flex flex-wrap gap-2">
-                  <Badge tone="brand">
-                    <MapPin className="mr-1 inline h-3 w-3" />
-                    {slot.code}
-                  </Badge>
-                  <Badge tone="neutral">{sku.name}</Badge>
-                  <Badge tone="warn">× {line.qty}</Badge>
-                </div>
-                <p className="text-xs text-[var(--ink-muted)]">
-                  SSCC {pallet.sscc} · {lang === "es" ? "lote" : "lot"} {pallet.lot}
-                </p>
+              <Card title={lang === "es" ? "Ticket del súper" : "Store ticket"}>
+                {(() => {
+                  const ticket = wave.operatorId ? nextFloorTicket(snap, wave.operatorId) : null;
+                  const order = snap.outbound.find((o) => o.code === line.orderCode);
+                  return (
+                    <>
+                      <p className="mb-2 text-sm font-semibold text-[var(--ink)]">
+                        {order?.customer ?? line.orderCode}
+                      </p>
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        <Badge tone="brand">
+                          <MapPin className="mr-1 inline h-3 w-3" />
+                          {lang === "es" ? "Pasillo" : "Aisle"} {slot.aisle} · {slot.code}
+                        </Badge>
+                        <Badge tone="neutral">{sku.name}</Badge>
+                        <Badge tone="warn">
+                          {lang === "es" ? "Tomar" : "Take"} {line.qty}
+                        </Badge>
+                        {order?.dock && (
+                          <Badge tone="neutral">
+                            {lang === "es" ? "Muelle" : "Dock"} {order.dock}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-[var(--ink-muted)]">
+                        {ticket?.orderCode ?? line.orderCode} · SSCC {pallet.sscc} ·{" "}
+                        {lang === "es" ? "lote" : "lot"} {pallet.lot}
+                      </p>
+                      <div className="mt-3">
+                        <WmsVoiceHeadset
+                          lang={lang}
+                          ticket={{
+                            storeName: order?.customer ?? line.orderCode,
+                            aisle: slot.aisle,
+                            slotCode: slot.code,
+                            skuName: sku.name,
+                            skuId: sku.id,
+                            qty: line.qty,
+                            pickPack: line.pickPack ?? "caja",
+                            stockInSlot: remainingOnPallet(snap, line.palletId),
+                            loadKind: ticket?.loadKind ?? null,
+                          }}
+                          remaining={remainingOnPallet(snap, line.palletId)}
+                          onConfirmOk={applyVoiceOk}
+                          onReportMismatch={applyMismatch}
+                        />
+                      </div>
+                    </>
+                  );
+                })()}
               </Card>
 
               <WmsAisleView
@@ -675,6 +828,8 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                       const nextWave = result.snap.pickWaves.find((w) => w.id === wave.id);
                       const nxt = nextWave ? nextOpenLine(nextWave) : null;
                       setQty(nxt?.qty ?? 0);
+                      const last = lineCloseCue();
+                      if (last) speakAfterMark(result.snap, last);
                     }}
                     className="inline-flex items-center gap-2 rounded-full border border-[var(--glass-border)] px-4 py-2.5 text-sm font-semibold text-[var(--ink)]"
                   >
@@ -706,6 +861,8 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                       const nextWave = result.snap.pickWaves.find((w) => w.id === wave.id);
                       const nxt = nextWave ? nextOpenLine(nextWave) : null;
                       setQty(nxt?.qty ?? 0);
+                      const last = lineCloseCue();
+                      if (last) speakAfterMark(result.snap, last);
                     }}
                     className="inline-flex items-center gap-2 rounded-full border border-[var(--glass-border)] px-4 py-2.5 text-sm font-semibold text-[var(--warn-ink)]"
                   >
@@ -714,13 +871,69 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                   </button>
                 </div>
               </Card>
+              <WmsMermaCard
+                lang={lang}
+                siteId={wave.siteId}
+                operatorId={matched?.id ?? wave.operatorId}
+                preset={{ sscc: pallet.sscc, fromSlotCode: slot.code }}
+              />
+              <WmsSlotFixCard lang={lang} siteId={wave.siteId} />
             </>
           ) : (
             <Card title={lang === "es" ? "Ola completada" : "Wave complete"}>
+              {(() => {
+                const code = wave.lines[0]?.orderCode;
+                const order = code ? snap.outbound.find((o) => o.code === code) : undefined;
+                const assignment =
+                  wave.operatorId && order
+                    ? snap.superAssignments.find((a) => a.operatorId === wave.operatorId && a.orderId === order.id)
+                    : null;
+                const fallback = closeCue
+                  ? { ...closeCue, loadKind: closeCue.loadKind ?? assignment?.loadKind ?? null }
+                  : order
+                    ? {
+                        storeName: order.customer,
+                        orderCode: order.code,
+                        dockAisle: order.dock,
+                        loadKind: assignment?.loadKind ?? null,
+                      }
+                    : null;
+                if (!fallback) return null;
+                if (assignment?.unitsMade != null) {
+                  return (
+                    <div className="mb-3">
+                      <WmsVoiceHeadset
+                        lang={lang}
+                        labelCue={{
+                          ...fallback,
+                          units: assignment.unitsMade,
+                          labels: assignment.labelsPrinted,
+                        }}
+                        remaining={lastRemaining}
+                      />
+                    </div>
+                  );
+                }
+                return (
+                  <div className="mb-3">
+                    <WmsVoiceHeadset
+                      lang={lang}
+                      askUnits={fallback}
+                      remaining={lastRemaining}
+                      autoSpeak={Boolean(closeCue)}
+                      onUnitsSaid={(n) => {
+                        if (!wave.operatorId || !order) return;
+                        const result = declareUnitsMade(snap, wave.operatorId, order.id, n);
+                        if (result.ok) setSnap(result.snap);
+                      }}
+                    />
+                  </div>
+                );
+              })()}
               <p className="mb-3 text-sm text-[var(--ink-muted)]">
                 {lang === "es"
-                  ? "Todas las líneas cerradas. Embala cajas sueltas, carga palets enteros y expede solo lo picado."
-                  : "All lines closed. Pack loose cases, stage full pallets and ship only what was picked."}
+                  ? "Súper finalizado. Di cuántos palets has hecho. Se imprimen dos etiquetas por palet (una por lado). En pantalla, déjalo en el muelle. Luego te asignan el siguiente súper."
+                  : "Store finished. Say how many pallets you made. Two labels print per pallet (one per side). On screen, leave it on the dock. Then you get the next store."}
               </p>
               <div className="flex flex-wrap gap-2">
                 {[...new Set(wave.lines.map((l) => l.orderCode))].map((code) => {
@@ -803,6 +1016,16 @@ export function WmsPickingPanel({ lang }: { lang: Lang }) {
                 </button>
               </div>
             </Card>
+          )}
+          {!line && (
+            <>
+              <WmsSuperFinishCard
+                lang={lang}
+                operatorId={wave.operatorId ?? matched?.id ?? null}
+                orderId={snap.outbound.find((o) => o.code === wave.lines[0]?.orderCode)?.id}
+              />
+              <WmsLoadUnitCard lang={lang} />
+            </>
           )}
         </div>
       </div>

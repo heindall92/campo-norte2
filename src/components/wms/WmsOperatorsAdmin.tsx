@@ -17,6 +17,7 @@ import {
 } from "@/lib/wms";
 import { Fingerprint, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { WmsAisleTraceCard, WmsAssignSuperCard } from "./WmsFloorBoard";
 import { WmsShiftBoard } from "./WmsShifts";
 import { useWmsLive } from "./useWmsLive";
 
@@ -113,6 +114,8 @@ export function WmsOperatorsPanel({ lang }: { lang: Lang }) {
 
       <WmsShiftBoard lang={lang} snap={snap} siteId={siteId} onChange={commit} />
 
+      <WmsAssignSuperCard lang={lang} />
+      <WmsAisleTraceCard lang={lang} siteId={siteId} />
       <Card title={lang === "es" ? "Alta / editar operario" : "Hire / edit operator"}>
         <form
           className="grid gap-2 md:grid-cols-3"

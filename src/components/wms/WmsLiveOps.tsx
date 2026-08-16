@@ -4,21 +4,35 @@ import type { Lang } from "@/lib/i18n";
 import {
   FLEET_KIND_LABEL,
   applyReplenishment,
+  applyReplenishTask,
   assertCanPick,
+  closeCountSession,
+  confirmCountSessionLine,
   confirmCycleCount,
   confirmPutaway,
   confirmTransfer,
+  linesForSession,
+  openCountSession,
+  openCountSessionForSite,
   operatorForAppUser,
+  openMinMaxTasks,
   planCycleCounts,
+  planMinMaxReplenishments,
   proposeReplenishments,
+  PUTAWAY_REASON_LABEL,
   putawayReceivedPallet,
+  rankPutawayCandidates,
+  skipCountSessionLine,
   suggestPutawaySlot,
-  type CycleCountError,
+  transferPalletBetweenSites,
+  type CountSessionError,
   type LiveMoveError,
+  type ReplenishError,
 } from "@/lib/wms";
 import { cn } from "@/lib/utils";
 import { ArrowDownToLine, ArrowLeftRight, Check, Forklift, ScanBarcode } from "lucide-react";
 import { useMemo, useState } from "react";
+import { WmsMermaCard } from "./WmsFloorBoard";
 import { WmsJornadaCard } from "./WmsJornadaCard";
 import { useWmsLive } from "./useWmsLive";
 
@@ -31,13 +45,36 @@ const MOVE_ERR: Record<LiveMoveError, { es: string; en: string }> = {
   slot_blocked: { es: "Destino bloqueado", en: "Destination blocked" },
   same_slot: { es: "Origen y destino son el mismo hueco", en: "Same slot" },
   not_on_dock: { es: "El palet no está en muelle", en: "Pallet is not on dock" },
+  same_site: { es: "Elige otro centro de destino", en: "Pick a different destination site" },
+  pallet_shipped: { es: "Ese palet ya salió", en: "That pallet already shipped" },
+  pallet_in_wave: { es: "El palet está en una ola o en muelle de salida", en: "Pallet is on a wave or outbound dock" },
+  stock_negative: { es: "El ledger no admite stock negativo", en: "Ledger rejected negative stock" },
+  qc_pending: { es: "QC pendiente: no ubicar hasta aprobar", en: "QC pending: do not put away until approved" },
+  pallet_quarantined: { es: "Palet en cuarentena: no ubicar a picking", en: "Pallet in quarantine: do not put away to pick" },
+  rec_missing: { es: "No hay recomendación de slotting", en: "No slotting recommendation" },
+  rec_accepted: { es: "Esa recomendación ya se aplicó", en: "That recommendation was already applied" },
 };
 
-const COUNT_ERR: Record<CycleCountError, { es: string; en: string }> = {
+const REPLENISH_ERR: Record<ReplenishError, { es: string; en: string }> = {
+  task_missing: { es: "Tarea de reposición no vigente", en: "Replenish task gone" },
+  task_done: { es: "La tarea ya está cerrada", en: "Task already closed" },
+  operator_required: { es: "AUTO no mueve sin operario", en: "AUTO does not move without an operator" },
+  no_source: { es: "No hay reserva sobre un pick face vacío para bajar", en: "No reserve over an empty pick face to drop" },
+  sku_missing: { es: "SKU no está en el catálogo", en: "SKU not in catalog" },
+};
+
+const COUNT_ERR: Record<CountSessionError, { es: string; en: string }> = {
   task_missing: { es: "Tarea no vigente", en: "Task gone" },
   wrong_slot: { es: "Hueco incorrecto", en: "Wrong slot" },
   wrong_sscc: { es: "SSCC incorrecto", en: "Wrong SSCC" },
   invalid_qty: { es: "Cantidad no válida", en: "Invalid qty" },
+  session_missing: { es: "No hay sesión abierta", en: "No open session" },
+  line_missing: { es: "Línea no vigente", en: "Line gone" },
+  line_done: { es: "Línea ya cerrada", en: "Line already closed" },
+  filter_required: { es: "Escribe SKU, lote o hueco", en: "Type SKU, lot or slot" },
+  no_lines: { es: "No hay huecos ocupados para ese recorte", en: "No occupied slots for that filter" },
+  session_closed: { es: "La sesión ya está cerrada", en: "Session already closed" },
+  site_missing: { es: "Centro no encontrado", en: "Site not found" },
 };
 
 export function WmsMovementsPanel({ lang }: { lang: Lang }) {
@@ -45,7 +82,10 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
   const { snap, commit } = useWmsLive();
   const matched = operatorForAppUser(snap, user);
   const isFloor = user?.role === "guide";
-  const [mode, setMode] = useState<"putaway" | "traslado">("putaway");
+  const [mode, setMode] = useState<"putaway" | "traslado" | "intersitio">("putaway");
+  const [hubPalletId, setHubPalletId] = useState("");
+  const [hubSiteId, setHubSiteId] = useState("");
+  const [hubSlot, setHubSlot] = useState("");
   const [sscc, setSscc] = useState("");
   const [fromCode, setFromCode] = useState("");
   const [toCode, setToCode] = useState("");
@@ -55,6 +95,11 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
 
   const dockPals = snap.pallets.filter((p) => p.status === "muelle");
   const proposals = useMemo(() => proposeReplenishments(snap), [snap]);
+  const minMaxPlan = useMemo(() => planMinMaxReplenishments(snap).slice(0, 8), [snap]);
+  const minMaxOpen = useMemo(
+    () => (snap.replenishTasks ?? []).filter((t) => t.status === "open").slice(0, 8),
+    [snap],
+  );
   const doubleReach = snap.fleet.find((f) => f.kind === "retractil_doble" && f.status === "operativa");
   const operatorId = matched?.id ?? null;
 
@@ -112,12 +157,13 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
         </h2>
         <p className="mt-1 max-w-2xl text-sm text-[var(--ink-muted)]">
           {lang === "es"
-            ? "Putaway de muelle y traslados hueco a hueco. El destino se sugiere por zona del SKU; planta necesita haber fichado."
-            : "Dock putaway and slot-to-slot transfers. Destination follows the SKU zone; floor staff must clock in."}
+            ? "Putaway de muelle y traslados hueco a hueco. El ranking sugiere zona, capacidad, familia y viaje A/B/C (no metros). La recomendación no mueve: hay que confirmar."
+            : "Dock putaway and slot-to-slot transfers. Ranking uses zone, capacity, family and A/B/C travel (not meters). A recommendation does not move until you confirm."}
         </p>
       </header>
 
       {matched && <WmsJornadaCard lang={lang} snap={snap} operatorId={matched.id} onChange={commit} />}
+      <WmsMermaCard lang={lang} operatorId={operatorId} />
       {isFloor && matched?.fingerprintEnrolled && (
         <input
           value={pickPin}
@@ -148,15 +194,144 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
         >
           {lang === "es" ? "Traslado" : "Transfer"}
         </button>
+        <button
+          type="button"
+          onClick={() => setMode("intersitio")}
+          className={cn(
+            "rounded-full px-4 py-2 text-sm font-semibold",
+            mode === "intersitio" ? "bg-[var(--accent)] text-white" : "border border-[var(--glass-border)]",
+          )}
+        >
+          {lang === "es" ? "Inter-centro" : "Inter-site"}
+        </button>
       </div>
+
+      {mode === "intersitio" && (
+        <Card
+          title={lang === "es" ? "Traslado entre centros" : "Inter-site transfer"}
+          subtitle={
+            lang === "es"
+              ? "Mueve un palet real a un hueco libre de otro hub. No se fabrica stock."
+              : "Move a real pallet to a free slot in another hub. No stock is invented."
+          }
+        >
+          <form
+            className="grid gap-2 md:grid-cols-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!gateFloor()) return;
+              const result = transferPalletBetweenSites(snap, {
+                palletId: hubPalletId,
+                destSiteId: hubSiteId,
+                toSlotCode: hubSlot,
+                operatorId,
+                fleetId: doubleReach?.id ?? null,
+              });
+              if (!result.ok) {
+                setOkMsg(null);
+                setFeedback(MOVE_ERR[result.error][lang]);
+                return;
+              }
+              commit(result.snap);
+              setFeedback(null);
+              setOkMsg(
+                lang === "es"
+                  ? `Traslado OK · ${hubSlot}`
+                  : `Transfer OK · ${hubSlot}`,
+              );
+              setHubPalletId("");
+              setHubSlot("");
+            }}
+          >
+            <select
+              required
+              value={hubPalletId}
+              onChange={(e) => setHubPalletId(e.target.value)}
+              className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+            >
+              <option value="">{lang === "es" ? "Palet origen" : "Source pallet"}</option>
+              {snap.pallets
+                .filter((p) => p.status === "en_ubicacion" && p.qty > 0)
+                .slice(0, 80)
+                .map((p) => {
+                  const sku = snap.skus.find((s) => s.id === p.skuId);
+                  const site = snap.sites.find((s) => s.id === p.siteId);
+                  return (
+                    <option key={p.id} value={p.id}>
+                      {p.sscc.slice(-10)} · {sku?.sku} · {site?.code}
+                    </option>
+                  );
+                })}
+            </select>
+            <select
+              required
+              value={hubSiteId}
+              onChange={(e) => {
+                setHubSiteId(e.target.value);
+                setHubSlot("");
+              }}
+              className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+            >
+              <option value="">{lang === "es" ? "Centro destino" : "Destination site"}</option>
+              {snap.sites
+                .filter((s) => s.id !== snap.pallets.find((p) => p.id === hubPalletId)?.siteId)
+                .map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.city} · {s.code}
+                  </option>
+                ))}
+            </select>
+            <select
+              required
+              value={hubSlot}
+              onChange={(e) => setHubSlot(e.target.value)}
+              className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+            >
+              <option value="">{lang === "es" ? "Hueco libre destino" : "Free destination slot"}</option>
+              {snap.slots
+                .filter((s) => s.siteId === hubSiteId && s.status === "libre" && !s.palletId)
+                .slice(0, 80)
+                .map((s) => (
+                  <option key={s.id} value={s.code}>
+                    {s.code} · {s.zone}
+                  </option>
+                ))}
+            </select>
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white md:col-span-3"
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+              {lang === "es" ? "Trasladar palet" : "Transfer pallet"}
+            </button>
+          </form>
+          {feedback && (
+            <p className="mt-2 rounded-xl bg-[var(--warn-bg)] px-3 py-2 text-xs font-semibold text-[var(--warn-ink)]">
+              {feedback}
+            </p>
+          )}
+          {okMsg && (
+            <p className="mt-2 rounded-xl bg-[color-mix(in_oklab,var(--ok)_16%,transparent)] px-3 py-2 text-xs font-semibold text-[var(--ok)]">
+              {okMsg}
+            </p>
+          )}
+        </Card>
+      )}
 
       {mode === "putaway" && dockPals.length > 0 && (
         <Card title={lang === "es" ? "Palets en muelle" : "Dock pallets"} subtitle={`${dockPals.length}`}>
           <ul className="space-y-2">
             {dockPals.slice(0, 8).map((pal) => {
               const from = pal.slotId ? snap.slots.find((s) => s.id === pal.slotId) : null;
-              const dest = suggestPutawaySlot(snap, pal);
+              const ranked = rankPutawayCandidates(snap, pal, { limit: 3 });
+              const dest = ranked[0] ? snap.slots.find((s) => s.id === ranked[0]!.slotId) : suggestPutawaySlot(snap, pal);
               const sku = snap.skus.find((s) => s.id === pal.skuId);
+              const reasonTxt = ranked[0]
+                ? ranked[0].reasons
+                    .slice(0, 3)
+                    .map((r) => PUTAWAY_REASON_LABEL[r as keyof typeof PUTAWAY_REASON_LABEL]?.[lang] ?? r)
+                    .join(" · ")
+                : "";
               return (
                 <li
                   key={pal.id}
@@ -166,7 +341,11 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
                     <span className="font-mono text-xs font-semibold">{pal.sscc.slice(-10)}</span>
                     <span className="mt-0.5 block truncate text-[var(--ink-muted)]">
                       {sku?.name} · {from?.code} → {dest?.code ?? "—"}
+                      {ranked[0] ? ` · ${ranked[0].travelPct}%` : ""}
                     </span>
+                    {reasonTxt && (
+                      <span className="mt-0.5 block truncate text-[10px] text-[var(--ink-muted)]">{reasonTxt}</span>
+                    )}
                   </span>
                   <button
                     type="button"
@@ -203,7 +382,7 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
         </Card>
       )}
 
-      <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
+      {mode !== "intersitio" && <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
         <Card title={lang === "es" ? "Confirmar con escáner" : "Confirm with scanner"}>
           <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
             SSCC
@@ -325,7 +504,93 @@ export function WmsMovementsPanel({ lang }: { lang: Lang }) {
             </ul>
           )}
         </Card>
-      </div>
+      </div>}
+
+      <Card
+        title={lang === "es" ? "Reposición MIN/MAX" : "MIN/MAX replenishment"}
+        subtitle={lang === "es" ? "qty = max(0, máx − actual) si actual < mín. AUTO no mueve sola." : "qty = max(0, max − current) if current < min. AUTO does not move alone."}
+      >
+        <div className="mb-3 flex flex-wrap gap-2">
+          {snap.sites.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className="rounded-full border border-[var(--glass-border)] px-3 py-1 text-xs font-semibold"
+              onClick={() => {
+                const opened = openMinMaxTasks(snap, s.id);
+                commit(opened.snap);
+                setOkMsg(
+                  lang === "es"
+                    ? `${opened.opened} tareas MIN/MAX abiertas · no se ha movido nada`
+                    : `${opened.opened} MIN/MAX tasks opened · nothing moved`,
+                );
+              }}
+            >
+              {lang === "es" ? `Abrir en ${s.city}` : `Open in ${s.city}`}
+            </button>
+          ))}
+        </div>
+        {minMaxPlan.length === 0 && minMaxOpen.length === 0 ? (
+          <p className="text-sm text-[var(--ink-muted)]">
+            {lang === "es" ? "Ningún SKU bajo el mínimo en este recorte." : "No SKU below min in this cut."}
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {minMaxOpen.slice(0, 6).map((task) => {
+              const sku = snap.skus.find((s) => s.id === task.skuId);
+              return (
+                <li
+                  key={task.id}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-[var(--glass-border)] px-3 py-2 text-sm"
+                >
+                  <span className="min-w-0">
+                    <span className="font-medium">{sku?.sku}</span>
+                    <span className="mt-0.5 block text-xs text-[var(--ink-muted)]">
+                      {task.kind} · {task.currentQty}/{task.minStock} → +{task.qty} (máx {task.maxStock})
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-white"
+                    onClick={() => {
+                      if (!gateFloor()) return;
+                      const result = applyReplenishTask(snap, task.id, operatorId, doubleReach?.id ?? null);
+                      if (!result.ok) {
+                        const err = result.error;
+                        setFeedback(
+                          err in REPLENISH_ERR
+                            ? REPLENISH_ERR[err as ReplenishError][lang]
+                            : MOVE_ERR[err as LiveMoveError][lang],
+                        );
+                        return;
+                      }
+                      commit(result.snap);
+                      setOkMsg(lang === "es" ? "Reposición MIN/MAX confirmada" : "MIN/MAX replenishment confirmed");
+                    }}
+                  >
+                    {lang === "es" ? "Bajar" : "Drop"}
+                  </button>
+                </li>
+              );
+            })}
+            {minMaxOpen.length === 0 &&
+              minMaxPlan.slice(0, 6).map((row) => {
+                const sku = snap.skus.find((s) => s.id === row.skuId);
+                return (
+                  <li
+                    key={`${row.skuId}-${row.warehouseId}`}
+                    className="rounded-xl border border-[var(--glass-border)] px-3 py-2 text-sm"
+                  >
+                    <span className="font-medium">{sku?.sku}</span>
+                    <span className="mt-0.5 block text-xs text-[var(--ink-muted)]">
+                      {row.kind} · {row.currentQty}/{row.minStock} → +{row.qty} (máx {row.maxStock})
+                    </span>
+                  </li>
+                );
+              })}
+          </ul>
+        )}
+      </Card>
 
       <Card title={lang === "es" ? "Últimos movimientos" : "Latest movements"}>
         <ul className="space-y-2 text-sm">
@@ -358,12 +623,27 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
   const isFloor = user?.role === "guide";
   const [pickPin, setPickPin] = useState("");
   const [siteId, setSiteId] = useState(snap.sites[0]?.id ?? "");
+  const session = openCountSessionForSite(snap, siteId);
+  const sessionLines = session ? linesForSession(snap, session.id) : [];
   const tasks = useMemo(
     () => planCycleCounts(snap, { siteId, limit: 10 }),
     [snap, siteId],
   );
   const [taskId, setTaskId] = useState(tasks[0]?.id ?? "");
-  const task = tasks.find((t) => t.id === taskId) ?? tasks[0];
+  const [lineId, setLineId] = useState(sessionLines.find((l) => l.status === "pending")?.id ?? "");
+  const line = sessionLines.find((l) => l.id === lineId) ?? sessionLines.find((l) => l.status === "pending") ?? sessionLines[0];
+  const task = session
+    ? line
+      ? {
+          id: line.id,
+          slotId: line.slotId,
+          palletId: line.palletId,
+          skuId: line.skuId,
+          reason: line.taskReason,
+          expectedQty: line.expectedQty,
+        }
+      : null
+    : (tasks.find((t) => t.id === taskId) ?? tasks[0]);
   const slot = task ? snap.slots.find((s) => s.id === task.slotId) : null;
   const pallet = task ? snap.pallets.find((p) => p.id === task.palletId) : null;
   const sku = task ? snap.skus.find((s) => s.id === task.skuId) : null;
@@ -373,12 +653,33 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
 
-  const reasonLabel: Record<typeof tasks[number]["reason"], string> = {
+  const reasonLabel: Record<(typeof tasks)[number]["reason"], string> = {
     caducidad: lang === "es" ? "Caducidad" : "Expiry",
     abc_a: "ABC A",
     antiguo: lang === "es" ? "Sin conteo reciente" : "Stale count",
     frio: lang === "es" ? "Cámara" : "Cold",
   };
+
+  function openSession(kind: "cyclic" | "abc") {
+    const result = openCountSession(snap, {
+      warehouseId: siteId,
+      kind,
+      operatorId: matched?.id ?? null,
+    });
+    if (!result.ok) {
+      setOkMsg(null);
+      setFeedback(COUNT_ERR[result.error][lang]);
+      return;
+    }
+    commit(result.snap);
+    const first = linesForSession(result.snap, result.sessionId).find((l) => l.status === "pending");
+    if (first) {
+      setLineId(first.id);
+      setQty(first.expectedQty);
+    }
+    setFeedback(null);
+    setOkMsg(lang === "es" ? "Sesión abierta · palets reales del recorte" : "Session opened · real pallets only");
+  }
 
   function confirm() {
     if (!task) return;
@@ -398,12 +699,15 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
         return;
       }
     }
-    const result = confirmCycleCount(snap, task, {
+    const payload = {
       slotCode: scanSlot,
       sscc: scanSscc,
       qty,
       operatorId: matched?.id ?? null,
-    });
+    };
+    const result = session && line
+      ? confirmCountSessionLine(snap, session.id, line.id, payload)
+      : confirmCycleCount(snap, tasks.find((t) => t.id === task.id) ?? tasks[0]!, payload);
     if (!result.ok) {
       setOkMsg(null);
       setFeedback(COUNT_ERR[result.error][lang]);
@@ -411,14 +715,15 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
     }
     commit(result.snap);
     setFeedback(null);
+    const variance = result.variance ?? 0;
     setOkMsg(
-      result.variance === 0
+      variance === 0
         ? lang === "es"
           ? "Conteo OK · sin desvío"
           : "Count OK · no variance"
         : lang === "es"
-          ? `Ajuste ${result.variance > 0 ? "+" : ""}${result.variance} ud.`
-          : `Adjust ${result.variance > 0 ? "+" : ""}${result.variance} u.`,
+          ? `Ajuste ${variance > 0 ? "+" : ""}${variance} ud.`
+          : `Adjust ${variance > 0 ? "+" : ""}${variance} u.`,
     );
     setScanSlot("");
     setScanSscc("");
@@ -433,8 +738,8 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
           </h2>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
             {lang === "es"
-              ? "Prioridad: caducidad, ABC A y huecos sin conteo reciente. Planta necesita haber fichado; el desvío se firma con el operario."
-              : "Priority: expiry, ABC A and stale slots. Floor staff must clock in; variance is signed by the operator."}
+              ? "Sesión + líneas sobre el planner (caducidad, ABC A, hueco). Full count solo si se pide. El desvío queda en movimientos con el operario."
+              : "Session + lines on the planner (expiry, ABC A, slot). Full count only if asked. Variance is signed on movements."}
           </p>
         </div>
         <select
@@ -451,6 +756,43 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
       </header>
 
       {matched && <WmsJornadaCard lang={lang} snap={snap} operatorId={matched.id} onChange={commit} />}
+      {!session && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => openSession("cyclic")}
+            className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white"
+          >
+            {lang === "es" ? "Abrir sesión cíclica" : "Open cyclic session"}
+          </button>
+          <button
+            type="button"
+            onClick={() => openSession("abc")}
+            className="rounded-full border border-[var(--glass-border)] px-4 py-2 text-sm font-semibold"
+          >
+            {lang === "es" ? "Sesión ABC A" : "ABC A session"}
+          </button>
+        </div>
+      )}
+      {session && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <Badge tone="brand">{session.kind === "abc" ? "ABC" : session.kind}</Badge>
+          <span className="text-[var(--ink-muted)]">
+            {sessionLines.filter((l) => l.status === "counted").length}/{sessionLines.length}{" "}
+            {lang === "es" ? "contadas" : "counted"}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              const closed = closeCountSession(snap, session.id);
+              if (closed.ok) commit(closed.snap);
+            }}
+            className="rounded-full border border-[var(--glass-border)] px-3 py-1.5 text-xs font-semibold"
+          >
+            {lang === "es" ? "Cerrar sesión" : "Close session"}
+          </button>
+        </div>
+      )}
       {isFloor && matched?.fingerprintEnrolled && (
         <input
           value={pickPin}
@@ -463,21 +805,24 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
       <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
         <Card title={lang === "es" ? "Cola de conteo" : "Count queue"}>
           <ul className="space-y-2">
-            {tasks.map((t) => {
-              const s = snap.slots.find((x) => x.id === t.slotId);
+            {(session ? sessionLines : tasks).map((t) => {
+              const s = snap.slots.find((x) => x.id === ("slotId" in t ? t.slotId : ""));
               const sk = snap.skus.find((x) => x.id === t.skuId);
+              const selected = session ? t.id === line?.id : t.id === task?.id;
+              const reason = "taskReason" in t ? t.taskReason : t.reason;
               return (
                 <li key={t.id}>
                   <button
                     type="button"
                     onClick={() => {
-                      setTaskId(t.id);
-                      setQty(t.expectedQty);
+                      if (session) setLineId(t.id);
+                      else setTaskId(t.id);
+                      setQty("expectedQty" in t ? t.expectedQty : 0);
                       setFeedback(null);
                     }}
                     className={cn(
                       "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm",
-                      t.id === task?.id
+                      selected
                         ? "border-[color-mix(in_oklab,var(--accent)_45%,transparent)] bg-[color-mix(in_oklab,var(--accent)_10%,transparent)]"
                         : "border-[var(--glass-border)]",
                     )}
@@ -486,7 +831,9 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
                       <span className="font-mono text-xs font-semibold">{s?.code}</span>
                       <span className="mt-0.5 block text-[var(--ink-muted)]">{sk?.name}</span>
                     </span>
-                    <Badge tone={t.reason === "caducidad" ? "bad" : "warn"}>{reasonLabel[t.reason]}</Badge>
+                    <Badge tone={"status" in t && t.status === "counted" ? "good" : reason === "caducidad" ? "bad" : "warn"}>
+                      {"status" in t && t.status !== "pending" ? t.status : reasonLabel[reason]}
+                    </Badge>
                   </button>
                 </li>
               );
@@ -544,6 +891,18 @@ export function WmsCycleCountPanel({ lang }: { lang: Lang }) {
                 <Check className="h-4 w-4" />
                 {lang === "es" ? "Confirmar conteo" : "Confirm count"}
               </button>
+              {session && line?.status === "pending" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const skipped = skipCountSessionLine(snap, session.id, line.id);
+                    if (skipped.ok) commit(skipped.snap);
+                  }}
+                  className="rounded-full border border-[var(--glass-border)] px-4 py-2.5 text-sm font-semibold"
+                >
+                  {lang === "es" ? "Omitir línea" : "Skip line"}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {

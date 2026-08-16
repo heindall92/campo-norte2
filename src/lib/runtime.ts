@@ -1,10 +1,45 @@
 /**
  * Flags de entorno para demo vs producción.
  *
- * Principio (pitch): las cuentas demo del equipo siguen disponibles aunque
- * haya Supabase. En producción real, cierra la puerta con
- * VITE_STRICT_AUTH=true o VITE_ALLOW_DEMO_AUTH=false.
+ * Demo (defecto): semilla local, login embebido, sin infraestructura.
+ * Producción: Supabase Auth + Postgres. Se activa con
+ * VITE_RUNTIME_MODE=production, VITE_STRICT_AUTH=true o
+ * VITE_ALLOW_DEMO_AUTH=false (y backend configurado).
+ *
+ * Las cuentas sofia@ / norte2026 NUNCA son credenciales de producción.
  */
+
+export type RuntimeMode = "demo" | "production";
+
+export function resolveRuntimeMode(input: {
+  explicit?: string | undefined;
+  strictAuth: boolean;
+  allowDemoAuth: boolean;
+  supabaseConfigured: boolean;
+}): RuntimeMode {
+  if (input.explicit === "production") return "production";
+  if (input.explicit === "demo") return "demo";
+  if (input.strictAuth) return "production";
+  if (!input.allowDemoAuth && input.supabaseConfigured) return "production";
+  return "demo";
+}
+
+export function runtimeMode(): RuntimeMode {
+  return resolveRuntimeMode({
+    explicit: import.meta.env.VITE_RUNTIME_MODE as string | undefined,
+    strictAuth: import.meta.env.VITE_STRICT_AUTH === "true",
+    allowDemoAuth: import.meta.env.VITE_ALLOW_DEMO_AUTH !== "false",
+    supabaseConfigured: supabaseConfigured(),
+  });
+}
+
+export function isDemoMode(): boolean {
+  return runtimeMode() === "demo";
+}
+
+export function wmsUsesSeedSnapshot(): boolean {
+  return isDemoMode() || forceLocalHub();
+}
 
 /** Build de producción (Vite). */
 export function isProdBuild(): boolean {
@@ -37,6 +72,7 @@ export function allowClientAiKeys(): boolean {
  *  3. Resto → sí (también con Supabase: fallback a Hub local semilla).
  */
 export function allowLocalDemoAuth(): boolean {
+  if (import.meta.env.VITE_RUNTIME_MODE === "production") return false;
   if (import.meta.env.VITE_STRICT_AUTH === "true") return false;
   if (import.meta.env.VITE_ALLOW_DEMO_AUTH === "false") return false;
   return true;

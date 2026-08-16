@@ -1,10 +1,15 @@
 /** Dominio WMS — Campo Norte Logística (fase 8: catálogo, prioridades, roster y fichaje). */
 
+import type { WmsMembership } from "./rbac";
+
 export type WarehouseZone = "seco" | "fresco" | "congelado" | "picking" | "muelle" | "crossdock";
 
 export type SlotStatus = "libre" | "ocupado" | "reservado" | "bloqueado" | "inventario";
 
 export type PalletStatus = "en_ubicacion" | "en_transito" | "picking" | "muelle" | "expedido" | "cuarentena";
+
+export const QC_STATUSES = ["PENDING", "APPROVED", "REJECTED", "QUARANTINED"] as const;
+export type QcStatus = (typeof QC_STATUSES)[number];
 
 export type CategoryCode =
   | "alimentacion_seca"
@@ -35,8 +40,63 @@ export type OperatorRoleFloor = "carretillero" | "picker" | "recepcion" | "exped
 
 export type MovementType = "entrada" | "salida" | "traslado" | "ajuste" | "inventario";
 
+/** Motivo de merma que escribe planta. No se inventa. */
+export type MermaReason = "caida" | "rota" | "otra";
+
+/**
+ * Rotura o caída declarada. Si no se declara y se coge otra caja,
+ * el hueco queda con un faltante invisible.
+ */
+export interface MermaEvent {
+  id: string;
+  at: string;
+  siteId: string;
+  skuId: string;
+  palletId: string;
+  fromSlotId: string | null;
+  qty: number;
+  reason: MermaReason;
+  note: string;
+  operatorId: string | null;
+  /** Hueco del área de merma si lo escriben. null = declarado y aún sin ubicar. */
+  mermaSlotId: string | null;
+}
+
+/**
+ * Faltante de hueco que el jefe tiene que cuadrar en el sistema.
+ * El operario no debería ir a la oficina: avisa desde el aparato.
+ * La cantidad contada la escribe el jefe; no se inventa.
+ */
+export type SlotFixReason = "merma" | "de_mas" | "roto" | "pico_mal" | "otra";
+
+export type SlotFixStatus = "pendiente" | "arreglado";
+
+export interface SlotFix {
+  id: string;
+  at: string;
+  siteId: string;
+  slotId: string;
+  palletId: string | null;
+  skuId: string;
+  /** Lo que decía el sistema al avisar. */
+  systemQty: number;
+  /** Lo que pidió el ticket. */
+  takeQty: number;
+  /** Lo que cuenta el jefe. null mientras está pendiente. */
+  countedQty: number | null;
+  reason: SlotFixReason | null;
+  note: string;
+  reportedBy: string | null;
+  fixedBy: string | null;
+  status: SlotFixStatus;
+  fixedAt: string | null;
+}
+
 /** Línea de picado para operario (escáner de pasillo). */
 export type PickLineStatus = "pendiente" | "en_curso" | "picada" | "faltante" | "omitida";
+
+/** Caja entera o unidades de dentro de un contenedor (droguería / inner pack). */
+export type PickPack = "caja" | "contenedor";
 
 export interface PickLine {
   id: string;
@@ -47,6 +107,9 @@ export interface PickLine {
   qtyPicked: number;
   /** Unidades embaladas. Nunca mayor que qtyPicked; 0 si aún no se ha embalado. */
   qtyPacked: number;
+  /** SSCC de caja suelta. Solo si lo escribe el operario; nunca se fabrica. */
+  cartonSscc: string | null;
+  pickPack: PickPack;
   slotId: string;
   palletId: string | null;
   status: PickLineStatus;
@@ -79,6 +142,13 @@ export interface WmsOrg {
    * RLS Postgres real queda para infra; aquí el filtro es de dominio.
    */
   rlsMode: "snapshot" | "postgres";
+  /** Si es true, applyInventoryTx admite buckets o available < 0. Por defecto no. */
+  allowNegativeInventory?: boolean;
+  /**
+   * Prefijo escrito para generar SSCC interno de packing.
+   * null = hay que escribir el SSCC. No es GCP GS1: no se fabrica un número de 18 dígitos.
+   */
+  ssccPrefix: string | null;
 }
 
 export interface Carrier {
@@ -161,6 +231,11 @@ export interface Pallet {
   supplier: string;
   /** ASN del que se descargó. null en semilla o alta manual. */
   asnId: string | null;
+  /**
+   * QC de recepción. Ausente en semilla histórica = ya estaba en hueco (APPROVED al normalizar).
+   * PENDING / REJECTED / QUARANTINED no pican.
+   */
+  qcStatus?: QcStatus;
 }
 
 export interface FleetUnit {
@@ -234,10 +309,39 @@ export interface InboundAsn {
   eta: string;
   dock: string;
   status: "previsto" | "en_muelle" | "descargando" | "ubicando" | "cerrado";
+  /** Número declarado. Las líneas reales viven en `asnLines`. */
   lines: number;
   palletsExpected: number;
   palletsDone: number;
   siteId: string;
+}
+
+export const ASN_INCIDENT_KINDS = ["partial", "overage", "shortage", "damaged", "wrong_lot"] as const;
+export type AsnIncidentKind = (typeof ASN_INCIDENT_KINDS)[number];
+
+export type AsnLineStatus = "open" | "partial" | "received" | "closed";
+
+/** Línea ASN escrita. No se fabrica a partir del número `InboundAsn.lines`. */
+export interface AsnLine {
+  id: string;
+  asnId: string;
+  skuId: string;
+  expectedQty: number;
+  receivedQty: number;
+  expectedLot: string | null;
+  status: AsnLineStatus;
+}
+
+/** Diferencia de recepción. `qty` es la magnitud real del desvío. */
+export interface AsnIncident {
+  id: string;
+  asnId: string;
+  lineId: string | null;
+  palletId: string | null;
+  kind: AsnIncidentKind;
+  qty: number;
+  note: string;
+  at: string;
 }
 
 export interface OutboundOrder {
@@ -255,6 +359,146 @@ export interface OutboundOrder {
   tracking: string | null;
   dockWindowStart: string | null;
   dockWindowEnd: string | null;
+}
+
+/** Palet, caja suelta o carro. Lo que el operario termina de montar en pasillo. */
+export type LoadUnitKind = "palet" | "caja" | "carro";
+
+export type LoadUnitStatus = "abierta" | "completa" | "flejada" | "etiquetada" | "en_muelle";
+
+/**
+ * Unidad de carga que el operario fleja, etiqueta y deja en el pasillo de muelle.
+ * La etiqueta no se fabrica: la escribe quien la pega.
+ */
+export interface LoadUnit {
+  id: string;
+  kind: LoadUnitKind;
+  orderId: string;
+  orderCode: string;
+  siteId: string;
+  operatorId: string | null;
+  /** Pasillo de muelle del pedido (el que ve en pantalla). */
+  dockAisle: string;
+  lineIds: string[];
+  qty: number;
+  labelCode: string | null;
+  strapped: boolean;
+  labeled: boolean;
+  dockSlotId: string | null;
+  status: LoadUnitStatus;
+  createdAt: string;
+}
+
+/** Estación de packing escrita. Vacío en semilla: no se inventan mesas. */
+export interface PackStation {
+  id: string;
+  warehouseId: string;
+  code: string;
+  name: string;
+  createdAt: string;
+}
+
+/**
+ * Bulto de packing asociado a un pedido.
+ * Peso y dims null hasta que se escriben. SSCC único en el registro del org.
+ */
+export interface PackPackage {
+  id: string;
+  orderId: string;
+  stationId: string | null;
+  sscc: string;
+  weightKg: number | null;
+  dimLengthCm: number | null;
+  dimWidthCm: number | null;
+  dimHeightCm: number | null;
+  lineIds: string[];
+  createdAt: string;
+  createdBy: string | null;
+}
+
+export const SHIPMENT_STATUSES = ["PACKED", "STAGED", "LOADED", "SHIPPED", "CANCELLED"] as const;
+export type ShipmentStatus = (typeof SHIPMENT_STATUSES)[number];
+
+export type TrackingEventSource = "user" | "mock";
+
+/**
+ * Expedición del pedido. Timestamps null hasta el evento real.
+ * Tracking null si nadie (ni el mock) lo escribe.
+ */
+export interface WmsShipment {
+  id: string;
+  orderId: string;
+  status: ShipmentStatus;
+  packedAt: string | null;
+  stagedAt: string | null;
+  loadedAt: string | null;
+  shippedAt: string | null;
+  cancelledAt: string | null;
+  carrierId: string | null;
+  tracking: string | null;
+  /** true si el tracking lo escribió el MockCarrierAdapter. */
+  mock: boolean;
+  packageIds: string[];
+  createdAt: string;
+}
+
+/** Evento de tracking. source=mock va etiquetado; no es SEUR/DHL. */
+export interface TrackingEvent {
+  id: string;
+  shipmentId: string;
+  at: string;
+  code: string;
+  note: string;
+  source: TrackingEventSource;
+}
+
+/** Muelle físico escrito. capacity null = no hay cupo configurado; no se inventa 1. */
+export interface Dock {
+  id: string;
+  warehouseId: string;
+  code: string;
+  name: string;
+  capacity: number | null;
+  createdAt: string;
+}
+
+export const DOCK_EVENT_KINDS = ["arrival", "check_in", "assignment", "load", "unload", "departure"] as const;
+export type DockEventKind = (typeof DOCK_EVENT_KINDS)[number];
+
+export interface DockAppointment {
+  id: string;
+  dockId: string;
+  warehouseId: string;
+  orderId: string | null;
+  asnId: string | null;
+  windowStart: string;
+  windowEnd: string;
+  cancelledAt: string | null;
+  createdAt: string;
+}
+
+export interface DockEvent {
+  id: string;
+  appointmentId: string;
+  kind: DockEventKind;
+  at: string;
+  note: string;
+  operatorId: string | null;
+}
+
+/** El patrón o un técnico asigna un súper (pedido) al código del operario. */
+export interface SuperAssignment {
+  id: string;
+  orderId: string;
+  operatorId: string;
+  assignedBy: string | null;
+  at: string;
+  /** Cómo tomar el súper: box, palet o carro. Lo dice quien asigna; no se deduce del pedido. */
+  loadKind: LoadUnitKind | null;
+  /** Palets/cajas/carros que dice el operario al terminar. null = aún no ha dicho. */
+  unitsMade: number | null;
+  /** Etiquetas a imprimir. En palet: 2 por unidad (una por lado). */
+  labelsPrinted: number;
 }
 
 export interface CostLine {
@@ -281,6 +525,23 @@ export interface StockMovement {
   note: string;
 }
 
+/** Bitácora append-only. No se borra desde la UI. */
+export interface WmsAuditLog {
+  id: string;
+  actorId: string | null;
+  organizationId: string;
+  warehouseId: string | null;
+  action: string;
+  entity: string;
+  entityId: string;
+  beforeData: Record<string, unknown> | null;
+  afterData: Record<string, unknown> | null;
+  timestamp: string;
+  reason: string;
+  deviceId: string | null;
+  correlationId: string;
+}
+
 export interface WmsSnapshot {
   org: WmsOrg;
   /** true = semilla local de almacén, no es el Data Hub de producción */
@@ -295,11 +556,300 @@ export interface WmsSnapshot {
   operators: Operator[];
   clockPunches: ClockPunch[];
   inbound: InboundAsn[];
+  /** Líneas ASN. Vacío en semilla: no se inventan SKU/qty a partir del número. */
+  asnLines: AsnLine[];
+  asnIncidents: AsnIncident[];
   outbound: OutboundOrder[];
   carriers: Carrier[];
   costs: CostLine[];
   movements: StockMovement[];
   pickWaves: PickWave[];
+  loadUnits: LoadUnit[];
+  /** Estaciones de packing. Vacío en semilla. */
+  packStations: PackStation[];
+  /** Bultos de packing. Vacío en semilla. */
+  packPackages: PackPackage[];
+  /** Expediciones. Vacío en semilla: se abren al embalar/cargar/expedir. */
+  shipments: WmsShipment[];
+  trackingEvents: TrackingEvent[];
+  /** Muelles escritos. Vacío en semilla: order.dock sigue siendo texto. */
+  docks: Dock[];
+  dockAppointments: DockAppointment[];
+  dockEvents: DockEvent[];
+  superAssignments: SuperAssignment[];
+  mermaEvents: MermaEvent[];
+  slotFixes: SlotFix[];
+  auditLogs: WmsAuditLog[];
+  reservations: StockReservation[];
+  products: WmsProduct[];
+  productUoms: WmsProductUom[];
+  lots: WmsLot[];
+  serialNumbers: WmsSerialNumber[];
+  inventoryBalances: InventoryBalance[];
+  inventoryReservations: InventoryReservation[];
+  inventoryTransactions: InventoryTransaction[];
+  inventoryAdjustments: InventoryAdjustment[];
+  inventoryCounts: InventoryCount[];
+  /** Sesiones de conteo. Vacío en semilla: no se inventa un full count. */
+  countSessions: CountSession[];
+  countLines: CountLine[];
+  /** Reglas de slotting escritas. Vacío en semilla: no se inventan incompatibles. */
+  slottingRules: SlottingRule[];
+  slottingRecommendations: SlottingRecommendation[];
+  /** Tareas MIN/MAX. Vacío en semilla: se calculan, no se inventan. */
+  replenishTasks: ReplenishTask[];
+  /** Revisión del ledger Postgres. 0 en semilla local. */
+  ledgerRevision: number;
+  /** Pertenencias de auth al org. Sin contraseñas. */
+  memberships: WmsMembership[];
+}
+
+export type InventoryTxType =
+  | "RECEIPT"
+  | "PUTAWAY"
+  | "MOVE"
+  | "ALLOCATE"
+  | "DEALLOCATE"
+  | "PICK"
+  | "REPLENISH"
+  | "PACK"
+  | "STAGE"
+  | "LOAD"
+  | "SHIP"
+  | "RETURN"
+  | "ADJUSTMENT"
+  | "COUNT"
+  | "QUARANTINE"
+  | "RELEASE";
+
+/** Catálogo de inventario. Proyección de `skus` — no inventa EAN ni SKU. */
+export interface WmsProduct {
+  id: string;
+  orgId: string;
+  sku: string;
+  name: string;
+  ean: string | null;
+  status: "active" | "inactive";
+  category: string;
+}
+
+export interface WmsProductUom {
+  id: string;
+  orgId: string;
+  productId: string;
+  uom: string;
+  isBase: boolean;
+  factorToBase: number;
+}
+
+export interface WmsLot {
+  id: string;
+  orgId: string;
+  productId: string;
+  lot: string;
+  expiry: string | null;
+  receivedAt: string;
+  blocked: boolean;
+}
+
+/** Vacío en semilla: no hay seriales reales que persistir. */
+export interface WmsSerialNumber {
+  id: string;
+  orgId: string;
+  productId: string;
+  serial: string;
+  lot: string | null;
+  status: "in_stock" | "shipped";
+}
+
+/**
+ * Estado actual de un grano (org, sku, lote, ubicación).
+ * `available = onHand - allocated - blocked - quarantined` (siempre recalculado).
+ */
+export interface InventoryBalance {
+  id: string;
+  orgId: string;
+  skuId: string;
+  lot: string | null;
+  locationId: string;
+  onHand: number;
+  allocated: number;
+  available: number;
+  picked: number;
+  packed: number;
+  staged: number;
+  blocked: number;
+  quarantined: number;
+  revision: number;
+  updatedAt: string;
+}
+
+export interface InventoryReservation {
+  id: string;
+  orgId: string;
+  skuId: string;
+  lot: string | null;
+  locationId: string;
+  qty: number;
+  status: "open" | "released" | "consumed";
+  orderCode: string;
+  waveId: string | null;
+  lineId: string | null;
+  palletId: string | null;
+  createdAt: string;
+  revision: number;
+}
+
+/** Ledger histórico. Append-only. */
+export interface InventoryTransaction {
+  id: string;
+  orgId: string;
+  type: InventoryTxType;
+  skuId: string;
+  lot: string | null;
+  fromLocationId: string | null;
+  toLocationId: string | null;
+  qty: number;
+  countedQty: number | null;
+  /** Cubo de ADJUSTMENT. Sin esto el replay suma a on_hand y rompe el ledger. */
+  bucket: "on_hand" | "blocked" | "quarantined" | null;
+  uom: string;
+  reason: string;
+  refType: string | null;
+  refId: string | null;
+  palletId: string | null;
+  createdAt: string;
+  actorId: string | null;
+}
+
+export interface InventoryAdjustment {
+  id: string;
+  orgId: string;
+  skuId: string;
+  lot: string | null;
+  locationId: string;
+  qty: number;
+  reason: string;
+  txId: string;
+  createdAt: string;
+  actorId: string | null;
+}
+
+export interface InventoryCount {
+  id: string;
+  orgId: string;
+  skuId: string;
+  lot: string | null;
+  locationId: string;
+  expectedQty: number;
+  countedQty: number;
+  variance: number;
+  txId: string;
+  createdAt: string;
+  actorId: string | null;
+}
+
+export const COUNT_SESSION_KINDS = ["cyclic", "abc", "slot", "sku", "lot"] as const;
+export type CountSessionKind = (typeof COUNT_SESSION_KINDS)[number];
+
+/** Sesión de inventario. Full count solo si `full` se pide; no se fabrica. */
+export interface CountSession {
+  id: string;
+  orgId: string;
+  warehouseId: string;
+  kind: CountSessionKind;
+  status: "open" | "closed";
+  openedAt: string;
+  closedAt: string | null;
+  operatorId: string | null;
+  skuId: string | null;
+  lot: string | null;
+  slotId: string | null;
+  abc: "A" | "B" | "C" | null;
+  full: boolean;
+}
+
+export interface CountLine {
+  id: string;
+  sessionId: string;
+  slotId: string;
+  palletId: string;
+  skuId: string;
+  expectedQty: number;
+  countedQty: number | null;
+  variance: number | null;
+  status: "pending" | "counted" | "skipped";
+  taskReason: "caducidad" | "abc_a" | "antiguo" | "frio";
+}
+
+export const SLOTTING_RULE_KINDS = ["incompatible_sku", "incompatible_category"] as const;
+export type SlottingRuleKind = (typeof SLOTTING_RULE_KINDS)[number];
+
+/** Incompatible solo si está escrito. Semilla vacía. */
+export interface SlottingRule {
+  id: string;
+  kind: SlottingRuleKind;
+  left: string;
+  right: string;
+  note: string;
+}
+
+/** Recomendación from→to. acceptedAt null hasta confirmar. No mueve sola. */
+export interface SlottingRecommendation {
+  id: string;
+  palletId: string;
+  skuId: string;
+  fromSlotId: string;
+  toSlotId: string;
+  toCode: string;
+  score: number;
+  travelPct: number;
+  reasons: string[];
+  createdAt: string;
+  acceptedAt: string | null;
+  acceptedBy: string | null;
+}
+
+export const REPLENISH_KINDS = ["PLANNED", "URGENT", "AUTO"] as const;
+export type ReplenishKind = (typeof REPLENISH_KINDS)[number];
+
+export type ReplenishTaskSource = "pick_face" | "min_max" | "wave";
+
+/** Propuesta de reposición. AUTO no mueve sin operario. */
+export interface ReplenishTask {
+  id: string;
+  warehouseId: string;
+  skuId: string;
+  kind: ReplenishKind;
+  source: ReplenishTaskSource;
+  currentQty: number;
+  minStock: number;
+  maxStock: number;
+  qty: number;
+  fromSlotId: string | null;
+  toSlotId: string | null;
+  palletId: string | null;
+  waveId: string | null;
+  status: "open" | "done" | "cancelled";
+  createdAt: string;
+  executedAt: string | null;
+  operatorId: string | null;
+}
+
+/** Hold de stock. No es reserva de viaje CRM. */
+export interface StockReservation {
+  id: string;
+  organizationId: string;
+  warehouseId: string;
+  palletId: string;
+  skuId: string;
+  qty: number;
+  status: "hold" | "consumed" | "released";
+  orderCode: string;
+  waveId: string | null;
+  lineId: string | null;
+  at: string;
+  revision: number;
 }
 
 export const CATEGORY_LABEL: Record<CategoryCode, { es: string; en: string }> = {

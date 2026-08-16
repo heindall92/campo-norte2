@@ -88,7 +88,73 @@
 - Manifiesto de muelle: palets cargados + cajas embaladas; tracking vacío si no lo escribes
 - CSP de Vercel permite las fuentes de Google (la web deja de verse sin tipografía)
 
-## Siguiente
-- Agente pyzk en la LAN cuando haya terminal físico
-- Telemetría real de flota (ISM / I_Site / InfoLink) cuando exista contrato
-- Tablas WMS en Postgres / RLS cuando haya stock real en el Hub
+## Fase 14 — Cierre de muelle y jornada (esta entrega)
+- Embalaje por línea: cantidad escrita y SSCC de caja solo si lo teclea el operario
+- Manifiesto imprimible (`window.print`); no fabrica tracking ni SSCC
+- Cierre de jornada: horas y movimientos del día a partir de fichajes reales
+- Traslado inter-centro de un palet existente a un hueco libre del otro hub
+- Separar ola mezclada (p. ej. `WAVE-A-0815-01`) en una ola por pedido
+
+## Fase 15 — Asignación de súper y rastro de pasillo (esta entrega)
+- El patrón o un técnico asigna el súper (pedido) al **código de operario**, no al número del aparato
+- El ticket de planta manda: súper · pasillo · hueco · cantidad a tomar
+- El rastro del operario avanza solo cuando marca el artículo; no hay GPS
+- Unidad de carga: palet / caja / carro → fleje → etiqueta escrita → dejar en el pasillo de muelle del pedido
+- No se modelan carta de porte ni la oficina de recepción: no están descritas
+
+## Fase 16 — Merma declarada (esta entrega)
+- Si se cae o se rompe una caja, hay que declararlo: baja el stock del palet
+- Coger otra para el súper sin declarar deja un faltante invisible; el sistema ya no lo permite tapar
+- El área de merma solo se apunta si el hueco existe; no se inventa un pasillo
+- Carta de porte: los jefes la mencionan; no está modelada porque no sabemos en qué consiste
+
+## Fase 17 — Auriculares y guía de pasillos (esta entrega)
+- El aparato dicta: súper, pasillo, hueco y cantidad
+- Cajas enteras o unidades de un contenedor (cuando el artículo trae cajas pequeñas dentro)
+- Guía de planta 8–37 (droguería, leche 28, cerveza 29, agua 31–32…) tal como la relató el operario
+- El twin digital sigue en letras A/B/C; no se inventan SKU de vino, cerveza ni especias
+
+## Fase 18 — Ciclo de voz de planta (esta entrega)
+- Al marcar, los auriculares dictan solos el siguiente ticket (pasillo, hueco, cajas o unidades del contenedor)
+- Si no queda línea, dicen: fleja, escribe la etiqueta y deja en el pasillo de muelle del súper
+- El resto en el hueco sale del palet real; no se inventa el desglose de cajas pequeñas
+- Preferencia de auriculares on/off en el aparato (local); no es telemetría
+
+## Fase 20 — Súper en box/palet/carro y etiquetas por lado (esta entrega)
+- Al identificar al operario, se le asigna el súper y si lo toma en box, palet o carro (lo dice quien asigna)
+- Al picar el último producto, la voz pregunta cuántos palets (o box/carros) ha hecho
+- 2 palets → 4 etiquetas (una por cada lado). Se imprimen con súper, muelle y lado; sin SSCC inventado
+- En pantalla deja el súper en el muelle. Luego le asignan el siguiente súper y oye pasillo y hueco
+
+## Fase 19 — Faltante de hueco y mandos de voz (esta entrega)
+- Si el hueco no coincide (merma, cogió de más, roto, picó mal), el operario avisa desde el aparato; el jefe cuadra la cuenta en el sistema
+- El aparato dice cuántas hay en el hueco para que el operario compruebe
+- Mandos: sube / baja / acelera / atrás / artículo / «N ok»
+- «N ok» pica y pasa al siguiente hueco; no se inventa stock
+
+## Phase 0 — Auditoría (esta entrega, solo docs)
+- Mapa del sistema actual, deuda, huecos y plan incremental
+- `docs/ARCHITECTURE_AUDIT.md`, `TARGET_ARCHITECTURE.md`, `DATABASE_PLAN.md`, `MIGRATION_PLAN.md`
+- El motor de planta (fases 1–20) no se ha reescrito
+
+## Oleada 8 — Packing + SSCC (esta entrega)
+- Estaciones y bultos solo si se escriben (semilla vacía)
+- Registro SSCC único (palet + caja de línea + bulto)
+- Generar SSCC interno solo con prefijo escrito; sin prefijo se teclea
+- Etiqueta de packing: SSCC del registro, peso/dims si existen; sin tracking
+
+## Oleada 9 — Shipping + MockCarrierAdapter (esta entrega)
+- `shipments` con timestamps; LOADED no se inventa
+- MockCarrierAdapter etiquetado MOCK; tracking solo si se escribe
+- Expedir sin tracking sigue siendo válido; el dominio no importa seur
+
+## Oleada 10 — Dock calendar (esta entrega)
+- Muelles, citas y eventos solo si se escriben
+- Cupo concurrente solo si `capacity` está escrita; null no se trata como 1
+- Calendario del día; el itinerario de texto M-05 sigue
+
+## Siguiente (tras revisión humana)
+- Oleadas 0–10 hechas en cliente (14 oleadas en total: 0–13)
+- Oleada 11: yard
+- Briefs restantes (yard, returns) — un módulo por oleada
+- Layout numérico 8–37 / SKU cerveza-vino / ZKTeco / telemetría flota: solo con dato real
