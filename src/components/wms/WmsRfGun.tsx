@@ -1,11 +1,12 @@
 import { Badge, Card } from "@/components/CrmChrome";
 import { useAuth } from "@/lib/auth";
 import type { Lang } from "@/lib/i18n";
+import { getRfOutboxStore } from "@/infrastructure/wms-store";
 import {
   applyRfScan,
   assertCanPick,
   buildRfQueue,
-  confirmRfTask,
+  confirmRfTaskOrQueue,
   operatorForAppUser,
   startRfSession,
   type RfScanError,
@@ -102,13 +103,20 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
         return;
       }
     }
-    const result = confirmRfTask(snap, session, operatorId || matched?.id || null);
+    const online = typeof navigator === "undefined" ? true : navigator.onLine;
+    const key = `rf:${session.task.id}:${session.fromCode}:${session.sscc}:${session.toCode}:${session.qty}`;
+    const result = confirmRfTaskOrQueue(snap, session, operatorId || matched?.id || null, {
+      online,
+      idempotencyKey: key,
+    });
     if (!result.ok) {
       setOkMsg(null);
       setFeedback(lang === "es" ? "No se pudo confirmar: revisa los escaneos" : "Could not confirm: check scans");
       return;
     }
     persist(result.snap);
+    const pending = (result.snap.rfOutbox ?? []).filter((i) => i.status === "pending");
+    void Promise.all(pending.map((item) => getRfOutboxStore().put(item)));
     const nextQueue = buildRfQueue(
       result.snap,
       siteId,
@@ -117,7 +125,15 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
     const next = nextQueue[0] ?? null;
     setTaskId(next?.id ?? "");
     setSession(next ? startRfSession(next) : null);
-    setOkMsg(lang === "es" ? "Movimiento registrado" : "Move recorded");
+    setOkMsg(
+      result.queued
+        ? lang === "es"
+          ? "Sin red · comando en cola IndexedDB"
+          : "Offline · command queued in IndexedDB"
+        : lang === "es"
+          ? "Movimiento registrado"
+          : "Move recorded",
+    );
     setFeedback(null);
   }
 
@@ -137,6 +153,12 @@ export function WmsRfGunPanel({ lang }: { lang: Lang }) {
         <h2 className="font-[family-name:var(--mps-display)] text-2xl text-[var(--ink)]">
           {lang === "es" ? "Pistola RF" : "RF gun"}
         </h2>
+        {(snap.rfOutbox ?? []).some((i) => i.status === "pending") && (
+          <p className="mt-1 text-xs font-semibold text-[var(--warn-ink)]">
+            {(snap.rfOutbox ?? []).filter((i) => i.status === "pending").length}{" "}
+            {lang === "es" ? "comandos en cola offline" : "offline queued commands"}
+          </p>
+        )}
         <p className="mt-1 max-w-2xl text-sm text-[var(--ink-muted)]">
           {lang === "es"
             ? "Un escáner: hueco → SSCC → destino o cantidad. Solo confirma si coincide con el palet y el hueco reales de la cola."

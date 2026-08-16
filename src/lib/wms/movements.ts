@@ -1,4 +1,5 @@
 import { closeAsnIfLocated } from "./catalog";
+import { recordPhysicalTx } from "./inventory";
 import { codesEqual } from "./location";
 import type { Pallet, Slot, StockMovement, WarehouseZone, WmsSnapshot } from "./types";
 
@@ -49,13 +50,27 @@ function appendMove(
   const operators = snap.operators.map((o) =>
     o.id === movement.operatorId ? { ...o, movesToday: o.movesToday + 1 } : o,
   );
-  return {
+  const next: WmsSnapshot = {
     ...snap,
     slots,
     pallets,
     movements: [movement, ...snap.movements],
     operators,
   };
+  return recordPhysicalTx(next, {
+    id: `tx-${movement.id}`,
+    at: movement.at,
+    type: movement.type === "entrada" ? "PUTAWAY" : "MOVE",
+    skuId: movement.skuId,
+    palletId: movement.palletId,
+    lot: pallets.find((p) => p.id === movement.palletId)?.lot ?? null,
+    fromSlotId: movement.fromSlotId,
+    toSlotId: movement.toSlotId,
+    qty: Math.max(movement.qty, 1),
+    operatorId: movement.operatorId,
+    note: movement.note,
+    idempotencyKey: movement.id,
+  });
 }
 
 function relocate(

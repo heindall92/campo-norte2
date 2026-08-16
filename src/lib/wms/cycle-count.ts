@@ -1,5 +1,6 @@
+import { recordPhysicalTx } from "./inventory";
 import { codesEqual } from "./location";
-import type { Slot, WmsSnapshot } from "./types";
+import type { CycleCountSession, Slot, WmsSnapshot } from "./types";
 
 export type CycleCountTask = {
   id: string;
@@ -90,29 +91,70 @@ export function confirmCycleCount(
     s.id === slot.id ? { ...s, lastCountedAt: at, status: s.status === "inventario" ? "ocupado" : s.status } : s,
   );
   const nextPallets = snap.pallets.map((p) => (p.id === pallet.id ? { ...p, qty: input.qty } : p));
-  return {
-    ok: true,
+  const session: CycleCountSession = {
+    id: `ccs-${slot.id}-${at}`,
+    siteId: slot.siteId,
+    slotId: slot.id,
+    palletId: pallet.id,
+    expectedQty: pallet.qty,
+    countedQty: input.qty,
     variance,
-    snap: {
-      ...snap,
-      slots: nextSlots,
-      pallets: nextPallets,
-      movements: [
-        {
-          id: `mv-cc-${slot.id}`,
-          at,
-          type: variance === 0 ? "inventario" : "ajuste",
-          skuId: pallet.skuId,
-          palletId: pallet.id,
-          fromSlotId: slot.id,
-          toSlotId: slot.id,
-          qty: variance,
-          operatorId: input.operatorId ?? null,
-          fleetId: null,
-          note: variance === 0 ? `Conteo OK ${slot.code}` : `Merma/ajuste ${variance} · ${slot.code}`,
-        },
-        ...snap.movements,
-      ],
-    },
+    status: "closed",
+    openedAt: at,
+    closedAt: at,
+    operatorId: input.operatorId ?? null,
   };
+  let next: WmsSnapshot = {
+    ...snap,
+    slots: nextSlots,
+    pallets: nextPallets,
+    cycleCountSessions: [session, ...(snap.cycleCountSessions ?? [])],
+    movements: [
+      {
+        id: `mv-cc-${slot.id}`,
+        at,
+        type: variance === 0 ? "inventario" : "ajuste",
+        skuId: pallet.skuId,
+        palletId: pallet.id,
+        fromSlotId: slot.id,
+        toSlotId: slot.id,
+        qty: variance,
+        operatorId: input.operatorId ?? null,
+        fleetId: null,
+        note: variance === 0 ? `Conteo OK ${slot.code}` : `Merma/ajuste ${variance} · ${slot.code}`,
+      },
+      ...snap.movements,
+    ],
+  };
+  next = recordPhysicalTx(next, {
+    id: `tx-count-${slot.id}`,
+    at,
+    type: "COUNT",
+    skuId: pallet.skuId,
+    palletId: pallet.id,
+    lot: pallet.lot,
+    fromSlotId: slot.id,
+    toSlotId: slot.id,
+    qty: input.qty,
+    operatorId: input.operatorId ?? null,
+    note: `COUNT ${slot.code} · ${input.qty}`,
+    idempotencyKey: `count-${slot.id}-${at}`,
+  });
+  if (variance !== 0) {
+    next = recordPhysicalTx(next, {
+      id: `tx-adj-${slot.id}`,
+      at,
+      type: "ADJUSTMENT",
+      skuId: pallet.skuId,
+      palletId: pallet.id,
+      lot: pallet.lot,
+      fromSlotId: variance < 0 ? slot.id : null,
+      toSlotId: variance > 0 ? slot.id : null,
+      qty: Math.abs(variance),
+      operatorId: input.operatorId ?? null,
+      note: `ADJUSTMENT ${variance} · ${slot.code}`,
+      idempotencyKey: `adj-${slot.id}-${at}`,
+    });
+  }
+  return { ok: true, variance, snap: next };
 }

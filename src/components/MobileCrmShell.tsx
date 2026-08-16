@@ -1,4 +1,4 @@
-import { useAuth, canAccessSection, canManageCrmUsers } from "@/lib/auth";
+import { useAuth, userCanAccessSection, canManageCrmUsers } from "@/lib/auth";
 import { useDataHub } from "@/lib/data";
 import { useNotifications, type AppSection } from "@/lib/notifications";
 import { loadUserProfile } from "@/lib/user-profile";
@@ -272,14 +272,14 @@ export function MobileCrmShell({
 
   const quickItems = useMemo(() => {
     if (!user) return QUICK;
-    return QUICK.filter((q) => canAccessSection(user.role, q.id));
+    return QUICK.filter((q) => userCanAccessSection(user, q.id));
   }, [user]);
 
   const moreItems = useMemo(() => {
     if (!user) return MORE_SECTIONS;
     const quickIds = new Set(QUICK.map((q) => q.id));
     return MORE_SECTIONS.filter(
-      (m) => !quickIds.has(m.id) && canAccessSection(user.role, m.id),
+      (m) => !quickIds.has(m.id) && userCanAccessSection(user, m.id),
     );
   }, [user]);
 

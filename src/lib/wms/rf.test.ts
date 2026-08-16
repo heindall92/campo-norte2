@@ -7,6 +7,7 @@ describe("wms RF gun", () => {
   it("classifies slot codes vs SSCC vs qty without guessing", () => {
     expect(classifyScan("A-03-02-1").kind).toBe("slot");
     expect(classifyScan("003841009900000001").kind).toBe("sscc");
+    expect(classifyScan("(00)003841009900000001").kind).toBe("sscc");
     expect(classifyScan("12").kind).toBe("qty");
     expect(classifyScan("hola").kind).toBe("unknown");
   });

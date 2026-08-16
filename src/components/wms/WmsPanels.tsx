@@ -28,6 +28,9 @@ import {
   buildLoadManifest,
   monthCosts,
   occupancyByZone,
+  computeTowerActions,
+  bookDockAppointment,
+  dockCalendar,
   type FleetStatus,
   type PalletStatus,
   type SlotStatus,
@@ -40,6 +43,7 @@ import {
   Battery,
   Boxes,
   Building2,
+  CalendarClock,
   CircleAlert,
   ClipboardCheck,
   ClipboardList,
@@ -49,6 +53,7 @@ import {
   Package,
   ScanBarcode,
   Truck,
+  UserRoundPlus,
   Users,
   Warehouse,
 } from "lucide-react";
@@ -98,6 +103,7 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
   const unit = computeUnitEconomics(snap, siteId);
   const coverage = computeShiftCoverage(snap, siteId);
   const openGaps = coverage.gaps.filter((g) => g.gap < 0).length;
+  const towerActions = computeTowerActions(snap, siteId);
 
   return (
     <div className="space-y-4">
@@ -136,6 +142,37 @@ export function WmsDashboardPanel({ lang }: { lang: Lang }) {
       </header>
 
       {matched && <WmsJornadaCard lang={lang} snap={snap} operatorId={matched.id} onChange={commit} />}
+
+      {towerActions.length > 0 && (
+        <Card
+          title={lang === "es" ? "Qué debo hacer ahora" : "What I should do now"}
+          subtitle={lang === "es" ? "Cola de Control Tower · no ejecuta sola" : "Control Tower queue · does not auto-run"}
+        >
+          <ul className="space-y-2">
+            {towerActions.slice(0, 8).map((action) => (
+              <li
+                key={action.id}
+                className="flex items-start justify-between gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2 text-sm"
+              >
+                <span>
+                  <span className="inline-flex items-center gap-1.5 font-semibold text-[var(--ink)]">
+                    {action.kind === "ASIGNAR_PICKER" ? (
+                      <UserRoundPlus className="h-3.5 w-3.5" />
+                    ) : (
+                      <ClipboardCheck className="h-3.5 w-3.5" />
+                    )}
+                    {lang === "es" ? action.titleEs : action.titleEn}
+                  </span>
+                  <p className="text-xs text-[var(--ink-muted)]">
+                    {lang === "es" ? action.detailEs : action.detailEn}
+                  </p>
+                </span>
+                <span className="shrink-0 font-mono text-[10px] text-[var(--ink-muted)]">{action.kind}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -511,6 +548,53 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
           </button>
         </form>
         {msg && <p className="mt-2 text-xs font-semibold text-[var(--danger)]">{msg}</p>}
+      </Card>
+      <Card
+        title={lang === "es" ? "Calendario de muelle" : "Dock calendar"}
+        subtitle={lang === "es" ? "Citas del día · sin solapes" : "Today's appointments · no overlaps"}
+      >
+        <ul className="space-y-2">
+          {dockCalendar(snap, siteId, "2026-08-15T00:00:00.000Z").map((appt) => (
+            <li key={appt.id} className="flex items-center justify-between text-sm">
+              <span className="inline-flex items-center gap-1.5 font-mono text-xs">
+                <CalendarClock className="h-3.5 w-3.5" />
+                {appt.dockCode} · {appt.kind}
+              </span>
+              <span className="text-[var(--ink-muted)]">
+                {new Date(appt.start).toLocaleTimeString(lang === "es" ? "es-ES" : "en-GB", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            </li>
+          ))}
+          {dockCalendar(snap, siteId, "2026-08-15T00:00:00.000Z").length === 0 && (
+            <p className="text-xs text-[var(--ink-muted)]">
+              {lang === "es" ? "Sin citas. Se crean al confirmar la ventana del pedido." : "No appointments. Booked from the order window."}
+            </p>
+          )}
+        </ul>
+        <button
+          type="button"
+          className="mt-3 rounded-full border border-[var(--glass-border)] px-3 py-1.5 text-xs font-semibold"
+          onClick={() => {
+            const result = bookDockAppointment(snap, {
+              siteId,
+              dockCode: dock,
+              kind: "outbound",
+              start: new Date(cutOff).toISOString(),
+              end: new Date(new Date(cutOff).getTime() + 90 * 60 * 1000).toISOString(),
+            });
+            if (result.ok) {
+              commit(result.snap);
+              setMsg(null);
+            } else {
+              setMsg(lang === "es" ? "Muelle ocupado en esa ventana" : "Dock busy in that window");
+            }
+          }}
+        >
+          {lang === "es" ? "Reservar muelle" : "Book dock"}
+        </button>
       </Card>
       <Card
         title={lang === "es" ? "Itinerario de muelle" : "Dock itinerary"}

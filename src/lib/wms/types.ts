@@ -281,6 +281,196 @@ export interface StockMovement {
   note: string;
 }
 
+/** Ledger canónico. qty siempre > 0; el sentido lo dan from/to y el tipo. */
+export type InventoryTxType =
+  | "RECEIPT"
+  | "PUTAWAY"
+  | "MOVE"
+  | "ALLOCATE"
+  | "DEALLOCATE"
+  | "PICK"
+  | "REPLENISH"
+  | "PACK"
+  | "STAGE"
+  | "LOAD"
+  | "SHIP"
+  | "RETURN"
+  | "ADJUSTMENT"
+  | "COUNT"
+  | "QUARANTINE"
+  | "RELEASE";
+
+export interface InventoryTx {
+  id: string;
+  at: string;
+  type: InventoryTxType;
+  skuId: string;
+  palletId: string | null;
+  lot: string | null;
+  fromSlotId: string | null;
+  toSlotId: string | null;
+  qty: number;
+  operatorId: string | null;
+  correlationId: string;
+  idempotencyKey: string | null;
+  note: string;
+}
+
+export interface InventoryBalance {
+  id: string;
+  palletId: string | null;
+  skuId: string;
+  lot: string;
+  slotId: string | null;
+  siteId: string;
+  onHand: number;
+  allocated: number;
+  blocked: number;
+  quarantined: number;
+}
+
+export type ReservationStatus = "open" | "released" | "consumed" | "cancelled";
+
+export interface InventoryReservation {
+  id: string;
+  orderId: string;
+  orderLineId: string;
+  palletId: string;
+  skuId: string;
+  qty: number;
+  status: ReservationStatus;
+}
+
+export interface OrderLine {
+  id: string;
+  orderId: string;
+  skuId: string;
+  qtyOrdered: number;
+  qtyAllocated: number;
+  qtyPicked: number;
+  qtyShipped: number;
+}
+
+export type ReceiptIncidentKind = "parcial" | "exceso" | "faltante" | "lote";
+
+export interface AsnLine {
+  id: string;
+  asnId: string;
+  skuId: string;
+  qtyExpected: number;
+  qtyReceived: number;
+  lotExpected: string | null;
+}
+
+export interface ReceiptIncident {
+  id: string;
+  asnId: string;
+  asnLineId: string | null;
+  kind: ReceiptIncidentKind;
+  skuId: string;
+  expectedQty: number;
+  actualQty: number;
+  note: string;
+  at: string;
+}
+
+export interface ShippingPackage {
+  id: string;
+  orderId: string;
+  sscc: string;
+  skuId: string;
+  qty: number;
+  lineIds: string[];
+  packedAt: string;
+}
+
+export interface DockAppointment {
+  id: string;
+  siteId: string;
+  dockCode: string;
+  kind: "inbound" | "outbound";
+  orderId: string | null;
+  asnId: string | null;
+  start: string;
+  end: string;
+  status: "booked" | "arrived" | "loading" | "done" | "no_show";
+}
+
+export interface YardVisit {
+  id: string;
+  siteId: string;
+  plate: string;
+  dockCode: string | null;
+  status: "in_yard" | "at_dock" | "departed";
+  checkedInAt: string;
+  checkedOutAt: string | null;
+}
+
+export type ReturnStatus = "requested" | "received" | "inspecting" | "restock" | "quarantine" | "scrap";
+
+export interface ReturnOrder {
+  id: string;
+  code: string;
+  siteId: string;
+  customer: string;
+  skuId: string;
+  qty: number;
+  status: ReturnStatus;
+  palletId: string | null;
+  note: string;
+  createdAt: string;
+}
+
+export interface QualityHold {
+  id: string;
+  palletId: string;
+  reason: string;
+  at: string;
+  releasedAt: string | null;
+}
+
+export type CycleCountSessionStatus = "open" | "closed";
+
+export interface CycleCountSession {
+  id: string;
+  siteId: string;
+  slotId: string;
+  palletId: string;
+  expectedQty: number;
+  countedQty: number | null;
+  variance: number | null;
+  status: CycleCountSessionStatus;
+  openedAt: string;
+  closedAt: string | null;
+  operatorId: string | null;
+}
+
+export type RfOutboxStatus = "pending" | "flushed" | "conflict";
+
+export interface RfOutboxItem {
+  id: string;
+  idempotencyKey: string;
+  taskId: string;
+  kind: string;
+  payload: Record<string, string | number | null>;
+  status: RfOutboxStatus;
+  queuedAt: string;
+  flushedAt: string | null;
+  conflictReason: string | null;
+}
+
+export interface WmsAuditLog {
+  id: string;
+  at: string;
+  actorId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string;
+  correlationId: string;
+  before: string | null;
+  after: string | null;
+}
+
 export interface WmsSnapshot {
   org: WmsOrg;
   /** true = semilla local de almacén, no es el Data Hub de producción */
@@ -300,6 +490,21 @@ export interface WmsSnapshot {
   costs: CostLine[];
   movements: StockMovement[];
   pickWaves: PickWave[];
+  /** Campos enterprise: hidratados en normalize si faltan (snapshots v8 antiguos). */
+  ledger?: InventoryTx[];
+  balances?: InventoryBalance[];
+  reservations?: InventoryReservation[];
+  orderLines?: OrderLine[];
+  asnLines?: AsnLine[];
+  receiptIncidents?: ReceiptIncident[];
+  packages?: ShippingPackage[];
+  dockAppointments?: DockAppointment[];
+  yardVisits?: YardVisit[];
+  returns?: ReturnOrder[];
+  qualityHolds?: QualityHold[];
+  cycleCountSessions?: CycleCountSession[];
+  rfOutbox?: RfOutboxItem[];
+  auditLogs?: WmsAuditLog[];
 }
 
 export const CATEGORY_LABEL: Record<CategoryCode, { es: string; en: string }> = {

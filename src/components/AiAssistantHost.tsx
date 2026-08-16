@@ -26,6 +26,7 @@ import { upsertAiThread } from "@/lib/ai/threads";
 import { useDataHub } from "@/lib/data";
 import type { Lang } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { answerWmsCopilot, formatCopilotAnswer, loadWmsSnapshot, looksLikeWmsQuestion } from "@/lib/wms";
 
 type Props = { lang: Lang };
 
@@ -62,6 +63,26 @@ export function AiAssistantHost({ lang }: Props) {
     const t1 = window.setTimeout(() => setStep(2), 400);
     const t2 = window.setTimeout(() => setStep(3), 850);
     try {
+      if (looksLikeWmsQuestion(text)) {
+        const copilot = formatCopilotAnswer(answerWmsCopilot(loadWmsSnapshot(), text), lang);
+        setResult({
+          answer: copilot,
+          sources: [],
+          chunksUsed: [],
+          engine: "retrieval",
+          why: [lang === "es" ? "Copiloto WMS (no ejecuta movimientos)" : "WMS copilot (does not execute moves)"],
+        });
+        setStreamText(copilot);
+        const settings = loadAiSettings();
+        recordAiUsage({ prompt: text, reply: copilot });
+        upsertAiThread({
+          question: text,
+          answer: copilot,
+          tokensOut: estimateTokens(copilot),
+          tokensMax: settings.maxOutputTokens,
+        });
+        return;
+      }
       const docs = loadKnowledgeDocs();
       const res = await askKnowledgeStream(
         text,

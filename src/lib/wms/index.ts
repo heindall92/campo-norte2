@@ -21,55 +21,29 @@ export * from "./normalize";
 export * from "./jornada";
 export * from "./waves";
 export * from "./outbound";
+export * from "./uom";
+export * from "./inventory";
+export * from "./orders";
+export * from "./allocation";
+export * from "./receiving";
+export * from "./replenishment";
+export * from "./packing";
+export * from "./carrier-adapter";
+export * from "./sscc";
+export * from "./docks";
+export * from "./yard";
+export * from "./returns";
+export * from "./quality";
+export * from "./offline-sync";
+export * from "./audit";
+export * from "./tower-actions";
+export * from "./copilot";
+export * from "./ids";
 
-import { buildWmsSeed } from "./seed";
-import { normalizeWmsSnapshot, snapshotLooksUsable } from "./normalize";
-import { WMS_STORAGE_KEY, WMS_STORAGE_KEY_LEGACY, type WmsSnapshot } from "./types";
-
-function readStoredSnapshot(): WmsSnapshot | null {
-  const keys = [WMS_STORAGE_KEY, ...WMS_STORAGE_KEY_LEGACY];
-  for (const key of keys) {
-    try {
-      const raw = localStorage.getItem(key);
-      if (!raw) continue;
-      const parsed = JSON.parse(raw) as WmsSnapshot;
-      if (snapshotLooksUsable(parsed)) return normalizeWmsSnapshot(parsed);
-    } catch {
-      /* try next key */
-    }
-  }
-  return null;
-}
-
-export function loadWmsSnapshot(): WmsSnapshot {
-  const stored = readStoredSnapshot();
-  if (stored) {
-    try {
-      localStorage.setItem(WMS_STORAGE_KEY, JSON.stringify(stored));
-    } catch {
-      /* ignore */
-    }
-    return stored;
-  }
-  const seed = buildWmsSeed();
-  try {
-    localStorage.setItem(WMS_STORAGE_KEY, JSON.stringify(seed));
-  } catch {
-    /* ignore */
-  }
-  return seed;
-}
-
-export function saveWmsSnapshot(snap: WmsSnapshot): void {
-  try {
-    localStorage.setItem(WMS_STORAGE_KEY, JSON.stringify(snap));
-  } catch {
-    /* ignore */
-  }
-}
-
-export function resetWmsSnapshot(): WmsSnapshot {
-  const seed = buildWmsSeed();
-  saveWmsSnapshot(seed);
-  return seed;
-}
+export {
+  loadWmsSnapshot,
+  saveWmsSnapshot,
+  resetWmsSnapshot,
+  canWriteWmsProduction,
+  resolveWmsAdapter,
+} from "@/infrastructure/wms-store";

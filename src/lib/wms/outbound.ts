@@ -1,4 +1,6 @@
 import type { OutboundOrder, Pallet, PickLine, Slot, WmsSnapshot } from "./types";
+import { recordPhysicalTx } from "./inventory";
+import { appendAudit } from "./audit";
 
 export type OutboundOpError =
   | "order_missing"
@@ -230,31 +232,45 @@ export function packPickedLines(
   const nextStatus =
     fill.order.status === "muelle" || fill.fullPalletsToStage.length ? fill.order.status : "embalaje";
 
+  const next: WmsSnapshot = {
+    ...snap,
+    pickWaves,
+    movements: [
+      {
+        id: `mv-pack-${orderId}-${at}`,
+        at,
+        type: "salida",
+        skuId: fill.unpackedCases[0]!.skuId,
+        palletId: null,
+        fromSlotId: null,
+        toSlotId: null,
+        qty: packedQty,
+        operatorId,
+        fleetId: null,
+        note: `Embalaje ${fill.order.code} · ${packedQty} ud. picadas`,
+      },
+      ...snap.movements,
+    ],
+    outbound: snap.outbound.map((o) =>
+      o.id === orderId ? { ...o, status: nextStatus as OutboundOrder["status"] } : o,
+    ),
+  };
+
   return {
     ok: true,
-    snap: {
-      ...snap,
-      pickWaves,
-      movements: [
-        {
-          id: `mv-pack-${orderId}-${at}`,
-          at,
-          type: "salida",
-          skuId: fill.unpackedCases[0]!.skuId,
-          palletId: null,
-          fromSlotId: null,
-          toSlotId: null,
-          qty: packedQty,
-          operatorId,
-          fleetId: null,
-          note: `Embalaje ${fill.order.code} · ${packedQty} ud. picadas`,
-        },
-        ...snap.movements,
-      ],
-      outbound: snap.outbound.map((o) =>
-        o.id === orderId ? { ...o, status: nextStatus as OutboundOrder["status"] } : o,
-      ),
-    },
+    snap: recordPhysicalTx(next, {
+      at,
+      type: "PACK",
+      skuId: fill.unpackedCases[0]!.skuId,
+      palletId: null,
+      lot: null,
+      fromSlotId: null,
+      toSlotId: null,
+      qty: packedQty,
+      operatorId,
+      note: `PACK ${fill.order.code}`,
+      idempotencyKey: `pack-${orderId}-${at}`,
+    }),
   };
 }
 
@@ -335,15 +351,30 @@ export function stageOrderToDock(
 
   return {
     ok: true,
-    snap: {
-      ...snap,
-      slots,
-      pallets,
-      movements,
-      outbound: snap.outbound.map((o) =>
-        o.id === order.id && o.status !== "expedido" ? { ...o, status: "muelle" as const } : o,
-      ),
-    },
+    snap: recordPhysicalTx(
+      {
+        ...snap,
+        slots,
+        pallets,
+        movements,
+        outbound: snap.outbound.map((o) =>
+          o.id === order.id && o.status !== "expedido" ? { ...o, status: "muelle" as const } : o,
+        ),
+      },
+      {
+        at,
+        type: "STAGE",
+        skuId: take[0]!.skuId,
+        palletId: take[0]!.id,
+        lot: take[0]!.lot,
+        fromSlotId: take[0]!.slotId,
+        toSlotId: docks[0]!.id,
+        qty: 0,
+        operatorId,
+        note: `STAGE ${order.code}`,
+        idempotencyKey: `stage-${orderId}-${at}`,
+      },
+    ),
   };
 }
 
@@ -392,14 +423,39 @@ export function shipOutboundOrder(
 
   return {
     ok: true,
-    snap: {
-      ...snap,
-      slots,
-      pallets,
-      movements,
-      outbound: snap.outbound.map((o) =>
-        o.id === orderId ? { ...o, status: "expedido" as const } : o,
+    snap: appendAudit(
+      recordPhysicalTx(
+        {
+          ...snap,
+          slots,
+          pallets,
+          movements,
+          outbound: snap.outbound.map((o) =>
+            o.id === orderId ? { ...o, status: "expedido" as const } : o,
+          ),
+        },
+        {
+          at,
+          type: "SHIP",
+          skuId: staged[0]?.skuId ?? fulfillment.lines[0]!.skuId,
+          palletId: staged[0]?.id ?? null,
+          lot: staged[0]?.lot ?? null,
+          fromSlotId: staged[0]?.slotId ?? null,
+          toSlotId: null,
+          qty: 0,
+          operatorId,
+          note: `SHIP ${fulfillment.order.code}`,
+          idempotencyKey: `ship-${orderId}-${at}`,
+        },
       ),
-    },
+      {
+        at,
+        actorId: operatorId,
+        action: "order.ship",
+        entityType: "order",
+        entityId: orderId,
+        after: "expedido",
+      },
+    ),
   };
 }

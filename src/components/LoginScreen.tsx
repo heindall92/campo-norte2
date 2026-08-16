@@ -11,7 +11,7 @@ const LOGIN_VIDEO_SRC = "/media/login-home.mp4"; // Hero Login (comprimido)
 export function LoginScreen() {
   const { signIn, supabaseReady } = useAuth();
   const demoAuth = allowLocalDemoAuth();
-  const [email, setEmail] = useState(LOCAL_TEAM_USERS[0]?.email ?? "sofia@camponorte.demo");
+  const [email, setEmail] = useState(demoAuth ? (LOCAL_TEAM_USERS[0]?.email ?? "") : "");
   const [password, setPassword] = useState(demoAuth ? "norte2026" : "");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState<string | null>(null);

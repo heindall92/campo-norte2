@@ -304,6 +304,17 @@ export function WmsInboundPanel({ lang }: { lang: Lang }) {
                 );
               })()}
               {recvMsg && <p className="mt-2 text-xs font-semibold text-[var(--danger)]">{recvMsg}</p>}
+              {(snap.receiptIncidents ?? []).filter((i) => i.asnId === asn.id).length > 0 && (
+                <ul className="mt-2 space-y-1 text-[11px] text-[var(--warn-ink)]">
+                  {(snap.receiptIncidents ?? [])
+                    .filter((i) => i.asnId === asn.id)
+                    .map((inc) => (
+                      <li key={inc.id}>
+                        {inc.kind} · {inc.note}
+                      </li>
+                    ))}
+                </ul>
+              )}
             </Card>
           );
         })}

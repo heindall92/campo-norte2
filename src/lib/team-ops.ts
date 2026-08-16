@@ -23,6 +23,7 @@ export const TEAM_DAY_RATE: Record<UserRole, number> = {
   ops: 140,
   booking: 90,
   admin: 0,
+  pending: 0,
 };
 
 export interface TeamAssignment {

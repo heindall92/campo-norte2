@@ -82,3 +82,7 @@ export function askAboutReservation(trip: string, reason: string): string {
 export function askAboutInvoice(number: string, reason: string): string {
   return `La factura ${number} requiere atención: ${reason}. ¿Cómo lo resuelvo sin incumplir la normativa?`;
 }
+
+export function askAboutWms(topic: string): string {
+  return `En el almacén: ${topic}. Dame hallazgo, evidencia del snapshot, confianza y una recomendación. No ejecutes pick ni expedición.`;
+}

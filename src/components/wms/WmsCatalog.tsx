@@ -7,6 +7,7 @@ import {
   deleteCategory,
   deleteSku,
   stockByCategory,
+  skuAvailable,
   updateCategory,
   updateSku,
   type CatalogError,
@@ -283,6 +284,7 @@ export function WmsStockPanel({ lang }: { lang: Lang }) {
                 <th className="pb-2 pr-3">{lang === "es" ? "Categoría" : "Category"}</th>
                 <th className="pb-2 pr-3">ABC</th>
                 <th className="pb-2 pr-3">{lang === "es" ? "Stock" : "Stock"}</th>
+                <th className="pb-2 pr-3">{lang === "es" ? "Disponible" : "Available"}</th>
                 <th className="pb-2 pr-3">Min / Max</th>
                 <th className="pb-2" />
               </tr>
@@ -302,6 +304,7 @@ export function WmsStockPanel({ lang }: { lang: Lang }) {
                       </Badge>
                     </td>
                     <td className={cn("py-2.5 pr-3 font-semibold", low && "text-[var(--danger)]")}>{units}</td>
+                    <td className="py-2.5 pr-3 font-mono text-xs">{skuAvailable(snap, sku.id)}</td>
                     <td className="py-2.5 pr-3 text-[var(--ink-muted)]">
                       {sku.minStock} / {sku.maxStock}
                     </td>

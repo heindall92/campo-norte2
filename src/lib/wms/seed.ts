@@ -1,3 +1,5 @@
+import { EXTRA_SKUS } from "./seed-catalog";
+import { hydrateInventory } from "./inventory";
 import { slotRecordId } from "./location";
 import { generateSiteSlots } from "./onboard";
 import { CAMPO_NORTE_ORG } from "./org";
@@ -900,12 +902,12 @@ export function buildWmsSeed(): WmsSnapshot {
   const pallets = buildPallets(slots);
   seedDockAndPickFaceGap(slots, pallets);
   const pickWaves = buildPickWaves(slots, pallets);
-  return {
+  return hydrateInventory({
     org: CAMPO_NORTE_ORG,
     seededFromDemo: true,
     sites: [SITE_SEV, SITE_HUE],
     categories: SYSTEM_CATEGORIES,
-    skus: SKUS,
+    skus: [...SKUS, ...EXTRA_SKUS],
     slots,
     pallets,
     fleet: FLEET,
@@ -918,7 +920,7 @@ export function buildWmsSeed(): WmsSnapshot {
     costs: COSTS,
     movements: MOVEMENTS,
     pickWaves,
-  };
+  });
 }
 
 /** Palet en muelle para putaway + un pick face vacío con reserva encima (retráctil doble). */

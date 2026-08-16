@@ -4,17 +4,16 @@ import {
   CAMPO_NORTE_ORG,
   occupancyByZone,
   onboardSite,
-  loadWmsSnapshot,
-  saveWmsSnapshot,
   ZONE_LABEL,
   type WarehouseZone,
   type WmsSnapshot,
 } from "@/lib/wms";
 import { Building2, Check, MapPin, Plus, Warehouse } from "lucide-react";
 import { useState } from "react";
+import { useWmsLive } from "./useWmsLive";
 
 export function WmsSitesPanel({ lang }: { lang: Lang }) {
-  const [snap, setSnap] = useState(() => loadWmsSnapshot());
+  const { snap, commit } = useWmsLive();
   const [city, setCity] = useState("");
   const [region, setRegion] = useState("");
   const [country, setCountry] = useState("ES");
@@ -26,8 +25,7 @@ export function WmsSitesPanel({ lang }: { lang: Lang }) {
   const [okMsg, setOkMsg] = useState<string | null>(null);
 
   function persist(next: WmsSnapshot) {
-    saveWmsSnapshot(next);
-    setSnap(next);
+    commit(next);
   }
 
   function submit() {
@@ -74,8 +72,8 @@ export function WmsSitesPanel({ lang }: { lang: Lang }) {
         </h2>
         <p className="mt-1 max-w-2xl text-sm text-[var(--ink-muted)]">
           {lang === "es"
-            ? "Alta de hub en el tenant Campo Norte. El aislamiento es por org_id en el snapshot (RLS Postgres queda para infra)."
-            : "Onboard a hub in the Campo Norte tenant. Isolation is by org_id in the snapshot (Postgres RLS is infra)."}
+            ? "Alta de hub en el tenant Campo Norte. DEMO filtra por org_id; PRODUCTION aísla con RLS en Postgres."
+            : "Onboard a hub in the Campo Norte tenant. DEMO filters by org_id; PRODUCTION isolates with Postgres RLS."}
         </p>
       </header>
 

@@ -10,12 +10,10 @@ import {
 import { getSupabase, getSupabaseEnv } from "@/lib/supabase/client";
 import { allowLocalDemoAuth, setForceLocalHub } from "@/lib/runtime";
 import { trackAccess } from "@/lib/access-log";
-import {
-  LOCAL_AUTH_KEY,
-  ROLE_LABEL,
-  type AppUser,
-  type UserRole,
-} from "./types";
+import { CAMPO_NORTE_ORG } from "@/lib/wms/org";
+import { crmRoleToWmsRole } from "./wms-rbac";
+import { resolveSupabaseAppUser } from "./resolve-supabase-user";
+import { LOCAL_AUTH_KEY, ROLE_LABEL, type AppUser } from "./types";
 import { findCrmUser } from "./crm-users";
 import { useIdleSessionTimeout } from "./useIdleSessionTimeout";
 import { clearLastActivity } from "@/lib/security-settings";
@@ -30,16 +28,22 @@ export interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function roleFromMeta(raw: unknown): UserRole {
-  if (raw === "admin" || raw === "ops" || raw === "booking" || raw === "guide") return raw;
-  return "ops";
+function withDemoRbac(user: AppUser): AppUser {
+  return {
+    ...user,
+    roleLabel: ROLE_LABEL[user.role] ?? user.roleLabel,
+    wmsRole: user.wmsRole ?? crmRoleToWmsRole(user.role),
+    organizationId: user.organizationId ?? CAMPO_NORTE_ORG.id,
+  };
 }
 
 function userFromLocalStorage(): AppUser | null {
   try {
     const raw = localStorage.getItem(LOCAL_AUTH_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as AppUser;
+    const parsed = JSON.parse(raw) as AppUser;
+    if (parsed?.provider !== "local") return null;
+    return withDemoRbac(parsed);
   } catch {
     return null;
   }
@@ -57,10 +61,11 @@ function signInLocalDemo(normalized: string, password: string): AppUser {
       "Email o contraseña incorrectos. Demo: sofia@camponorte.demo / norte2026",
     );
   }
-  localStorage.setItem(LOCAL_AUTH_KEY, JSON.stringify(match));
+  const user = withDemoRbac(match);
+  localStorage.setItem(LOCAL_AUTH_KEY, JSON.stringify(user));
   setForceLocalHub(true);
-  void trackAccess("login", match);
-  return match;
+  void trackAccess("login", user);
+  return user;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -70,10 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    let authGen = 0;
     const sb = getSupabase();
 
     async function boot() {
-      // Sesión demo local (prioridad si el operador entró con cuenta equipo)
       if (allowLocalDemoAuth()) {
         const local = userFromLocalStorage();
         if (local?.provider === "local") {
@@ -90,29 +95,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const session = data.session;
         if (session?.user) {
           setForceLocalHub(false);
-          const meta = session.user.user_metadata ?? {};
-          const name =
-            (meta.full_name as string) ||
-            (meta.name as string) ||
-            session.user.email?.split("@")[0] ||
-            "Usuario";
-          const role = roleFromMeta(meta.role);
-          setUser({
-            id: session.user.id,
-            email: session.user.email ?? "",
-            name,
-            role,
-            roleLabel: ROLE_LABEL[role],
-            avatarInitial: name.slice(0, 1).toUpperCase(),
-            provider: "supabase",
-          });
+          const appUser = await resolveSupabaseAppUser(sb, session.user);
+          if (cancelled) return;
+          setUser(appUser);
         } else {
           setUser(null);
         }
 
         const { data: sub } = sb.auth.onAuthStateChange((_event, next) => {
+          const my = ++authGen;
           if (!next?.user) {
-            // No borrar sesión demo local
             const local = allowLocalDemoAuth() ? userFromLocalStorage() : null;
             if (local?.provider === "local") {
               setUser(local);
@@ -123,21 +115,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           localStorage.removeItem(LOCAL_AUTH_KEY);
           setForceLocalHub(false);
-          const meta = next.user.user_metadata ?? {};
-          const name =
-            (meta.full_name as string) ||
-            (meta.name as string) ||
-            next.user.email?.split("@")[0] ||
-            "Usuario";
-          const role = roleFromMeta(meta.role);
-          setUser({
-            id: next.user.id,
-            email: next.user.email ?? "",
-            name,
-            role,
-            roleLabel: ROLE_LABEL[role],
-            avatarInitial: name.slice(0, 1).toUpperCase(),
-            provider: "supabase",
+          void resolveSupabaseAppUser(sb, next.user).then((appUser) => {
+            if (cancelled || my !== authGen) return;
+            setUser(appUser);
           });
         });
 
@@ -173,7 +153,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!error) {
         localStorage.removeItem(LOCAL_AUTH_KEY);
         setForceLocalHub(false);
-        // El onAuthStateChange / getSession rellenará user; trackeamos por email
         void trackAccess("login", {
           id: normalized,
           email: normalized,
@@ -182,7 +161,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         return;
       }
-      // Fallback pitch: cuentas demo del equipo → Hub local (semilla)
       if (allowLocalDemoAuth()) {
         try {
           const match = signInLocalDemo(normalized, password);
@@ -215,7 +193,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useIdleSessionTimeout(Boolean(user) && ready, signOut);
 
-  // Sesión ya abierta (reload / pestaña): 1 ping/día para saber que volvieron
   useEffect(() => {
     if (!ready || !user) return;
     void trackAccess("session", user);

@@ -1,3 +1,4 @@
+import { hydrateInventory } from "./inventory";
 import { ensureShiftRoster, normalizeOperator, ROSTER_PRIMARY_SITE } from "./roster";
 import { SYSTEM_CATEGORIES, type FleetUnit, type Pallet, type PickWave, type WmsSnapshot } from "./types";
 
@@ -24,7 +25,7 @@ function normalizeWave(wave: PickWave): PickWave {
 
 /** Completa campos de v7→v8 sin inventar telemetría ni identidades. */
 export function normalizeWmsSnapshot(snap: WmsSnapshot): WmsSnapshot {
-  return {
+  const base: WmsSnapshot = {
     ...snap,
     categories: snap.categories?.length ? snap.categories : SYSTEM_CATEGORIES,
     chargers: Array.isArray(snap.chargers) ? snap.chargers : [],
@@ -33,7 +34,22 @@ export function normalizeWmsSnapshot(snap: WmsSnapshot): WmsSnapshot {
     pallets: (snap.pallets ?? []).map(normalizePallet),
     pickWaves: (snap.pickWaves ?? []).map(normalizeWave),
     operators: ensureShiftRoster((snap.operators ?? []).map(normalizeOperator), ROSTER_PRIMARY_SITE),
+    ledger: snap.ledger ?? [],
+    balances: snap.balances ?? [],
+    reservations: snap.reservations ?? [],
+    orderLines: snap.orderLines ?? [],
+    asnLines: snap.asnLines ?? [],
+    receiptIncidents: snap.receiptIncidents ?? [],
+    packages: snap.packages ?? [],
+    dockAppointments: snap.dockAppointments ?? [],
+    yardVisits: snap.yardVisits ?? [],
+    returns: snap.returns ?? [],
+    qualityHolds: snap.qualityHolds ?? [],
+    cycleCountSessions: snap.cycleCountSessions ?? [],
+    rfOutbox: snap.rfOutbox ?? [],
+    auditLogs: snap.auditLogs ?? [],
   };
+  return hydrateInventory(base);
 }
 
 export function snapshotLooksUsable(parsed: Partial<WmsSnapshot> | null | undefined): parsed is WmsSnapshot {

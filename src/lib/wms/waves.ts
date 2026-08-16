@@ -63,7 +63,18 @@ export function openWaveFromOrder(
   if (existing) return { ok: true, snap, waveId: existing.id };
 
   const need = Math.max(1, Math.min(order.pallets || order.lines || 4, 12));
-  const candidates = pickCandidates(snap, order.siteId).slice(0, need);
+  const reserved = (snap.reservations ?? []).filter((r) => r.orderId === orderId && r.status === "open");
+  const reservedCandidates = reserved
+    .map((r) => {
+      const pallet = snap.pallets.find((p) => p.id === r.palletId);
+      const slot = pallet?.slotId ? snap.slots.find((s) => s.id === pallet.slotId) : undefined;
+      const sku = pallet ? snap.skus.find((s) => s.id === pallet.skuId) : undefined;
+      if (!pallet || !slot || !sku || pallet.qty < 1) return null;
+      return { slot, pallet, sku, qty: r.qty };
+    })
+    .filter((row): row is { slot: Slot; pallet: Pallet; sku: Sku; qty: number } => Boolean(row));
+  const fallback = pickCandidates(snap, order.siteId).map((row) => ({ ...row, qty: row.pallet.qty }));
+  const candidates = (reservedCandidates.length ? reservedCandidates : fallback).slice(0, need);
   if (!candidates.length) return { ok: false, error: "no_free_pallets" };
 
   const aisle = candidates[0]!.slot.aisle;
@@ -96,7 +107,7 @@ export function openWaveFromOrder(
       waveId,
       orderCode: order.code,
       skuId: row.sku.id,
-      qty: row.pallet.qty,
+      qty: row.qty,
       qtyPicked: 0,
       qtyPacked: 0,
       slotId: row.slot.id,

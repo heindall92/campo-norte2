@@ -1,9 +1,8 @@
 /**
  * Flags de entorno para demo vs producción.
  *
- * Principio (pitch): las cuentas demo del equipo siguen disponibles aunque
- * haya Supabase. En producción real, cierra la puerta con
- * VITE_STRICT_AUTH=true o VITE_ALLOW_DEMO_AUTH=false.
+ * Con Supabase configurado el login demo está cerrado.
+ * Para reabrirlo hace falta `VITE_ALLOW_DEMO_AUTH=true` (no es el defecto).
  */
 
 /** Build de producción (Vite). */
@@ -34,11 +33,15 @@ export function allowClientAiKeys(): boolean {
  * Orden de decisión:
  *  1. `VITE_STRICT_AUTH=true`  → nunca.
  *  2. `VITE_ALLOW_DEMO_AUTH=false` → nunca.
- *  3. Resto → sí (también con Supabase: fallback a Hub local semilla).
+ *  3. `VITE_ALLOW_DEMO_AUTH=true` → sí (solo si lo pides).
+ *  4. Con Supabase configurado → nunca (producción real).
+ *  5. Sin backend → sí, para tests / build sin .env.
  */
 export function allowLocalDemoAuth(): boolean {
   if (import.meta.env.VITE_STRICT_AUTH === "true") return false;
   if (import.meta.env.VITE_ALLOW_DEMO_AUTH === "false") return false;
+  if (import.meta.env.VITE_ALLOW_DEMO_AUTH === "true") return true;
+  if (supabaseConfigured()) return false;
   return true;
 }
 
@@ -65,4 +68,21 @@ export function setForceLocalHub(on: boolean): void {
   } catch {
     /* ignore */
   }
+}
+
+export type WmsMode = "demo" | "production";
+
+/**
+ * PRODUCTION si hay Supabase y no se forzó demo.
+ * `VITE_WMS_MODE=demo` vuelve al snapshot. El login demo nunca escribe wms_*.
+ */
+export function wmsMode(): WmsMode {
+  const forced = (import.meta.env.VITE_WMS_MODE as string | undefined)?.trim().toLowerCase();
+  if (forced === "demo") return "demo";
+  if (supabaseConfigured() && !forceLocalHub()) return "production";
+  return "demo";
+}
+
+export function isWmsProduction(): boolean {
+  return wmsMode() === "production";
 }

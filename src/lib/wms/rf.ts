@@ -1,4 +1,5 @@
-import { parseSlotCode, formatSlotCode, codesEqual } from "./location";
+import { parseBarcode } from "@/infrastructure/barcode";
+import { codesEqual } from "./location";
 import { confirmPick, nextOpenLine } from "./picking";
 import {
   applyReplenishment,
@@ -7,6 +8,7 @@ import {
   suggestPutawaySlot,
   type LiveMoveError,
 } from "./movements";
+import { proposeMinMaxReplenishments } from "./replenishment";
 import { confirmCycleCount, planCycleCounts, type CycleCountError, type CycleCountTask } from "./cycle-count";
 import type { ConfirmPickError } from "./picking";
 import type { Operator, WmsSnapshot } from "./types";
@@ -45,14 +47,13 @@ export type RfScanError = "unknown_scan" | "wrong_slot" | "wrong_sscc" | "wrong_
 export type RfConfirmError = ConfirmPickError | LiveMoveError | CycleCountError | "scan_incomplete" | "task_stale";
 
 export function classifyScan(raw: string): { kind: ScanKind; value: string } {
-  const v = raw.trim();
-  if (!v) return { kind: "unknown", value: v };
-  const slot = parseSlotCode(v);
-  if (slot) return { kind: "slot", value: formatSlotCode(slot) };
-  const digits = v.replace(/\s/g, "");
-  if (/^\d{10,}$/.test(digits)) return { kind: "sscc", value: digits };
-  if (/^\d+$/.test(v)) return { kind: "qty", value: v };
-  return { kind: "unknown", value: v };
+  const parsed = parseBarcode(raw);
+  if (parsed.kind === "slot") return { kind: "slot", value: parsed.slotCode ?? parsed.value };
+  if (parsed.kind === "sscc" || parsed.sscc) {
+    return { kind: "sscc", value: parsed.sscc ?? parsed.value };
+  }
+  if (parsed.kind === "qty") return { kind: "qty", value: parsed.value };
+  return { kind: "unknown", value: parsed.value };
 }
 
 export function stepsFor(kind: RfTaskKind): RfStep[] {
@@ -120,7 +121,8 @@ export function buildRfQueue(snap: WmsSnapshot, siteId?: string, operatorId?: st
   }
 
   const fleet = snap.fleet.find((f) => f.kind === "retractil_doble" && f.status === "operativa");
-  for (const proposal of proposeReplenishments(snap)) {
+  const replenish = [...proposeReplenishments(snap), ...proposeMinMaxReplenishments(snap)];
+  for (const proposal of replenish) {
     if (siteId && proposal.siteId !== siteId) continue;
     const from = snap.slots.find((s) => s.id === proposal.fromSlotId);
     const to = snap.slots.find((s) => s.id === proposal.toSlotId);
@@ -248,7 +250,9 @@ export function confirmRfTask(
   }
 
   if (task.kind === "replenish") {
-    const proposal = proposeReplenishments(snap).find((p) => p.id === task.replenishId);
+    const proposal =
+      proposeReplenishments(snap).find((p) => p.id === task.replenishId) ??
+      proposeMinMaxReplenishments(snap).find((p) => p.id === task.replenishId);
     if (!proposal) return { ok: false, error: "task_stale" };
     return applyReplenishment(snap, proposal, fleet?.id ?? null, operatorId);
   }

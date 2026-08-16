@@ -1,4 +1,6 @@
-export type UserRole = "admin" | "ops" | "booking" | "guide";
+import type { WmsRole } from "./wms-rbac";
+
+export type UserRole = "admin" | "ops" | "booking" | "guide" | "pending";
 
 export interface AppUser {
   id: string;
@@ -9,6 +11,9 @@ export interface AppUser {
   avatarInitial: string;
   /** local = demo equipo; supabase = Auth real */
   provider: "local" | "supabase";
+  /** Rol de planta. null = sin acceso WMS (pending). */
+  wmsRole?: WmsRole | null;
+  organizationId?: string | null;
 }
 
 export const ROLE_LABEL: Record<UserRole, string> = {
@@ -16,7 +21,18 @@ export const ROLE_LABEL: Record<UserRole, string> = {
   ops: "Almacén",
   booking: "Office",
   guide: "Planta",
+  pending: "Pendiente",
 };
+
+export function isUserRole(value: unknown): value is UserRole {
+  return (
+    value === "admin" ||
+    value === "ops" ||
+    value === "booking" ||
+    value === "guide" ||
+    value === "pending"
+  );
+}
 
 /**
  * Cuentas demo del equipo Campo Norte (solo cuando NO hay Supabase — ver

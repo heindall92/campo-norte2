@@ -27,6 +27,27 @@ export function scopeSnapshotToOrg(snap: WmsSnapshot, orgId: string): WmsSnapsho
     costs: snap.costs.filter((c) => siteIds.has(c.siteId)),
     pickWaves: snap.pickWaves.filter((w) => siteIds.has(w.siteId)),
     carriers: snap.carriers.filter((c) => c.orgId === orgId),
+    ledger: (snap.ledger ?? []).filter((t) => {
+      const pallet = t.palletId ? snap.pallets.find((p) => p.id === t.palletId) : undefined;
+      return !pallet || siteIds.has(pallet.siteId);
+    }),
+    balances: (snap.balances ?? []).filter((b) => siteIds.has(b.siteId)),
+    reservations: (snap.reservations ?? []).filter((r) => {
+      const order = snap.outbound.find((o) => o.id === r.orderId);
+      return !order || siteIds.has(order.siteId);
+    }),
+    orderLines: (snap.orderLines ?? []).filter((l) => {
+      const order = snap.outbound.find((o) => o.id === l.orderId);
+      return !order || siteIds.has(order.siteId);
+    }),
+    packages: (snap.packages ?? []).filter((p) => {
+      const order = snap.outbound.find((o) => o.id === p.orderId);
+      return !order || siteIds.has(order.siteId);
+    }),
+    dockAppointments: (snap.dockAppointments ?? []).filter((a) => siteIds.has(a.siteId)),
+    yardVisits: (snap.yardVisits ?? []).filter((v) => siteIds.has(v.siteId)),
+    returns: (snap.returns ?? []).filter((r) => siteIds.has(r.siteId)),
+    auditLogs: snap.org.id === orgId ? snap.auditLogs ?? [] : [],
     movements: snap.movements.filter((m) => {
       const slotId = m.toSlotId ?? m.fromSlotId;
       if (!slotId) return true;

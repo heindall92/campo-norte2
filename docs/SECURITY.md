@@ -14,11 +14,12 @@ paneles de Supabase y Vercel (no se pueden hacer desde el repositorio).
 | # | Hallazgo | Severidad | Estado |
 |---|---|---|---|
 | 1 | RLS permisiva: cualquier usuario autenticado leía y escribía toda la base | **Crítica** | Corregido |
-| 2 | Escalada de privilegios: el rol se tomaba del `user_metadata` del propio registro | **Crítica** | Corregido |
+| 2 | Escalada de privilegios: el rol se tomaba del `user_metadata` del propio registro | **Crítica** | Corregido (trigger + **cliente Phase 1**) |
 | 3 | `/api/ai/chat` y `/api/ollama/chat` abiertos con `CORS: *` y sin autenticación | **Alta** | Corregido |
-| 4 | El login de demo seguía activo aunque hubiera Supabase con datos reales | **Media** | Corregido |
+| 4 | El login de demo seguía activo aunque hubiera Supabase con datos reales | **Media** | Parcial: el código **no** lo apaga solo con Supabase; hay que `VITE_STRICT_AUTH=true` o `VITE_ALLOW_DEMO_AUTH=false`. `VITE_WMS_MODE=production` exige Supabase y no mezcla el snapshot demo. |
 | 5 | Contraseñas de demo fijadas en el código, sin forma de rotarlas | **Baja** | Corregido |
 | 6 | Sin cabeceras de seguridad ni CSP; demo de marca indexable por buscadores | **Media** | Corregido |
+| 7 | Auth UI leía `user_metadata.role` (default `ops`) | **Alta** | Corregido 2026-08-16: `mps_profiles.role`, faltante = `pending` |
 
 Verificado además, sin hallazgos:
 
@@ -130,13 +131,33 @@ conectar datos reales:
 
 1. **Supabase → Authentication → Providers → Email:** desactivar
    *"Allow new users to sign up"*. El equipo se da de alta por invitación.
-2. **Ejecutar el `schema.sql` actualizado** y promover al primer administrador:
+2. **Ejecutar las migraciones** `supabase/migrations/*.sql` (baseline CRM + `wms_*` RBAC) y promover al primer administrador:
    ```sql
    update public.mps_profiles set role = 'admin' where email = 'sofia@camponorte.demo';
+   -- Primer ADMIN WMS (SQL Editor, auth.uid() is null):
+   -- insert into wms_organization_members (organization_id, user_id, status)
+   --   select 'c0a1e000-0001-4000-8000-000000000001', id, 'active' from auth.users where email = 'sofia@camponorte.demo';
+   -- insert into wms_user_roles (organization_id, user_id, role_code)
+   --   select 'c0a1e000-0001-4000-8000-000000000001', id, 'ADMIN' from auth.users where email = 'sofia@camponorte.demo';
    ```
    Sin este paso nadie ve nada — es el comportamiento correcto.
 3. **Vercel → Environment Variables:** definir `ALLOWED_ORIGINS` con el dominio
    definitivo y mover las claves de IA a variables de servidor.
+
+## 7 · Rol de sesión (Phase 1, 2026-08-16)
+
+El trigger `mps_handle_new_user` ya nace en `pending`. El cliente **también** debe leer `mps_profiles`. Hasta Phase 1, `AuthProvider` usaba `user_metadata.role` y si faltaba asignaba `ops`, de modo que el menú WMS no coincidía con RLS.
+
+Ahora:
+
+1. `resolveSupabaseAppUser` lee `mps_profiles.role`. Si no hay fila o el valor no es del enum → `pending`.
+2. `wms_user_roles` (si las tablas existen) aporta el rol de planta; si no, se mapea CRM→WMS.
+3. `pending` no ve secciones. DEMO conserva la matriz de 4 roles.
+4. `VITE_WMS_MODE=production` solo si hay Supabase y no hay `forceLocalHub`.
+
+El primer ADMIN de `wms_user_roles` se inserta desde el SQL Editor (`auth.uid()` null). Un usuario autenticado no puede auto-asignarse ADMIN (trigger `wms_guard_user_role_write`).
+
+---
 
 ## Fuera de alcance de esta revisión
 

@@ -1,3 +1,4 @@
+import { ManualCarrierAdapter } from "./carrier-adapter";
 import type { WmsSnapshot } from "./types";
 
 export type AssignCarrierError = "order_missing" | "carrier_missing" | "inactive" | "wrong_org";
@@ -51,7 +52,12 @@ export function setOutboundTracking(
 ): { ok: true; snap: WmsSnapshot } | { ok: false; error: "order_missing" } {
   const order = snap.outbound.find((o) => o.id === orderId);
   if (!order) return { ok: false, error: "order_missing" };
-  const value = tracking.trim();
+  const trimmed = tracking.trim();
+  if (trimmed.length) {
+    const issued = ManualCarrierAdapter.createShipment({ orderId, tracking: trimmed });
+    if (!issued.ok) return { ok: false, error: "order_missing" };
+  }
+  const value = trimmed;
   return {
     ok: true,
     snap: {

@@ -59,11 +59,11 @@ import {
   useDataHub,
 } from "@/lib/data";
 import {
-  canAccessSection,
   canEditAiSettings,
   canEditBusinessSettings,
   canManageCrmUsers,
   canViewDatabaseCard,
+  userCanAccessSection,
   useAuth,
 } from "@/lib/auth";
 import { allowClientAiKeys } from "@/lib/runtime";
@@ -3990,6 +3990,21 @@ function SlidesPanel({ lang }: { lang: Lang }) {
   );
 }
 
+function PendingAccessNotice({ lang }: { lang: Lang }) {
+  return (
+    <div className="mx-auto max-w-lg rounded-2xl border border-[var(--glass-border)] bg-[var(--glass)] p-6 text-center">
+      <p className="font-[family-name:var(--mps-display)] text-xl text-[var(--ink)]">
+        {lang === "es" ? "Cuenta pendiente de activación" : "Account pending activation"}
+      </p>
+      <p className="mt-2 text-sm text-[var(--ink-muted)]">
+        {lang === "es"
+          ? "Un administrador debe asignarte un rol. No hay acceso al WMS ni al Hub hasta entonces."
+          : "An admin must assign you a role. There is no WMS or Hub access until then."}
+      </p>
+    </div>
+  );
+}
+
 export function MpsCrmApp() {
   const { user } = useAuth();
   const [section, setSection] = useState<Section>("dashboard");
@@ -4001,10 +4016,14 @@ export function MpsCrmApp() {
   const [aiSnap, setAiSnap] = useState(() => loadAiSettings());
   const hub = useDataHub();
   const isMobile = useIsMobile();
-  const role = user?.role ?? "guide";
+  const role = user?.role ?? "pending";
   const theme = prefs.theme;
   const showUsersNav = canManageCrmUsers(role);
-  const visibleNav = NAV_IDS.filter((item) => canAccessSection(role, item.id));
+  const visibleNav = NAV_IDS.filter((item) =>
+    user ? userCanAccessSection(user, item.id) : false,
+  );
+  const firstAllowed = visibleNav[0]?.id;
+  const canSeeSection = Boolean(user && userCanAccessSection(user, section));
   const aiConnected = aiReady(aiSnap);
   const aiStatusLabel = `${providerLabel(aiSnap)}: ${aiConnected ? "ON" : "OFF"}`;
 
@@ -4066,10 +4085,10 @@ export function MpsCrmApp() {
   }, [prefs]);
 
   useEffect(() => {
-    if (!canAccessSection(role, section)) {
-      setSection("dashboard");
-    }
-  }, [role, section]);
+    if (!user) return;
+    if (userCanAccessSection(user, section)) return;
+    if (firstAllowed && firstAllowed !== section) setSection(firstAllowed);
+  }, [user, section, firstAllowed]);
 
   useEffect(() => {
     if (!user) return;
@@ -4081,13 +4100,13 @@ export function MpsCrmApp() {
   useEffect(() => {
     function onNavigateEvent(e: Event) {
       const detail = (e as CustomEvent<string>).detail;
-      if (detail && canAccessSection(role, detail as Section)) {
+      if (detail && user && userCanAccessSection(user, detail as Section)) {
         setSection(detail as Section);
       }
     }
     window.addEventListener("mps-navigate", onNavigateEvent);
     return () => window.removeEventListener("mps-navigate", onNavigateEvent);
-  }, [role]);
+  }, [user]);
 
   function setTheme(next: Theme) {
     if (!user) return;
@@ -4119,7 +4138,7 @@ export function MpsCrmApp() {
           prefs={prefs}
           onPrefsChange={setPrefs}
         >
-          {sectionPanels}
+          {canSeeSection ? sectionPanels : <PendingAccessNotice lang={lang} />}
           <AiAssistantHost lang={lang} />
         </MobileCrmShell>
         {user && (
@@ -4407,7 +4426,7 @@ export function MpsCrmApp() {
         />
 
         <main className="px-4 py-5 md:px-6 md:py-6">
-          {sectionPanels}
+          {canSeeSection ? sectionPanels : <PendingAccessNotice lang={lang} />}
           <AiAssistantHost lang={lang} />
 
           <footer className="mt-8 flex flex-wrap items-center gap-2 border-t border-[var(--glass-border)] pt-4 text-xs text-[var(--ink-muted)]">

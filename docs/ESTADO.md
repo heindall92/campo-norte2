@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-15 · Cloud Agent · WMS fase 13: embalaje y manifiesto de muelle
+**Última actualización:** 2026-08-16 · Proyecto Almacen WMS vivo (`seilzoeciirzlvzbwhml`). Alta pública cerrada. Centros Sevilla/Huelva sembrados.
 
 ---
 
@@ -28,15 +28,18 @@ Si el chat y el repo se contradicen sobre marca o personas, **manda este archivo
 | `cursor/rebrand-camponorte-2ebf` | tip | Anonimización marca/PII → Campo Norte. |
 | `feat/aurora-patterns` | tip | Espejo histórico Aurora. |
 | Producción | — | Despliegue Vercel desde main (revisar que el tip incluya rebrand). |
-| Supabase | proyecto vinculado | Hub / Auth (credenciales en `.env`, no en docs). |
+| Supabase **WMS** | `seilzoeciirzlvzbwhml` · eu-west-1 | **Proyecto Almacen WMS**. Auth + `wms_*` + `mps_profiles` vacío. Credenciales en `.env.development.local`. |
+| Supabase 30mps | `gkskudxjuafsidqiiqpg` | CRM ajeno. **Pausado.** No usarlo para el almacén. |
+| Supabase Noaru Park | `pcmehdxdccrqovqvdwau` | Otro producto. **Pausado.** |
 | **Fuera de núcleo** | `docs/FUERA-DE-NUCLEO.md` | RRHH/equity, contabilidad, alquileres, OCR, multi-org. |
 | **Aurora playbook** | `docs/AURORA-CONOCIMIENTO.md` | Checklist canónico. |
 
-### Acceso demo
+### Acceso
 
-- App login: `sofia@camponorte.demo` / `norte2026` (también marta@ · luis@ · jorge@, misma pass).
-- Fallback demo activo aunque haya `VITE_SUPABASE_*` (Hub semilla local).
-- Cerrar demo en prod real: `VITE_STRICT_AUTH=true` o `VITE_ALLOW_DEMO_AUTH=false`.
+- Producción local: Auth del proyecto **Proyecto Almacen WMS**. Login demo **cerrado**.
+- Cuenta operativa: `yoandy@campo-norte.es` (pass en el chat / no en el repo). No usar `sofia@camponorte.demo`.
+- Dashboard: https://supabase.com/dashboard/project/seilzoeciirzlvzbwhml
+- Alta pública: **cerrada** (trigger `wms_guard_signup` + `wms_allowed_emails`). Un alta nueva exige insertar el email en esa tabla.
 
 ---
 
@@ -86,7 +89,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | 13 | IA contextual global + streaming + decay con fecha + detalle score + EN ESTA VISTA + FAB arrastrable | `AiAssistantHost`, `chat-stream.ts`, `coldBy*`, `ViewTotals` leads/reservas/clientes, `DraggableAiFab` |
 | 13b | Streaming también en pestaña Conocimiento | `KnowledgePanel` → `askKnowledgeStream` |
 
-**Verificación automática:** lint, `npm test` (**107**), `npm run build` — limpios.
+**Verificación automática:** lint, `npm test` (**201**), `npm run build` — limpios.
 
 **Decisiones de alcance (no son olvidos):**
 - **Núcleo = viajes + leads.** Todo lo demás deliberado → `docs/FUERA-DE-NUCLEO.md`.
@@ -161,11 +164,44 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 ## 6 · Siguiente tarea (UNA)
 
-> **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
+> **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS demo es semilla local (`seededFromDemo`). En PRODUCTION el stock vive en `wms_handling_units` + ledger. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–13 hechas en esta rama: operación diaria, jornada, olas, recepción ASN, RF, móvil, putaway por zona, conteo firmado, expedición de lo picado, embalaje de cajas sueltas y manifiesto de muelle. `main` ya publica en Vercel.
+**Hecho (2026-08-16):** fases 0–14 + cierre producción + proyecto Supabase propio. Alta pública bloqueada (`signup_disabled`). Centros `site-sev` / `site-hue` en Postgres. El primer `load` de producción persiste el floor vacío (sin palets demo). Login Auth verificado.
 
-Siguiente: terminal ZKTeco físico y APIs de flota cuando existan. Tablas WMS en Postgres cuando haya stock real.
+**Siguiente:** producción en https://campo-norte2.vercel.app y `npm run dev` → `yoandy@campo-norte.es`. Recibir en Sevilla.
+
+**Phase 0** (2026-08-16): auditoría en `docs/ARCHITECTURE_AUDIT.md`, `TARGET_ARCHITECTURE.md`, `DATABASE_PLAN.md`, `MIGRATION_PLAN.md`.
+
+**Phase 1** (2026-08-16): tenant + Auth + RBAC.
+- Migraciones: `supabase/migrations/20260816100000_baseline_crm.sql`, `20260816120000_create_wms_tenant_rbac.sql`.
+- Rol de UI/sesión desde `mps_profiles` (pending si falta). **No** `user_metadata.role`.
+- `VITE_WMS_MODE=demo|production` (defecto demo). Login demo no escribe WMS prod.
+- Matriz CRM intacta en DEMO. En PRODUCTION las secciones WMS van por permiso de rol planta.
+- `pending` no ve WMS ni Hub.
+
+**Phase 2** (2026-08-16): warehouse + UOM + GS1 (sin cortar el snapshot).
+- Migración `20260817120000_create_warehouse_catalog.sql` (tablas vacías + UOM seed de org demo).
+- `src/lib/wms/uom.ts`: CASE=12 UNIT, PALLET=48 CASE.
+- `src/infrastructure/barcode/`: parser GS1/hueco; `classifyScan` delega.
+
+**Phase 3–14** (2026-08-16): dominio enterprise sobre el snapshot (sin reescritura).
+- Ledger + balances + FEFO + cuarentena: `src/lib/wms/inventory.ts`, `quality.ts`.
+- Pedidos / allocation / olas: `orders.ts`, `allocation.ts`, `waves.ts`.
+- ASN incidencias, pack SSCC, carrier manual, dock/yard, RMA: `receiving.ts`, `packing.ts`, `docks.ts`, `returns.ts`.
+- RF outbox idempotente (servidor gana): `offline-sync.ts`.
+- Audit append-only + Control Tower + copiloto (no ejecuta): `audit.ts`, `tower-actions.ts`, `copilot.ts`.
+- SQL: `20260818120000_create_inventory_core.sql`, `20260819120000_create_orders_fulfillment.sql`, `20260820120000_create_dock_returns_audit.sql`.
+- Seed ≥50 SKU (`seed-catalog.ts`). Docs: `INVENTORY.md`, `ORDERS.md`, `RF.md`, `QA.md`, `RUNBOOK.md`, `ARCHITECTURE.md`.
+
+**Cierre producción** (2026-08-16): adapter, no reescritura. `confirmPick` se queda; cambia quién persiste.
+- `src/infrastructure/wms-store/`: `WmsPort` + Demo (localStorage) + Postgres (`wms_save_floor` / `wms_commit_stock`).
+- Stock NUNCA jsonb. Floor (olas/flota/huecos) en `wms_floor_state`. Overlay HU+ledger al cargar.
+- `canWriteWmsProduction`: false si `forceLocalHub()`, modo demo, `provider=local` o email `@camponorte.demo`.
+- RF: IndexedDB (`rf-idb.ts`) con fallback memoria (Vitest/node). Pistola usa `confirmRfTaskOrQueue`.
+- `useWmsLive` / centros / copiloto hablan el port, no SQL.
+- Migraciones aplicadas al proyecto **Proyecto Almacen WMS** (`seilzoeciirzlvzbwhml`), no a 30mps. Ledger: INSERT+SELECT, sin UPDATE/DELETE.
+- Prod local: `.env.development.local` con `VITE_WMS_MODE=production` + usuario Auth ADMIN en org `c0a1e000-0001-4000-8000-000000000001`.
+- Tests: **201**. `tsc -b` + `vite build` OK.
 
 ### Plan B — repo público (fecha límite 2026-08-22)
 

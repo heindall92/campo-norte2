@@ -1,3 +1,5 @@
+import { consumeReservationOnPick } from "./allocation";
+import { recordPhysicalTx } from "./inventory";
 import { codesEqual } from "./location";
 import type { FleetKind, PickLine, PickWave, StockMovement, WmsSnapshot } from "./types";
 
@@ -113,9 +115,8 @@ export function confirmPick(
     o.id === wave.operatorId ? { ...o, movesToday: o.movesToday + 1 } : o,
   );
 
-  return {
-    ok: true,
-    snap: {
+  const nextSnap: WmsSnapshot = consumeReservationOnPick(
+    {
       ...snap,
       pickWaves: snap.pickWaves.map((w) => (w.id === nextWave.id ? nextWave : w)),
       slots: nextSlots,
@@ -123,6 +124,26 @@ export function confirmPick(
       movements: [movement, ...snap.movements],
       operators: nextOperators,
     },
+    pallet.id,
+    input.qty,
+  );
+
+  return {
+    ok: true,
+    snap: recordPhysicalTx(nextSnap, {
+      id: `tx-pick-${line.id}`,
+      at,
+      type: wave.kind === "reposicion" ? "REPLENISH" : "PICK",
+      skuId: line.skuId,
+      palletId: pallet.id,
+      lot: pallet.lot,
+      fromSlotId: slot.id,
+      toSlotId: null,
+      qty: input.qty,
+      operatorId: wave.operatorId,
+      note: movement.note,
+      idempotencyKey: `pick-${line.id}`,
+    }),
   };
 }
 
