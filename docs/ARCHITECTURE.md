@@ -96,3 +96,4 @@ No hay `src/modules/` todavía. No se crean carpetas vacías en Phase 0.
 | [LOTS.md](./LOTS.md) | FIFO / FEFO / LIFO / MANUAL |
 | [BARCODE.md](./BARCODE.md) | Parser GS1 desacoplado |
 | [AUDIT.md](./AUDIT.md) | `audit_logs` append-only |
+| [COPILOT.md](./COPILOT.md) | Preguntas de planta, no chat genérico |

@@ -3,11 +3,13 @@
 WMS y CRM. La auditoría CRM (hallazgos 1–6) sigue debajo. Decisiones WMS:
 
 - Roles de menú: `admin` Dirección, `ops` Almacén, `booking` Office, `guide` Planta, `pending` sin acceso.
-- Stock hoy en el navegador: **cualquiera con la demo ve el snapshot local**. No hay RLS de almacén.
-- Cuando exista `wms_ledgers`, el aislamiento es `org_id` + `wms_is_org_member` (un tenant: Campo Norte).
-- Service role nunca en `VITE_*`. Demo se apaga con Supabase configurado o `VITE_STRICT_AUTH`.
-- Mutaciones futuras: `operationId` + `wms_audit`. Phase 11 del brief; no implementado.
-- IA no escribe huecos ni expediciones.
+- Stock hoy en el navegador: **cualquiera con la demo ve el snapshot local**. RLS de almacén: SQL `wms_site_members` **no aplicado**.
+- Autorización de dominio: `authorizeWms(snap, actor, perm, warehouseId)`. El frontend no basta.
+- Un tenant: `org-camponorte`. Aislamiento de centro: `scopeSnapshotToWarehouse` + `warehouseIds` del actor.
+- Service role nunca en `VITE_*`. Demo ≠ producción: `VITE_RUNTIME_MODE=production` o `VITE_STRICT_AUTH`.
+- Credenciales `sofia@camponorte.demo` / `norte2026` **no** se usan en prod.
+- Mutaciones: `audit_logs` en cliente. `operationId` servidor pendiente de ledger.
+- IA no escribe huecos ni expediciones (confirmación obligatoria).
 
 Pendiente WMS (no es olvido de la auditoría CRM): ledger, RLS stock, tests de políticas WMS, trazas de picking.
 

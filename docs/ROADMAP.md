@@ -12,7 +12,7 @@ Phase 0 del brief = auditoría. **Hecha.** El código de planta no se ha parado:
 | Brief | Nombre | En este repo | Abrir cuando |
 |---|---|---|---|
 | **0** | Audit + architecture | Hecho: `ARCHITECTURE*.md`, `DATABASE*.md`, `MIGRATION_PLAN.md`, este índice | — |
-| **1** | Multi-tenant + Auth + RBAC | Auth/RBAC CRM **existe**. WMS: `org_id` en snapshot, sin RLS de stock | Tras Phase 0 revisada. Un tenant. No inventar org 2 |
+| **1** | Multi-tenant + Auth + RBAC | Auth CRM + `authorizeWms` + SQL `wms_site_members` no aplicado | Un tenant. No inventar org 2 |
 | **2** | Warehouse + Locations + Products + UOM | Sites/slots/SKU hechos. Motor UOM puro (`uom.ts`), no persistido | Ledger + tabla de factores |
 | **3** | Inventory ledger + balances + lots | Palets + `lots.ts` FEFO (sin cablear a la ola) | Extract movements + usar FEFO al asignar |
 | **4** | Orders + allocation + reservations | Pedidos + `order-state.ts` (sin sustituir status ES) | Holds + cablear transiciones |
@@ -24,8 +24,8 @@ Phase 0 del brief = auditoría. **Hecha.** El código de planta no se ha parado:
 | **10** | RF mobile + offline sync | RF + cola `cn-wms-offline-q-v1`. Sync al volver; conflicto si el apply rechaza | No inventar un segundo snapshot |
 | **11** | Audit + observability + hardening | `audit_logs` en snapshot + SQL no aplicado | Ledger + `operationId` servidor |
 | **12** | Control tower | ¿Qué pasa? / ¿Qué hago? sobre el snapshot | No inventar «38 líneas» si la ola tiene 8 |
-| **13** | AI operational copilot | IA = CRM/knowledge. No opera stock | Nunca escribe al hueco sola |
-| **14** | Performance + QA + prod ready | Build/test locales | Tras ledger + demo OFF |
+| **13** | AI operational copilot | `askWmsCopilot` sobre snapshot. Confirmación obligatoria | Nunca escribe al hueco sola |
+| **14** | Performance + QA + prod ready | Demo/prod en `runtime.ts`. Tests críticos | Ledger + `VITE_RUNTIME_MODE=production` |
 
 Plan interno por oleadas (más granular, commits pequeños): [`MIGRATION_PLAN.md`](./MIGRATION_PLAN.md).
 

@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-16 · Cloud Agent · briefs 28–30: audit_logs, RF offline, torre
+**Última actualización:** 2026-08-16 · Cloud Agent · briefs 34–38: copilot, seguridad, tests, UX, demo/prod
 
 ---
 
@@ -86,7 +86,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | 13 | IA contextual global + streaming + decay con fecha + detalle score + EN ESTA VISTA + FAB arrastrable | `AiAssistantHost`, `chat-stream.ts`, `coldBy*`, `ViewTotals` leads/reservas/clientes, `DraggableAiFab` |
 | 13b | Streaming también en pestaña Conocimiento | `KnowledgePanel` → `askKnowledgeStream` |
 
-**Verificación automática:** lint (warnings previos), `npm test` (**202**), `npm run build` — limpios.
+**Verificación automática:** lint (warnings previos), `npm test` (**217**), `npm run build` — limpios.
 
 **Decisiones de alcance (no son olvidos):**
 - **Núcleo = viajes + leads.** Todo lo demás deliberado → `docs/FUERA-DE-NUCLEO.md`.
@@ -164,6 +164,10 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | **Brief 28 — auditoría** | `docs/AUDIT.md`, `src/lib/wms/audit.ts` |
 | **Brief 29 — RF offline** | `src/lib/wms/offline-queue.ts`, `offline-apply.ts`, `WmsRfGun.tsx` |
 | **Brief 30 — torre** | `src/lib/wms/tower.ts`, `WmsTowerOps.tsx` |
+| **Brief 34 — copilot** | `src/lib/wms/copilot.ts`, `WmsCopilot.tsx` |
+| **Brief 35 — seguridad** | `permissions.ts`, `runtime.ts`, SQL RLS no aplicado |
+| **Brief 36 — tests** | `ops-critical.test.ts`, `copilot.test.ts` |
+| **Brief 38 — demo/prod** | `resolveRuntimeMode` · semilla vs Supabase |
 | **Aurora playbook futuros** | `docs/AURORA-CONOCIMIENTO.md` |
 
 ---
@@ -172,17 +176,19 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–20 + Phase 0 docs + motores 8–11 + **briefs 28–30** en esta rama.
+Fases 8–20 + Phase 0 + briefs 28–30 + **34–38** en esta rama.
 
-**28 Audit:** `audit_logs` en snapshot. `appendAuditLog` / `listAuditLogs`. Sin delete. SQL `wms_audit_logs` no aplicado.
+**34 Copilot:** cinco preguntas sobre el snapshot. `finding/evidence/confidence/recommendation/optional_action`. Confirmación obligatoria. No LLM.
 
-**29 RF / Mobile:** flujo SCAN LOCATION → SKU → QTY → COMPLETE. Sin red: cola `cn-wms-offline-q-v1`. Al volver: `applyOfflineRfEvent` o `conflict`. Home móvil = pulso + acciones + PDA.
+**35 Seguridad:** `authorizeWms` (org + almacén + RBAC). SQL `wms_site_members` no aplicado. Demo ≠ prod. Sin secretos en git.
 
-**30 Torre:** ¿qué está pasando? / ¿qué debo hacer? Cifras del snapshot. WAVE-A-0815-01 tiene **8** líneas, no 38. ASIGNAR PICKER solo si `operatorId` es null.
+**36 Tests:** holds, escasez, doble reserva, revisión, lote caducado, escaneo duplicado, transición inválida, permisos, putaway, FEFO, conteo, devolución.
 
-Motores UOM/FEFO/GS1/pedido **siguen sin cablear** a `openWaveFromOrder`.
+**37 UX:** identidad igual. Badge DEMO/PROD, footnotes de decisión, a11y RF, empty del copilot. Sin gráfico decorativo. Quitado delta 2.1% inventado.
 
-**Parar el resto.** Phase 1 (RLS/ledger) y cablear FEFO/UOM a olas no se abren solos.
+**38 Demo/prod:** `VITE_RUNTIME_MODE`. Demo = semilla sin infra. Prod = Supabase + auth estricta.
+
+UOM/FEFO **siguen sin cablear** a `openWaveFromOrder`. Ledger Postgres no se aplica solo.
 
 ### Plan B — repo público (fecha límite 2026-08-22)
 
