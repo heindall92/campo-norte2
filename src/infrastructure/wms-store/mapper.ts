@@ -1,3 +1,4 @@
+import { hydrateInventory } from "@/lib/wms/inventory";
 import { normalizeWmsSnapshot } from "@/lib/wms/normalize";
 import { buildWmsSeed } from "@/lib/wms/seed";
 import type {
@@ -67,6 +68,16 @@ export function isPalletStatus(value: string): value is PalletStatus {
 
 export function isInventoryTxType(value: string): value is InventoryTxType {
   return (TX_TYPES as string[]).includes(value);
+}
+
+/** Planta operativa para el primer arranque en PRODUCTION (stock vía ledger, no jsonb). */
+export function productionPlantSnapshot(): WmsSnapshot {
+  const seed = hydrateInventory(buildWmsSeed());
+  return normalizeWmsSnapshot({
+    ...seed,
+    seededFromDemo: false,
+    org: { ...seed.org, rlsMode: "postgres" },
+  });
 }
 
 /** Layout de semilla sin stock. PRODUCTION vacío no hereda palets demo. */

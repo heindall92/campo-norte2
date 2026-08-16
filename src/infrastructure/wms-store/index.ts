@@ -16,6 +16,7 @@ export { postgresWmsAdapter, createPostgresWmsAdapter } from "./postgres-adapter
 export {
   overlayStock,
   productionBootstrapSnapshot,
+  productionPlantSnapshot,
   stripStockForFloor,
   palletStockPayload,
   ledgerStockPayload,

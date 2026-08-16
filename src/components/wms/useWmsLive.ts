@@ -21,13 +21,17 @@ export function useWmsLive() {
     setSnap(adapter.peek());
     let cancelled = false;
     void (async () => {
-      const loaded = await adapter.load(user?.organizationId);
-      if (cancelled) return;
-      const queued = await getRfOutboxStore().list();
-      const next = queued.length
-        ? { ...loaded, rfOutbox: mergeRfOutbox(loaded.rfOutbox, queued) }
-        : loaded;
-      setSnap(next);
+      try {
+        const loaded = await adapter.load(user?.organizationId);
+        if (cancelled) return;
+        const queued = await getRfOutboxStore().list();
+        const next = queued.length
+          ? { ...loaded, rfOutbox: mergeRfOutbox(loaded.rfOutbox, queued) }
+          : loaded;
+        setSnap(next);
+      } catch (err) {
+        console.error("wms load failed", err);
+      }
     })();
     return () => {
       cancelled = true;

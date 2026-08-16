@@ -7,6 +7,7 @@ import {
   overlayStock,
   palletStockPayload,
   productionBootstrapSnapshot,
+  productionPlantSnapshot,
   stripStockForFloor,
   type HandlingUnitRow,
   type LedgerRow,
@@ -98,14 +99,29 @@ export function createPostgresWmsAdapter(): WmsPort {
       ]);
 
       const payload = floorRow?.payload as WmsSnapshot | undefined;
-      const floor = snapshotLooksUsable(payload) ? payload : productionBootstrapSnapshot();
-      if (!floorRow) {
+      const husEmpty = (huRows ?? []).length === 0;
+      if (!floorRow || husEmpty) {
+        const plant = productionPlantSnapshot();
         const { error: bootErr } = await sb.rpc("wms_save_floor", {
           p_organization_id: organizationId,
-          p_floor: stripStockForFloor(floor),
+          p_floor: stripStockForFloor(plant),
         });
         if (bootErr) throw new Error(bootErr.message);
+        const pals = palletStockPayload(plant);
+        const ledger = ledgerStockPayload(plant);
+        for (let i = 0; i < pals.length; i += 80) {
+          const { error: stockErr } = await sb.rpc("wms_commit_stock", {
+            p_organization_id: organizationId,
+            p_ledger: i === 0 ? ledger : [],
+            p_pallets: pals.slice(i, i + 80),
+          });
+          if (stockErr) throw new Error(stockErr.message);
+        }
+        memory = plant;
+        cacheSet(plant);
+        return plant;
       }
+      const floor = snapshotLooksUsable(payload) ? payload : productionBootstrapSnapshot();
       const hus: HandlingUnitRow[] = ((huRows ?? []) as HuQueryRow[]).map((row) => ({
         external_id: row.external_id,
         sscc: row.sscc,

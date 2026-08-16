@@ -8,6 +8,7 @@ import {
   mergeRfOutbox,
   overlayStock,
   productionBootstrapSnapshot,
+  productionPlantSnapshot,
   stripStockForFloor,
   toPostgresOrgId,
   WMS_PG_ORG_ID,
@@ -90,6 +91,17 @@ describe("mapper overlay", () => {
     expect(overlaid.pallets.find((p) => p.id === live.id)?.qty).toBe(17);
     expect(overlaid.ledger?.[0]?.qty).toBe(17);
     expect(overlaid.org.rlsMode).toBe("postgres");
+  });
+
+  it("planta de producción trae operación para recorrer las fases", () => {
+    const plant = productionPlantSnapshot();
+    expect(plant.pallets.length).toBeGreaterThan(20);
+    expect(plant.inbound.length).toBeGreaterThan(0);
+    expect(plant.outbound.length).toBeGreaterThan(0);
+    expect(plant.pickWaves.length).toBeGreaterThan(0);
+    expect(plant.sites).toHaveLength(2);
+    expect(plant.org.rlsMode).toBe("postgres");
+    expect(plant.seededFromDemo).toBe(false);
   });
 
   it("bootstrap de producción no hereda palets demo", () => {
