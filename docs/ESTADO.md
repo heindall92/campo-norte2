@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-16 · Cloud Agent · oleada 9 shipping + MockCarrierAdapter
+**Última actualización:** 2026-08-16 · Cloud Agent · oleada 10 dock calendar
 
 ---
 
@@ -182,6 +182,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | **Oleada 7 — MIN/MAX** | `max(0, máx−actual)` si actual < mín. AUTO no mueve sin operario. Pick face vacío se mantiene |
 | **Oleada 8 — packing/SSCC** | Estaciones y bultos escritos. Registro SSCC único. Generar solo con prefijo. Etiqueta sin tracking |
 | **Oleada 9 — shipping/mock** | `shipments` PACKED→STAGED→LOADED→SHIPPED. MockCarrierAdapter etiquetado. Expedir sin tracking válido |
+| **Oleada 10 — dock calendar** | Muelles escritos. Citas + eventos. Cupo 1 solo si está escrito; si no, no se inventa |
 | **Aurora playbook futuros** | `docs/AURORA-CONOCIMIENTO.md` |
 
 ---
@@ -190,13 +191,13 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–20 + Phase 0 + briefs 28–38 + 31–33 + 6–7 + 4–5 + oleadas 1–9 + FEFO en esta rama.
+Fases 8–20 + Phase 0 + briefs 28–38 + 31–33 + 6–7 + 4–5 + oleadas 1–10 + FEFO en esta rama.
 
-**Plan de oleadas:** **14** (0–13) en `docs/MIGRATION_PLAN.md`. Hechas: 0–9. Siguientes: 10 dock calendar, 11 yard, 12 returns, 13 mover carpetas.
+**Plan de oleadas:** **14** (0–13) en `docs/MIGRATION_PLAN.md`. Hechas: 0–10. Siguientes: 11 yard, 12 returns, 13 mover carpetas.
 
-**Oleada 9 hecha:** `shipments` / `trackingEvents` semilla `[]`. Stage/ship mapean timestamps. MockCarrierAdapter no fabrica tracking. El dominio no importa `seur`. Pedido expedido sin tracking válido.
+**Oleada 10 hecha:** `docks` / citas / eventos semilla `[]`. Dos pedidos no chocan en el mismo muelle **si** capacity=1 está escrita; si capacity es null, no se inventa el cupo. Yard todavía no.
 
-**Siguiente (UNA):** oleada 10 — dock calendar. No inventar capacidad de muelle. No aplicar SQL en prod.
+**Siguiente (UNA):** oleada 11 — yard. Sin telemetría de camión. No reutilizar `fleet[]`. Semilla sin visitas inventadas.
 
 **4–5 Multi-tenant + Postgres:** `organization → warehouses → zones/locations`. 11 roles WMS. `authorizeWms` / `actorFromAppUser`. SQL no aplicado. Un org.
 

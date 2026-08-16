@@ -242,6 +242,8 @@ Dominio (oleada 8): unicidad en palets + `cartonSscc` + `packPackages`. `org.ssc
 
 No sembrar visitas de camión inventadas.
 
+Dominio (oleada 10, SQL **no** aplicado): `docks` / `dockAppointments` / `dockEvents` en el snapshot. Semilla vacía. `order.dock` texto se conserva. `capacity` null = sin cupo.
+
 ### Returns (26)
 
 `wms_returns`, `wms_return_lines`, `wms_return_inspections`.  

@@ -148,8 +148,13 @@
 - MockCarrierAdapter etiquetado MOCK; tracking solo si se escribe
 - Expedir sin tracking sigue siendo válido; el dominio no importa seur
 
+## Oleada 10 — Dock calendar (esta entrega)
+- Muelles, citas y eventos solo si se escriben
+- Cupo concurrente solo si `capacity` está escrita; null no se trata como 1
+- Calendario del día; el itinerario de texto M-05 sigue
+
 ## Siguiente (tras revisión humana)
-- Oleadas 0–9 hechas en cliente (14 oleadas en total: 0–13)
-- Oleada 10: dock calendar
-- Briefs restantes (dock, yard, returns) — un módulo por oleada
+- Oleadas 0–10 hechas en cliente (14 oleadas en total: 0–13)
+- Oleada 11: yard
+- Briefs restantes (yard, returns) — un módulo por oleada
 - Layout numérico 8–37 / SKU cerveza-vino / ZKTeco / telemetría flota: solo con dato real

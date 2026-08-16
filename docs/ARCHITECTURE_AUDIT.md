@@ -251,7 +251,7 @@ Permisos = lista de secciones de menú (`ROLE_ALLOWED_SECTIONS`). No hay RLS de 
 | Catálogo / ASN / palets / flota | Sí | LS | Sección | No |
 | Torre / alertas / P&L 3PL | Sí (calculado) | LS + tarifas demo | Sección | No |
 | Reservas ATP | No | — | — | — |
-| Yard / dock calendar | No | — | — | — |
+| Yard / dock calendar | Calendar sí / yard no | LS | Sección | Eventos de cita |
 | Returns / QC | No (tipos huérfanos) | — | — | — |
 | SSCC generator | Solo con prefijo escrito (interno, no GS1) | LS | Sección | Audit `pack.open` |
 | Carrier adapter | Mock etiquetado | LS | Sección | Eventos source=mock |
@@ -276,7 +276,7 @@ Pedidas y **ausentes** en el tip fase 20. No se implementan en Phase 0.
 | 21 SSCC único + etiqueta | **Oleada 8:** registro único; generar solo con prefijo; print sin tracking |
 | 22 Shipping shipments/events | **Oleada 9:** timestamps; tracking null si no se escribe |
 | 23 CarrierAdapter + mock | **Oleada 9:** MockCarrierAdapter etiquetado; no importa seur |
-| 24 Dock calendar / appointments | `order.dock` + ventana cut-off |
+| 24 Dock calendar / appointments | **Oleada 10:** muelles escritos; cupo 1 solo si está escrito |
 | 25 Yard visits / vehicles | No existe (y no hay telemetría de flota de calle) |
 | 26 Returns | No existe |
 | 27 Cycle count sessions + adjustments | Tareas efímeras, sin sesión |

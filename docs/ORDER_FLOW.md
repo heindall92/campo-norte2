@@ -7,7 +7,8 @@ OutboundOrder (pendiente)
   → confirmPick | skip | shortage
   → packPickLine / LoadUnit    fleje + etiqueta escrita
   → openPackPackage            SSCC único; generar solo con prefijo
-  → stageOrderToDock           shipment STAGED
+  → openDockAppointment        opcional; cupo solo si está escrito
+  → stageOrderToDock           shipment STAGED; evento load si hay cita
   → shipOutboundOrder          shipment SHIPPED; tracking null si no se escribe
 ```
 

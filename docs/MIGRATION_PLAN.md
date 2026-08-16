@@ -147,9 +147,9 @@ docs(wms): …
 
 ### Oleada 10 — Dock calendar (brief 24)
 
-**Qué:** `docks` por site (hoy `M-05` es texto). Appointments + events: llegada, check-in, asignación, carga, descarga, salida. Vista calendario (día de cut-off ya existe como itinerario).
+**Hecho (2026-08-16).** `docks` por site (semilla `[]`; `order.dock` sigue siendo texto). Citas + eventos: llegada, check-in, asignación, carga, descarga, salida. Calendario del día de demo. Stage/ship anotan load/departure **solo si** ya hay cita; no inventan una.
 
-**Qué no:** yard todavía.
+**Qué no:** yard.
 
 **DoD:** dos pedidos no se asignan al mismo muelle en la misma ventana **si** se configura capacidad 1; si no hay capacidad escrita, no inventarla.
 

@@ -11,7 +11,7 @@
 - `stageOrderToDock` / `shipOutboundOrder`.
 - Carriers en catálogo (SEUR, DHL Freight, Carreras, XPO) como **datos**, no como API.
 
-No hay `CarrierAdapter` real (SEUR/DHL). Hay `MockCarrierAdapter` etiquetado MOCK. Dock calendar y yard aún no.
+No hay `CarrierAdapter` real (SEUR/DHL). Hay `MockCarrierAdapter` etiquetado MOCK. Calendario de muelle (oleada 10): muelles/citas escritos, cupo no inventado. Yard aún no.
 
 ---
 
