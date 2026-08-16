@@ -132,9 +132,13 @@
 - Mandos: sube / baja / acelera / atrás / artículo / «N ok»
 - «N ok» pica y pasa al siguiente hueco; no se inventa stock
 
-## Siguiente
-- Layout numérico 8–37 en el snapshot solo si se confirma sustituir A/B/C
-- SKU de cerveza, vino, papel o especias solo si los escriben
-- Agente pyzk en la LAN cuando haya terminal físico
-- Telemetría real de flota (ISM / I_Site / InfoLink) cuando exista contrato
-- Tablas WMS en Postgres / RLS cuando haya stock real en el Hub
+## Phase 0 — Auditoría (esta entrega, solo docs)
+- Mapa del sistema actual, deuda, huecos y plan incremental
+- `docs/ARCHITECTURE_AUDIT.md`, `TARGET_ARCHITECTURE.md`, `DATABASE_PLAN.md`, `MIGRATION_PLAN.md`
+- El motor de planta (fases 1–20) no se ha reescrito
+
+## Siguiente (tras revisión humana)
+- Oleada 1: estado WMS compartido (`WmsLiveProvider`)
+- Oleada 2–3: ledger Postgres + reservas de stock
+- Briefs 15–27 (replenishment, receiving, QC, putaway, slotting, packing, SSCC, shipping, carriers, dock, yard, returns, cycle sessions) — un módulo por oleada
+- Layout numérico 8–37 / SKU cerveza-vino / ZKTeco / telemetría flota: solo con dato real

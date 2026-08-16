@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-15 · Cloud Agent · WMS fase 20: súper en box/palet/carro y etiquetas por lado
+**Última actualización:** 2026-08-16 · Cloud Agent · Phase 0: auditoría de arquitectura (sin cambiar el motor)
 
 ---
 
@@ -155,6 +155,10 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | **Aurora — IA global/stream** | `AiAssistantHost.tsx`, `chat-stream.ts`, `askKnowledgeStream`, FAB `DraggableAiFab` |
 | **Aurora — decay fecha / vistas** | `coldByDate/Label`, ViewTotals leads·reservas·clientes, toggle detalle score |
 | **Fuera de núcleo (memoria)** | `docs/FUERA-DE-NUCLEO.md` |
+| **Phase 0 — auditoría** | `docs/ARCHITECTURE_AUDIT.md` |
+| **Phase 0 — arquitectura objetivo** | `docs/TARGET_ARCHITECTURE.md` |
+| **Phase 0 — plan SQL** | `docs/DATABASE_PLAN.md` |
+| **Phase 0 — plan de migración** | `docs/MIGRATION_PLAN.md` |
 | **Aurora playbook futuros** | `docs/AURORA-CONOCIMIENTO.md` |
 
 ---
@@ -163,9 +167,16 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–20 hechas. La 20: al asignar el súper se dice box/palet/carro; al terminar, el operario dice cuántos palets hizo (2 → 4 etiquetas, una por lado); deja el súper en el muelle de la pantalla y recibe el siguiente. Sin SSCC inventado.
+Fases 8–20 hechas en esta rama. Phase 0 (2026-08-16): auditoría completa, **sin implementar** persistencia, reservas ni los briefs 15–27.
 
-Siguiente: layout numérico en el snapshot cuando se confirme; ZKTeco y flota cuando existan.
+Leer y revisar:
+
+- `docs/ARCHITECTURE_AUDIT.md`
+- `docs/TARGET_ARCHITECTURE.md`
+- `docs/DATABASE_PLAN.md`
+- `docs/MIGRATION_PLAN.md`
+
+**Parar.** No abrir oleada 1 (provider / ledger / holds / receiving / yard…) hasta que el dueño elija el orden.
 
 ### Plan B — repo público (fecha límite 2026-08-22)
 
