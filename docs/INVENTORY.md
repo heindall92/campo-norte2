@@ -1,26 +1,51 @@
 # Inventario — Campo Norte WMS
 
-## Qué hay (fase 20)
+## Qué hay (briefs 6–7)
 
-Unidad de stock = **palet** con `sscc`, `skuId`, `qty`, `lot`, `expiry`, `slotId`, `status`.
+Unidad física de planta = **palet** (`sscc`, `skuId`, `qty`, `lot`, `expiry`, `slotId`, `status`).
 
-`Sku` ya trae `uom` (`ud|caja|kg|palet`), `unitsPerPallet`, `minStock`, `maxStock`, `abc`. **min/max no disparan reposición.**
+Unidad de ATP / ledger = **balance** por `(org, sku, lote, ubicación)` + **transacción** append-only.
 
-No hay libro mayor. El «balance» es la suma de `pallets.qty` del SKU. Los `movements[]` son una bitácora en el mismo JSON; **no hay test que exija** `stock = entradas − salidas − ajustes`.
+`applyInventoryTx` es la **única** API que cambia un número de stock. `projectBalances(txs)` reconstruye el estado. Si un flujo de planta muta `pallet.qty`, también escribe el tipo de transacción (PICK, ADJUSTMENT, COUNT, …).
 
-`SlotStatus` incluye `reservado` y `PalletStatus` incluye `cuarentena` **sin motor**. Dos olas evitan el mismo palet con un `Set` de ids en olas abiertas, no con ATP.
+### Entidades
 
-Merma (`declareMerma`) baja `qty`. Cycle-count (`confirmCycleCount`) pisa `qty` y firma `lastCountedAt`. Slot-fix bloquea el hueco hasta que el jefe escribe la cuenta.
+| Entidad | Dónde | Nota |
+|---|---|---|
+| `products` / `product_uoms` | snapshot + SQL no aplicado | Proyección de los 8 SKU. Sin EAN inventado. |
+| `lots` | snapshot | Un lote = `lot` del palet. Unicidad (org, sku, lot). |
+| `serial_numbers` | vacío | No hay seriales reales en semilla. |
+| `inventory_balances` | estado actual | `on_hand`, `allocated`, `available`, `picked`, `packed`, `staged`, `blocked`, `quarantined` |
+| `inventory_transactions` | ledger | 16 tipos: RECEIPT … RELEASE |
+| `inventory_reservations` | holds de ATP | Distinto de `reservations` (hold de palet) y de `mps_reservations` (viajes). |
+| `inventory_adjustments` / `inventory_counts` | auditoría de merma/conteo | Apuntan al `txId` |
+
+### Regla de available
+
+```
+available = on_hand - allocated - blocked - quarantined
+```
+
+Stock negativo **prohibido** salvo `org.allowNegativeInventory === true` (Campo Norte: `false`).
+
+Race: `expectedRevision` en dominio; en SQL `UPDATE … WHERE revision = $esperada` dentro de `apply_wms_inventory_tx`. El SQL **no se aplica** solo.
+
+Apertura de semilla: un RECEIPT por palet con qty > 0. Expedido = RECEIPT + SHIP. Cuarentena = QUARANTINE. Caducado a `WMS_DEMO_NOW` = ADJUSTMENT `blocked`. Snapshot viejo sin ledger: `hydrateInventoryIfMissing` abre desde los palets actuales.
+
+`movements[]` sigue siendo la bitácora de planta (RF/UI). No sustituye al ledger.
+
+`Sku` ya trae `uom`, `unitsPerPallet`, `minStock`, `maxStock`, `abc`. **min/max no disparan reposición.** UOM/FEFO siguen sin cablear a `openWaveFromOrder`.
 
 ---
 
 ## Decisiones
 
-1. El ledger de inventario (Phase 3 del brief) **no se finge** con más arrays en LS. O hay transacción (movement + balance) o se documenta como demo.
-2. `available = on_hand − held − quarantined`. Hoy `available` no existe.
-3. Un lote es el `lot` del palet. No se inventan lotes extra en la semilla para «llenar» el brief.
-4. Ajuste solo con motivo (conteo, merma, slot-fix). Sin qty negativa.
+1. El ledger existe de verdad: transacción + balance + test de reconstrucción. No es un array decorativo.
+2. `available = on_hand − allocated − blocked − quarantined`.
+3. Un lote es el `lot` del palet. No se inventan lotes extra.
+4. Ajuste solo con motivo (conteo, merma, slot-fix, edición de palet). Sin qty negativa salvo flag.
 5. UOM y FEFO tienen motor puro (`uom.ts`, `lots.ts`) sin cambiar el pick de planta.
+6. `serial_numbers` vacío: no fabricar series.
 
 ---
 
@@ -30,7 +55,7 @@ Hoy: **8 SKU** (aceite, arroz, leche, jamón, helado, agua, detergente, yogur), 
 
 Antes de subir a 50+ SKU:
 
-- Test de coherencia: para cada `skuId`, `sum(pallet.qty)` cuadra con la semilla de movimientos **o** se declara `seededFromDemo` y se regeneran movements desde el stock (una de las dos; no las dos incoherentes).
+- Test de coherencia: `projectBalances(inventoryTransactions)` = `inventoryBalances`, y `on_hand` del grano cuadra con `pallet.qty` del palet vivo.
 - Familias ya existentes (`alimentacion_seca`, `frescos`, `congelados`, `bebidas`, `no_food`). Variantes de lo que ya hay (formatos de aceite/arroz/leche/agua).
 - **Prohibido** inventar cerveza, vino, especias, papel (regla de planta).
 - Un org, dos warehouses (Sevilla + Huelva). Sin tercer hub.
@@ -41,9 +66,9 @@ Antes de subir a 50+ SKU:
 
 ## Hueco vs brief Phase 3
 
-| Brief | Hoy | Siguiente oleada de datos |
+| Brief | Hoy | Siguiente |
 |---|---|---|
-| Inventory ledger | `movements[]` en JSON | extract `wms_movements` + balances |
-| Balances | suma de palets | tabla o proyección versionada |
-| Lots | campo en palet | igual, con unicidad (org, sku, lot) cuando haya tabla |
-| Reservations | no | hold/consume/release (oleada 3 del plan interno) |
+| Inventory ledger | `inventory_transactions` + motor | Aplicar SQL + extraer de LS |
+| Balances | `inventory_balances` (proyección + lock de revisión) | Tabla viva en Postgres |
+| Lots | `lots[]` + campo en palet | Igual |
+| Reservations | hold de palet + ALLOCATE/DEALLOCATE | Consumir hold al picar en todas las UIs |

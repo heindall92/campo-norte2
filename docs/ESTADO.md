@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-16 · Cloud Agent · briefs 31–33: productividad, costes, motor de alertas
+**Última actualización:** 2026-08-16 · Cloud Agent · briefs 6–7: inventory core + balances / ledger
 
 ---
 
@@ -86,7 +86,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | 13 | IA contextual global + streaming + decay con fecha + detalle score + EN ESTA VISTA + FAB arrastrable | `AiAssistantHost`, `chat-stream.ts`, `coldBy*`, `ViewTotals` leads/reservas/clientes, `DraggableAiFab` |
 | 13b | Streaming también en pestaña Conocimiento | `KnowledgePanel` → `askKnowledgeStream` |
 
-**Verificación automática:** lint (warnings previos), `npm test` (**221**), `npm run build` — limpios.
+**Verificación automática:** lint (warnings previos), `npm test` (**221** + inventory-core), `npm run build` — gate al cerrar la oleada.
 
 **Decisiones de alcance (no son olvidos):**
 - **Núcleo = viajes + leads.** Todo lo demás deliberado → `docs/FUERA-DE-NUCLEO.md`.
@@ -171,6 +171,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | **Brief 31 — productividad** | `src/lib/wms/productivity.ts` |
 | **Brief 32 — costes** | `src/lib/wms/costs.ts` |
 | **Brief 33 — alertas** | `src/lib/wms/alert-engine.ts` |
+| **Briefs 6–7 — inventory** | `src/lib/wms/inventory-core.ts`, SQL `20260816053000_create_wms_inventory_core.sql` (no aplicado) |
 | **Aurora playbook futuros** | `docs/AURORA-CONOCIMIENTO.md` |
 
 ---
@@ -179,7 +180,9 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–20 + Phase 0 + briefs 28–30 + 34–38 + **31–33** en esta rama.
+Fases 8–20 + Phase 0 + briefs 28–30 + 34–38 + 31–33 + **6–7 inventory ledger** en esta rama.
+
+**6–7 Inventory core / balance:** `applyInventoryTx` es la única mutación de stock. `available = on_hand − allocated − blocked − quarantined`. Semilla = RECEIPT de palets reales (sin seriales). SQL no aplicado. UOM/FEFO **siguen sin cablear** a `openWaveFromOrder`.
 
 **31 Productividad:** l/h, u/h, ped/h, accuracy, distancia estimada, min/tarea. Por picker/packer/carretilla/turno/zona/almacén. Código, no nombre.
 

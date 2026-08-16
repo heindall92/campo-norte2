@@ -14,7 +14,13 @@ Detalle de tablas futuras: [`DATABASE_PLAN.md`](./DATABASE_PLAN.md).
 
 `mps_reservations` = reservas de **viaje**. No usarla para holds de stock.
 
-Primera migration WMS (no aplicada): `supabase/migrations/20260816033000_create_wms_audit_logs.sql` — `wms_audit_logs` append-only. Convención:
+Migrations WMS (no aplicadas):
+
+- `20260816033000_create_wms_audit_logs.sql` — `wms_audit_logs` append-only
+- `20260816040000_wms_rls_tenant_warehouse.sql` — `wms_site_members`
+- `20260816053000_create_wms_inventory_core.sql` — products, uoms, lots, serials, balances, reservations, transactions, adjustments, counts + `apply_wms_inventory_tx` (lock de `revision`)
+
+Convención:
 
 ```
 supabase/migrations/YYYYMMDDHHMMSS_description.sql
@@ -51,4 +57,4 @@ Lock: `update wms_ledgers set revision = revision+1 … where revision = $espera
 
 ## Después (por módulo, no de golpe)
 
-Inventory balances, ASN lines, QC, packages, shipments, docks, yard, returns: ver `DATABASE_PLAN.md` oleada B. No crear tablas vacías en Phase 0.
+Inventory core (briefs 6–7) ya tiene SQL escrito, **no aplicado**. El dominio en cliente es la fuente hasta hidratar Postgres. ASN lines, QC, packages, shipments, docks, yard: ver `DATABASE_PLAN.md` oleada B.
