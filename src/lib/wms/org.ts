@@ -63,6 +63,16 @@ export function scopeSnapshotToOrg(snap: WmsSnapshot, orgId: string): WmsSnapsho
       const order = snap.outbound.find((o) => o.id === p.orderId);
       return order ? siteIds.has(order.siteId) : false;
     }),
+    shipments: (snap.shipments ?? []).filter((s) => {
+      const order = snap.outbound.find((o) => o.id === s.orderId);
+      return order ? siteIds.has(order.siteId) : false;
+    }),
+    trackingEvents: (snap.trackingEvents ?? []).filter((e) => {
+      const ship = (snap.shipments ?? []).find((s) => s.id === e.shipmentId);
+      if (!ship) return false;
+      const order = snap.outbound.find((o) => o.id === ship.orderId);
+      return order ? siteIds.has(order.siteId) : false;
+    }),
     memberships: (snap.memberships ?? []).filter((m) => m.organizationId === orgId),
     carriers: snap.carriers.filter((c) => c.orgId === orgId),
     movements: snap.movements.filter((m) => {
@@ -135,6 +145,16 @@ export function scopeSnapshotToWarehouse(snap: WmsSnapshot, siteId: string): Wms
     packStations: (scoped.packStations ?? []).filter((s) => siteIds.has(s.warehouseId)),
     packPackages: (scoped.packPackages ?? []).filter((p) => {
       const order = scoped.outbound.find((o) => o.id === p.orderId);
+      return order ? siteIds.has(order.siteId) : false;
+    }),
+    shipments: (scoped.shipments ?? []).filter((s) => {
+      const order = scoped.outbound.find((o) => o.id === s.orderId);
+      return order ? siteIds.has(order.siteId) : false;
+    }),
+    trackingEvents: (scoped.trackingEvents ?? []).filter((e) => {
+      const ship = (scoped.shipments ?? []).find((s) => s.id === e.shipmentId);
+      if (!ship) return false;
+      const order = scoped.outbound.find((o) => o.id === ship.orderId);
       return order ? siteIds.has(order.siteId) : false;
     }),
   };

@@ -1,5 +1,6 @@
 import { WMS_DEMO_NOW } from "./alerts";
 import { appendAuditLog } from "./audit";
+import { markShipmentPacked } from "./shipping";
 import type { PackPackage, PackStation, WmsSnapshot } from "./types";
 
 export type PackError =
@@ -223,7 +224,8 @@ export function openPackPackage(
     correlationId: pkg.id,
     timestamp: at,
   });
-  return { ok: true, snap: next, packageId: pkg.id, sscc: pkg.sscc };
+  const packed = markShipmentPacked(next, order.id, at);
+  return { ok: true, snap: packed.ok ? packed.snap : next, packageId: pkg.id, sscc: pkg.sscc };
 }
 
 function escHtml(v: string): string {

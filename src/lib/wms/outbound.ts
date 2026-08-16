@@ -1,5 +1,6 @@
 import { applyTxToSnapshot, findBalance, ledgerLocationForPallet, locationOfPallet } from "./inventory-core";
 import { isSsccTaken } from "./packing";
+import { markShipmentPacked, markShipmentShipped, markShipmentStaged } from "./shipping";
 import type { OutboundOrder, Pallet, PickLine, Slot, WmsSnapshot } from "./types";
 
 export type OutboundOpError =
@@ -277,7 +278,8 @@ export function packPickedLines(
     if (!led.ok) return { ok: false, error: "invalid_qty" };
     next = led.snap;
   }
-  return { ok: true, snap: next };
+  const packed = markShipmentPacked(next, orderId, at);
+  return { ok: true, snap: packed.ok ? packed.snap : next };
 }
 
 function cleanCartonSscc(value: string | null | undefined): string | null {
@@ -316,6 +318,12 @@ export function packPickLine(
   };
   const delta = qty - (line.qtyPacked ?? 0);
   const pallet = palletOf(snap, line.palletId);
+  const withPacked = (nextSnap: WmsSnapshot): OutboundOpResult => {
+    const order = snap.outbound.find((o) => o.code === line.orderCode);
+    if (!order) return { ok: true, snap: nextSnap };
+    const packed = markShipmentPacked(nextSnap, order.id);
+    return { ok: true, snap: packed.ok ? packed.snap : nextSnap };
+  };
   if (delta < 1 || !pallet) return { ok: true, snap: physical };
   const led = applyTxToSnapshot(physical, {
     type: "PACK",
@@ -331,7 +339,7 @@ export function packPickLine(
     id: `itx-PACK-${line.id}`,
   });
   if (!led.ok) return { ok: false, error: "invalid_qty" };
-  return { ok: true, snap: led.snap };
+  return withPacked(led.snap);
 }
 
 /** HTML del manifiesto para imprimir. No inventa SSCC ni tracking. */
@@ -489,7 +497,8 @@ export function stageOrderToDock(
     if (!led.ok) return { ok: false, error: "invalid_qty" };
     next = led.snap;
   }
-  return { ok: true, snap: next };
+  const staged = markShipmentStaged(next, order.id, at);
+  return { ok: true, snap: staged.ok ? staged.snap : next };
 }
 
 /**
@@ -571,5 +580,6 @@ export function shipOutboundOrder(
     if (!led.ok) return { ok: false, error: "invalid_qty" };
     next = led.snap;
   }
-  return { ok: true, snap: next };
+  const shipped = markShipmentShipped(next, orderId, at);
+  return { ok: true, snap: shipped.ok ? shipped.snap : next };
 }

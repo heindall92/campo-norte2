@@ -63,7 +63,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useState } from "react";
 import { WmsAssignSuperCard, WmsAisleTraceCard, WmsFloorHint, WmsLoadUnitCard, WmsMermaCard, WmsSlotFixCard } from "./WmsFloorBoard";
-import { WmsPackCard } from "./WmsPackAdmin";
+import { WmsPackCard, WmsShipCard } from "./WmsPackAdmin";
 import { WmsCopilot } from "./WmsCopilot";
 import { WmsModeBadge } from "./WmsModeBadge";
 import { WmsOpsMetrics } from "./WmsOpsMetrics";
@@ -581,6 +581,7 @@ export function WmsOutboundPanel({ lang }: { lang: Lang }) {
       <WmsAssignSuperCard lang={lang} />
       <WmsLoadUnitCard lang={lang} />
       <WmsPackCard lang={lang} />
+      <WmsShipCard lang={lang} />
       <WmsMermaCard lang={lang} />
       <WmsSlotFixCard lang={lang} />
       <WmsFloorHint lang={lang} />

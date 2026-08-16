@@ -416,6 +416,42 @@ export interface PackPackage {
   createdBy: string | null;
 }
 
+export const SHIPMENT_STATUSES = ["PACKED", "STAGED", "LOADED", "SHIPPED", "CANCELLED"] as const;
+export type ShipmentStatus = (typeof SHIPMENT_STATUSES)[number];
+
+export type TrackingEventSource = "user" | "mock";
+
+/**
+ * Expedición del pedido. Timestamps null hasta el evento real.
+ * Tracking null si nadie (ni el mock) lo escribe.
+ */
+export interface WmsShipment {
+  id: string;
+  orderId: string;
+  status: ShipmentStatus;
+  packedAt: string | null;
+  stagedAt: string | null;
+  loadedAt: string | null;
+  shippedAt: string | null;
+  cancelledAt: string | null;
+  carrierId: string | null;
+  tracking: string | null;
+  /** true si el tracking lo escribió el MockCarrierAdapter. */
+  mock: boolean;
+  packageIds: string[];
+  createdAt: string;
+}
+
+/** Evento de tracking. source=mock va etiquetado; no es SEUR/DHL. */
+export interface TrackingEvent {
+  id: string;
+  shipmentId: string;
+  at: string;
+  code: string;
+  note: string;
+  source: TrackingEventSource;
+}
+
 /** El patrón o un técnico asigna un súper (pedido) al código del operario. */
 export interface SuperAssignment {
   id: string;
@@ -499,6 +535,9 @@ export interface WmsSnapshot {
   packStations: PackStation[];
   /** Bultos de packing. Vacío en semilla. */
   packPackages: PackPackage[];
+  /** Expediciones. Vacío en semilla: se abren al embalar/cargar/expedir. */
+  shipments: WmsShipment[];
+  trackingEvents: TrackingEvent[];
   superAssignments: SuperAssignment[];
   mermaEvents: MermaEvent[];
   slotFixes: SlotFix[];

@@ -936,6 +936,8 @@ export function buildWmsSeed(): WmsSnapshot {
     replenishTasks: [],
     packStations: [],
     packPackages: [],
+    shipments: [],
+    trackingEvents: [],
     ...seedInventoryCore({
       orgId: CAMPO_NORTE_ORG.id,
       skus: SKUS,

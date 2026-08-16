@@ -2,6 +2,8 @@ import { Badge, Card } from "@/components/CrmChrome";
 import type { Lang } from "@/lib/i18n";
 import {
   addPackStation,
+  mockCarrierAdapter,
+  openMockLabelPrint,
   openPackPackage,
   openPackPackagePrint,
   setOrgSsccPrefix,
@@ -293,6 +295,126 @@ export function WmsPackCard({ lang }: { lang: Lang }) {
                   <Printer className="size-3.5" />
                   {lang === "es" ? "Imprimir" : "Print"}
                 </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+const SHIP_ERR: Record<string, { es: string; en: string }> = {
+  order_missing: { es: "Pedido no encontrado", en: "Order missing" },
+  order_done: { es: "Ese pedido ya salió", en: "That order already shipped" },
+  shipment_missing: { es: "No hay expedición", en: "No shipment" },
+  shipment_cancelled: { es: "Esa expedición está cancelada", en: "Shipment cancelled" },
+  already_shipped: { es: "Ya está expedido", en: "Already shipped" },
+};
+
+export function WmsShipCard({ lang }: { lang: Lang }) {
+  const { snap, commit } = useWmsLive();
+  const [orderId, setOrderId] = useState("");
+  const [tracking, setTracking] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const openOrders = snap.outbound.filter((o) => o.status !== "expedido");
+  const shipments = (snap.shipments ?? []).slice(0, 8);
+
+  return (
+    <Card
+      title={lang === "es" ? "Expedición · MockCarrierAdapter" : "Shipping · MockCarrierAdapter"}
+      subtitle={
+        lang === "es"
+          ? "Adapter etiquetado MOCK. El tracking solo se guarda si lo escribes. Expedir sin tracking sigue siendo válido. No es SEUR ni DHL."
+          : "MOCK-labelled adapter. Tracking is stored only if you type it. Shipping without tracking stays valid. Not SEUR or DHL."
+      }
+    >
+      <form
+        className="mb-3 grid gap-2 md:grid-cols-[1fr_1fr_auto]"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const result = mockCarrierAdapter.createShipment(snap, orderId, emptyToNull(tracking));
+          if (!result.ok) {
+            setMsg(SHIP_ERR[result.error]?.[lang] ?? result.error);
+            return;
+          }
+          commit(result.snap);
+          setMsg(null);
+          setTracking("");
+        }}
+      >
+        <select
+          required
+          value={orderId}
+          onChange={(e) => setOrderId(e.target.value)}
+          className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm"
+        >
+          <option value="">{lang === "es" ? "Pedido" : "Order"}</option>
+          {openOrders.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.code} · {o.customer}
+            </option>
+          ))}
+        </select>
+        <input
+          value={tracking}
+          onChange={(e) => setTracking(e.target.value)}
+          placeholder={lang === "es" ? "Tracking escrito (opcional)" : "Written tracking (optional)"}
+          className="rounded-xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-sm"
+        />
+        <button type="submit" className="rounded-full bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white">
+          {lang === "es" ? "Abrir MOCK" : "Open MOCK"}
+        </button>
+      </form>
+      {msg && <p className="mb-2 text-xs font-semibold text-[var(--danger)]">{msg}</p>}
+      {shipments.length === 0 ? (
+        <p className="text-sm text-[var(--ink-muted)]">
+          {lang === "es" ? "Ninguna expedición abierta." : "No open shipments."}
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {shipments.map((s) => {
+            const order = snap.outbound.find((o) => o.id === s.orderId);
+            return (
+              <li
+                key={s.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-sunken)] px-3 py-2"
+              >
+                <span className="text-sm">
+                  <span className="font-mono text-xs font-semibold">{order?.code ?? s.orderId}</span>
+                  {" · "}
+                  {s.status}
+                  <span className="mt-0.5 block text-[11px] text-[var(--ink-muted)]">
+                    {s.tracking ?? (lang === "es" ? "sin tracking" : "no tracking")}
+                    {s.mock ? " · MOCK" : ""}
+                  </span>
+                </span>
+                <span className="flex gap-1">
+                  <button
+                    type="button"
+                    className="rounded-full border border-[var(--glass-border)] px-3 py-1.5 text-xs font-semibold"
+                    onClick={() => openMockLabelPrint(snap, s.id, lang)}
+                  >
+                    {lang === "es" ? "Etiqueta MOCK" : "MOCK label"}
+                  </button>
+                  {s.status !== "SHIPPED" && s.status !== "CANCELLED" && (
+                    <button
+                      type="button"
+                      className="rounded-full border border-[var(--glass-border)] px-3 py-1.5 text-xs font-semibold"
+                      onClick={() => {
+                        const result = mockCarrierAdapter.cancelShipment(snap, s.id);
+                        if (!result.ok) {
+                          setMsg(SHIP_ERR[result.error]?.[lang] ?? result.error);
+                          return;
+                        }
+                        commit(result.snap);
+                        setMsg(null);
+                      }}
+                    >
+                      {lang === "es" ? "Cancelar" : "Cancel"}
+                    </button>
+                  )}
+                </span>
               </li>
             );
           })}
