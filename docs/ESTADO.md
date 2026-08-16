@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-16 · Cloud Agent · oleadas 1–2 (provider + ledger) + FEFO al abrir ola
+**Última actualización:** 2026-08-16 · Cloud Agent · oleada 3 holds + recuento 14 oleadas (0–13)
 
 ---
 
@@ -86,7 +86,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | 13 | IA contextual global + streaming + decay con fecha + detalle score + EN ESTA VISTA + FAB arrastrable | `AiAssistantHost`, `chat-stream.ts`, `coldBy*`, `ViewTotals` leads/reservas/clientes, `DraggableAiFab` |
 | 13b | Streaming también en pestaña Conocimiento | `KnowledgePanel` → `askKnowledgeStream` |
 
-**Verificación automática:** lint (warnings previos), `npm test` (**243**), `npm run build` — limpios.
+**Verificación automática:** lint (warnings previos), `npm test` (**246**), `npm run build` — limpios.
 
 **Decisiones de alcance (no son olvidos):**
 - **Núcleo = viajes + leads.** Todo lo demás deliberado → `docs/FUERA-DE-NUCLEO.md`.
@@ -175,6 +175,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | **Briefs 4–5 — tenant/RBAC** | `rbac.ts`, `tenant.ts`, `persist.ts`, SQL `20260816060000_create_wms_tenant_rbac.sql` (no aplicado) |
 | **Oleadas 1–2 — estado + ledger** | `WmsLiveProvider` en `main.tsx`. Push remoto cableado; demo en LS. SQL no aplicado. |
 | **FEFO al abrir ola** | `openWaveFromOrder` filtra caducado/cuarentena y ordena por expiry (`WMS_DEMO_NOW`) |
+| **Oleada 3 — holds** | Hold ALLOCATE al abrir ola; consume al picar; release al omitir; merma recorta |
 | **Aurora playbook futuros** | `docs/AURORA-CONOCIMIENTO.md` |
 
 ---
@@ -183,13 +184,13 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–20 + Phase 0 + briefs 28–38 + 31–33 + 6–7 + 4–5 + **oleadas 1–2 + FEFO** en esta rama.
+Fases 8–20 + Phase 0 + briefs 28–38 + 31–33 + 6–7 + 4–5 + oleadas 1–3 + FEFO en esta rama.
 
-**Oleadas 1–2 hechas en cliente:** un `WmsLiveProvider` (torre, pistola, centros). `saveWmsSnapshot` sigue en LS. En producción + Supabase, `commit` hace push a `wms_ledgers`; conflicto recarga remoto; **no se sube la semilla** si Postgres está vacío. SQL **no aplicado**. Badge `local | Postgres · rev N`.
+**Plan de oleadas:** **14** (0–13) en `docs/MIGRATION_PLAN.md`. Hechas: 0 auditoría, 1 estado compartido, 2 ledger cableado (SQL no aplicado), **3 holds**. Siguientes: 4 counts, 5 receiving/QC, 6 putaway/slotting, 7 replenishment MIN/MAX, 8 packing/SSCC, 9 shipping/mock carrier, 10 dock calendar, 11 yard, 12 returns, 13 mover carpetas.
 
-**FEFO al abrir ola:** caducado y cuarentena fuera; orden por expiry + FIFO de recepción. Reloj `WMS_DEMO_NOW`. **Sin auto-hold** al abrir (rompe `line.qty === pallet.qty`).
+**Oleada 3 hecha:** `openWaveFromOrder` llama `reserveStock`. `available = qty − held`. Picar consume; omitir/faltante libera; merma recorta el hold antes del ADJUSTMENT. Semilla histórica (wave-01) **sin** hold: no se inventa qty. No es ATP de ERP. No mezclar con `mps_reservations`.
 
-**Siguiente (UNA):** oleada 3 — holds al abrir ola (`reserveStock`) **o** receiving ASN lines. No inventar 50 SKU ni segunda empresa. No aplicar SQL en prod desde este agente.
+**Siguiente (UNA):** oleada 4 (sesiones de cycle-count) **o** oleada 5 (ASN lines + QC). No inventar 50 SKU ni segunda empresa. No aplicar SQL en prod desde este agente.
 
 **4–5 Multi-tenant + Postgres:** `organization → warehouses → zones/locations`. 11 roles WMS. `authorizeWms` / `actorFromAppUser`. SQL no aplicado. Un org.
 
@@ -211,7 +212,7 @@ Fases 8–20 + Phase 0 + briefs 28–38 + 31–33 + 6–7 + 4–5 + **oleadas 1�
 
 **38 Demo/prod:** `VITE_RUNTIME_MODE`. Demo = semilla sin infra. Prod = Supabase + auth estricta.
 
-UOM **sigue sin cablear** a la ola. Ledger Postgres no se aplica solo (código sí; migration no). Holds al abrir ola: no.
+UOM **sigue sin cablear** a la ola. Ledger Postgres no se aplica solo (código sí; migration no). Holds al abrir ola: **sí** (olas nuevas; semilla histórica sin hold).
 
 ### Plan B — repo público (fecha límite 2026-08-22)
 

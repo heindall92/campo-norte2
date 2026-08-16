@@ -44,7 +44,7 @@ Apertura de semilla: un RECEIPT por palet con qty > 0. Expedido = RECEIPT + SHIP
 2. `available = on_hand − allocated − blocked − quarantined`.
 3. Un lote es el `lot` del palet. No se inventan lotes extra.
 4. Ajuste solo con motivo (conteo, merma, slot-fix, edición de palet). Sin qty negativa salvo flag.
-5. UOM sigue puro (`uom.ts`). FEFO ordena candidatos al abrir ola; no reserva hold.
+5. UOM sigue puro (`uom.ts`). FEFO ordena candidatos al abrir ola; hold de palet al abrir.
 6. `serial_numbers` vacío: no fabricar series.
 
 ---
@@ -71,4 +71,4 @@ Antes de subir a 50+ SKU:
 | Inventory ledger | `inventory_transactions` + motor | Aplicar SQL + extraer de LS |
 | Balances | `inventory_balances` (proyección + lock de revisión) | Tabla viva en Postgres |
 | Lots | `lots[]` + campo en palet | Igual |
-| Reservations | hold de palet + ALLOCATE/DEALLOCATE | Consumir hold al picar en todas las UIs |
+| Reservations | hold al abrir ola + ALLOCATE/DEALLOCATE/consume | Semilla histórica sin hold (no inventar qty) |

@@ -77,11 +77,11 @@ docs(wms): …
 
 ### Oleada 3 — Reservas de stock
 
-**Qué:** `StockReservation` hold al abrir ola, consume al picar, release al omitir/faltante. `available = qty − held`. `suggest`/nuevas olas respetan available. Merma recorta holds si el físico baja.
+**Hecho (2026-08-16).** Hold al abrir ola, consume al picar, release al omitir/faltante. `available = qty − held`. Nuevas olas exigen available ≥ qty del palet. Merma recorta holds si el físico baja (antes del ADJUSTMENT).
 
-**Qué no:** ATP de ERP, promesas a cliente, segunda unidad de medida.
+**Qué no:** ATP de ERP, promesas a cliente, segunda unidad de medida. No se fabrican holds sobre las olas de semilla.
 
-**DoD:** tests de hold/consume/release; no se puede picar por encima de available; semilla vieja se rellena al normalizar **sin inventar qty**.
+**DoD:** tests de hold/consume/release/merma; 246 verdes.
 
 ---
 

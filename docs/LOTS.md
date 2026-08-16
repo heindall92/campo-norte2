@@ -8,9 +8,9 @@ El palet ya tiene `lot` + `expiry`. La torre avisa caducidad 7 días (`alerts.ts
 
 Al abrir una ola:
 
-- Fuera: `classifyLotAlert` EXPIRED o BLOCKED (cuarentena / expedido), `availableQty < 1`.
+- Fuera: `classifyLotAlert` EXPIRED o BLOCKED (cuarentena / expedido), `availableQty < pallet.qty`.
 - Orden: FEFO (menor `expiry`; sin fecha al final) y empate FIFO por `receivedAt`.
-- **No** se llama a `reserveStock` al abrir (los holds son oleada 3).
+- Hold de palet al abrir (`reserveStock`). No es ATP de ERP.
 
 ## Políticas
 

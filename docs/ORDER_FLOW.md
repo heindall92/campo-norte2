@@ -2,7 +2,7 @@
 
 ```
 OutboundOrder (pendiente)
-  → openWaveFromOrder          palets reales en pick face, FEFO, sin caducados
+  → openWaveFromOrder          palets reales, FEFO, hold ALLOCATE
   → PickWave (abierta / en_curso)
   → confirmPick | skip | shortage
   → packPickLine / LoadUnit    fleje + etiqueta escrita
@@ -16,7 +16,7 @@ Máquina del brief (`CREATED → … → SHIPPED | CANCELLED`): `src/lib/wms/ord
 Transición inválida → error. Cada éxito devuelve un registro `{ from, to, event, at }`.
 **No sustituye** el status español en la UI. Mapa: `pendiente=CREATED`, `picking=PICKING`, `embalaje=PACKING`, `muelle=STAGED`, `expedido=SHIPPED`. No se inventa `ALLOCATED` en la semilla.
 
-No hay entidad `Shipment` aparte. No hay allocation ATP: la ola coge palets libres de cara de picking, no caducados ni en cuarentena, ordenados FEFO, que no estén en otra ola abierta. Sin hold al abrir.
+No hay entidad `Shipment` aparte. La ola coge palets libres de cara de picking, no caducados ni en cuarentena, ordenados FEFO, con hold de palet al abrir. Sin ATP de ERP. `mps_reservations` son viajes.
 
 El súper lo asigna el patrón al **código de operario** (`OP-1903` = Jorge Peña), no al número del aparato. Ticket: súper + pasillo + hueco + cantidad.
 
@@ -35,6 +35,6 @@ El súper lo asigna el patrón al **código de operario** (`OP-1903` = Jorge Pe�
 
 | Phase brief | Pieza |
 |---|---|
-| 4 | Pedidos + holds (aún no) |
+| 4 | Pedidos + holds al abrir ola (hecho). Status ES no sustituido | Cablear transiciones de `order-state` |
 | 6 | Olas + picking (hecho en memoria) + replenishment MIN/MAX (no) |
 | 7 | Packing/SSCC/shipping (parcial: load unit + ship) |
