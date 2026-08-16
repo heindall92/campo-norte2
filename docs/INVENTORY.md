@@ -22,6 +22,7 @@ Unidad de ATP / ledger = **balance** por `(org, sku, lote, ubicación)` + **tran
 | `countSessions` / `countLines` | oleada 4 | Encima de `planCycleCounts`. Semilla vacía |
 | `asnLines` / `asnIncidents` | oleada 5 | Líneas escritas. Semilla vacía. QC en el palet |
 | `slottingRules` / `slottingRecommendations` | oleada 6 | Reglas escritas. Semilla vacía. Recomendación ≠ movimiento |
+| `replenishTasks` | oleada 7 | MIN/MAX + ola AUTO. Semilla vacía. No mueve sola |
 
 ### Regla de available
 
@@ -37,7 +38,7 @@ Apertura de semilla: un RECEIPT por palet con qty > 0. Expedido = RECEIPT + SHIP
 
 `movements[]` sigue siendo la bitácora de planta (RF/UI). No sustituye al ledger.
 
-`Sku` ya trae `uom`, `unitsPerPallet`, `minStock`, `maxStock`, `abc`. **min/max no disparan reposición.** FEFO sí filtra y ordena al abrir ola. UOM **no** convierte qty de línea.
+`Sku` ya trae `uom`, `unitsPerPallet`, `minStock`, `maxStock`, `abc`. **MIN/MAX dispara propuesta** (`replenish = max(0, max − current)` si current < min). AUTO no mueve sin operario. Pick face vacío sigue. UOM **no** convierte qty de línea.
 
 ---
 

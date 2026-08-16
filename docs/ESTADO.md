@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-16 · Cloud Agent · oleada 6 putaway/slotting
+**Última actualización:** 2026-08-16 · Cloud Agent · oleada 7 replenishment MIN/MAX
 
 ---
 
@@ -86,7 +86,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | 13 | IA contextual global + streaming + decay con fecha + detalle score + EN ESTA VISTA + FAB arrastrable | `AiAssistantHost`, `chat-stream.ts`, `coldBy*`, `ViewTotals` leads/reservas/clientes, `DraggableAiFab` |
 | 13b | Streaming también en pestaña Conocimiento | `KnowledgePanel` → `askKnowledgeStream` |
 
-**Verificación automática:** lint (warnings previos), `npm test` (**257**), `npm run build` — limpios.
+**Verificación automática:** lint (warnings previos), `npm test` (**261**), `npm run build` — limpios.
 
 **Decisiones de alcance (no son olvidos):**
 - **Núcleo = viajes + leads.** Todo lo demás deliberado → `docs/FUERA-DE-NUCLEO.md`.
@@ -179,6 +179,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 | **Oleada 4 — counts** | Sesión + líneas sobre `planCycleCounts`. Desvío = movimiento `ajuste` + audit |
 | **Oleada 5 — receiving/QC** | `asnLines` + incidencias + QC. Palet en cuarentena no pica. Semilla sin líneas inventadas |
 | **Oleada 6 — putaway/slotting** | Ranking zona/capacidad/familia/FEFO/% pasillo. Recomendación no mueve. Semilla sin reglas |
+| **Oleada 7 — MIN/MAX** | `max(0, máx−actual)` si actual < mín. AUTO no mueve sin operario. Pick face vacío se mantiene |
 | **Aurora playbook futuros** | `docs/AURORA-CONOCIMIENTO.md` |
 
 ---
@@ -187,13 +188,13 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS es semilla local (`seededFromDemo`), no se mezcla con cobros reales. Batería de flota y huella: sin telemetría inventada.
 
-Fases 8–20 + Phase 0 + briefs 28–38 + 31–33 + 6–7 + 4–5 + oleadas 1–6 + FEFO en esta rama.
+Fases 8–20 + Phase 0 + briefs 28–38 + 31–33 + 6–7 + 4–5 + oleadas 1–7 + FEFO en esta rama.
 
-**Plan de oleadas:** **14** (0–13) en `docs/MIGRATION_PLAN.md`. Hechas: 0 auditoría, 1 estado compartido, 2 ledger cableado (SQL no aplicado), 3 holds, 4 counts, 5 receiving/QC, **6 putaway/slotting**. Siguientes: 7 replenishment MIN/MAX, 8 packing/SSCC, 9 shipping/mock carrier, 10 dock calendar, 11 yard, 12 returns, 13 mover carpetas.
+**Plan de oleadas:** **14** (0–13) en `docs/MIGRATION_PLAN.md`. Hechas: 0–6 + **7 MIN/MAX**. Siguientes: 8 packing/SSCC, 9 shipping/mock carrier, 10 dock calendar, 11 yard, 12 returns, 13 mover carpetas.
 
-**Oleada 6 hecha:** `rankPutawayCandidates` (zona, capacidad, familia, FEFO, % viaje A/B/C). Incompatibles solo con reglas escritas (semilla vacía). `openSlottingRecommendation` no mueve el palet.
+**Oleada 7 hecha:** `minMaxReplenishQty(30, 100, 22) = 78`. Pick face vacío sigue. Ola encola AUTO. `applyReplenishTask` exige operario.
 
-**Siguiente (UNA):** oleada 7 — replenishment MIN/MAX. AUTO no mueve sin operario. No aplicar SQL en prod.
+**Siguiente (UNA):** oleada 8 — packing + SSCC. No GS1 de fantasía. No aplicar SQL en prod.
 
 **4–5 Multi-tenant + Postgres:** `organization → warehouses → zones/locations`. 11 roles WMS. `authorizeWms` / `actorFromAppUser`. SQL no aplicado. Un org.
 

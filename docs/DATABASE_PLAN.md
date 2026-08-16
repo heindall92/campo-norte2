@@ -193,7 +193,7 @@ Flujo: `ASN → ARRIVAL → DOCK → RECEIVING → QC → PUTAWAY → AVAILABLE`
 
 ### Replenishment (brief 15)
 
-No hace falta tabla nueva al inicio: `Sku.minStock` / `maxStock` ya están. Una `wms_replenishment_tasks` (`PLANNED\|URGENT\|AUTO`, origen ola o MIN/MAX) cuando el módulo se abra.
+No hace falta tabla nueva al inicio: `Sku.minStock` / `maxStock` ya están. Tareas en snapshot `replenishTasks` (`PLANNED|URGENT|AUTO`, origen ola o MIN/MAX). AUTO no mueve sin operario. SQL **no** aplicado.
 
 ### Putaway / slotting (18–19)
 

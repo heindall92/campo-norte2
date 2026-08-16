@@ -22,7 +22,7 @@ Cuarentena / QC no `APPROVED`: `confirmPick` → `pallet_quarantined`. La cola R
 
 1. No se reescribe esta UI en las oleadas de persistencia.
 2. El aparato no asigna por número de terminal.
-3. Reposición actual = pick face vacío + reserva encima + retráctil doble. MIN/MAX es Phase 6 del brief, encima de esto.
+3. Reposición = pick face vacío + reserva encima + retráctil doble, **más** MIN/MAX (`max(0, máx − actual)`). AUTO no mueve sin operario.
 4. Offline: cola `cn-wms-offline-q-v1`. Sin red no se toca stock. Al volver, `applyOfflineRfEvent` confirma o marca `conflict`. No hay un segundo snapshot inventado.
 
 ---

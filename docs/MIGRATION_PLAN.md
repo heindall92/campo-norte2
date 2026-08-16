@@ -117,11 +117,11 @@ docs(wms): …
 
 ### Oleada 7 — Replenishment MIN/MAX (brief 15)
 
-**Qué:** `replenish = max(0, maxStock − current)` si `current < minStock`. Tipos `PLANNED|URGENT|AUTO`. Seguir ofreciendo la reposición por pick face vacío (ya existe). Ola puede provocar reposición.
+**Hecho (2026-08-16).** `replenish = max(0, maxStock − current)` si `current < minStock`. Tipos `PLANNED|URGENT|AUTO`. Pick face vacío se mantiene. Abrir ola encola AUTO si el proyectado baja del mínimo. **AUTO no mueve sin operario.**
 
-**Qué no:** AUTO que mueva sin operario.
+**Qué no:** AUTO que mueva sin operario. Inventar palets de reserva.
 
-**DoD:** SKU con min 30 max 100 current 22 → propuesta 78; tests.
+**DoD:** SKU min 30 max 100 current 22 → 78; 261 verdes.
 
 ---
 

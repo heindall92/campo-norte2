@@ -17,7 +17,7 @@ Phase 0 del brief = auditoría. **Hecha.** El código de planta no se ha parado:
 | **3** | Inventory ledger + balances + lots | Motor + FEFO + holds al abrir ola. SQL no aplicado | Aplicar SQL |
 | **4** | Orders + allocation + reservations | Pedidos + holds de palet. `order-state.ts` no sustituye status ES | Cablear transiciones |
 | **5** | Receiving + ASN + putaway | ASN + QC + **ranking putaway/slotting** (oleadas 5–6) | — |
-| **6** | Waves + picking + replenishment | Olas + pick **hechos**. Reposición = cara vacía | MIN/MAX encima |
+| **6** | Waves + picking + replenishment | Olas + pick + **MIN/MAX** (oleada 7). Pick face vacío se mantiene | — |
 | **7** | Packing + SSCC + shipping | Load unit + ship. Sin SSCC gen / shipments | Adapter mock + registro SSCC |
 | **8** | Dock + yard + carriers | Dock texto + catálogo carriers | Calendar; yard vacío de semilla |
 | **9** | Returns + quality + cycle counting | Cycle-count con sesiones. QC ASN + cuarentena bloquea pick | Returns |
