@@ -9,6 +9,9 @@ import {
   overlayStock,
   productionBootstrapSnapshot,
   productionPlantSnapshot,
+  palletStockPayload,
+  ledgerStockPayload,
+  stockCommitBatches,
   stripStockForFloor,
   toPostgresOrgId,
   WMS_PG_ORG_ID,
@@ -102,6 +105,17 @@ describe("mapper overlay", () => {
     expect(plant.sites).toHaveLength(2);
     expect(plant.org.rlsMode).toBe("postgres");
     expect(plant.seededFromDemo).toBe(false);
+    const ssccs = plant.pallets.map((p) => p.sscc);
+    expect(new Set(ssccs).size).toBe(ssccs.length);
+    const batches = stockCommitBatches(palletStockPayload(plant), ledgerStockPayload(plant), 80);
+    expect(batches.some((b) => b.pallets.length > 0)).toBe(true);
+    expect(batches.filter((b) => b.pallets.length > 0).every((b) => b.ledger.length === 0)).toBe(true);
+    const palletIds = new Set(plant.pallets.map((p) => p.id));
+    for (const batch of batches) {
+      for (const tx of batch.ledger) {
+        if (tx.palletId) expect(palletIds.has(tx.palletId)).toBe(true);
+      }
+    }
   });
 
   it("bootstrap de producción no hereda palets demo", () => {

@@ -160,6 +160,27 @@ export function ledgerStockPayload(snap: WmsSnapshot) {
   });
 }
 
+export type StockCommitBatch = {
+  pallets: ReturnType<typeof palletStockPayload>;
+  ledger: ReturnType<typeof ledgerStockPayload>;
+};
+
+/** Palets primero, ledger después. Mezclarlos en el primer lote rompe el FK de HU. */
+export function stockCommitBatches(
+  pallets: ReturnType<typeof palletStockPayload>,
+  ledger: ReturnType<typeof ledgerStockPayload>,
+  chunk = 80,
+): StockCommitBatch[] {
+  const batches: StockCommitBatch[] = [];
+  for (let i = 0; i < pallets.length; i += chunk) {
+    batches.push({ pallets: pallets.slice(i, i + chunk), ledger: [] });
+  }
+  for (let i = 0; i < ledger.length; i += chunk) {
+    batches.push({ pallets: [], ledger: ledger.slice(i, i + chunk) });
+  }
+  return batches;
+}
+
 function syncSlots(slots: Slot[], pallets: Pallet[]): Slot[] {
   const bySlot = new Map<string, Pallet>();
   for (const p of pallets) {

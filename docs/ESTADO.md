@@ -166,9 +166,9 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS demo es semilla local (`seededFromDemo`). En PRODUCTION el stock vive en `wms_handling_units` + ledger. Batería de flota y huella: sin telemetría inventada.
 
-**Hecho (2026-08-16):** fases 0–14 + cierre producción + proyecto Supabase propio. Alta pública bloqueada (`signup_disabled`). Centros `site-sev` / `site-hue` en Postgres. El primer `load` de producción persiste el floor vacío (sin palets demo). Login Auth verificado.
+**Hecho (2026-08-16):** fases 0–14 en código. El primer login guardó el floor pero **falló el ledger** (FK de HU: se enviaba el diario con el primer lote de palets). Corregido: palets primero, ledger después; el RPC salta HU inexistente.
 
-**Siguiente:** producción en https://campo-norte2.vercel.app y `npm run dev` → `yoandy@campo-norte.es`. Recibir en Sevilla.
+**Siguiente:** recargar https://campo-norte2.vercel.app con `yoandy@campo-norte.es` (Ctrl+F5). Debe sembrar ~277 palets + ASN/olas. Recibir en Sevilla.
 
 **Phase 0** (2026-08-16): auditoría en `docs/ARCHITECTURE_AUDIT.md`, `TARGET_ARCHITECTURE.md`, `DATABASE_PLAN.md`, `MIGRATION_PLAN.md`.
 
