@@ -6,13 +6,16 @@ import {
   createDemoWmsAdapter,
   isDemoWmsEmail,
   mergeRfOutbox,
+  overlayFulfillment,
   overlayStock,
   productionBootstrapSnapshot,
   productionPlantSnapshot,
   palletStockPayload,
   ledgerStockPayload,
   stockCommitBatches,
+  stripFloorForPostgres,
   stripStockForFloor,
+  fulfillmentPayload,
   toPostgresOrgId,
   WMS_PG_ORG_ID,
   WMS_SNAPSHOT_ORG_ID,
@@ -185,6 +188,62 @@ describe("mapper overlay", () => {
     const other = scopeSnapshotToOrg(overlaid, "org-intruso");
     expect(other.pallets).toHaveLength(0);
     expect(scopeSnapshotToOrg(overlaid, seed.org.id).pallets.some((p) => p.id === live.id)).toBe(true);
+  });
+});
+
+describe("fulfillment overlay", () => {
+  it("tablas reemplazan pedidos y olas; jsonb se usa si las tablas están vacías", () => {
+    const plant = productionPlantSnapshot();
+    const payload = fulfillmentPayload(plant);
+    expect(payload.orders.length).toBe(plant.outbound.length);
+    expect(payload.asns.length).toBe(plant.inbound.length);
+    expect(payload.waves.length).toBe(plant.pickWaves.length);
+    expect(payload.pickTasks.length).toBe(plant.pickWaves.reduce((n, w) => n + w.lines.length, 0));
+    expect(payload.slots.length).toBe(plant.slots.length);
+
+    const stripped = stripFloorForPostgres(plant);
+    expect(stripped.outbound).toEqual([]);
+    expect(stripped.inbound).toEqual([]);
+    expect(stripped.pickWaves).toEqual([]);
+    expect(stripped.pallets.every((p) => p.qty === 0)).toBe(true);
+    expect(stripped.slots.length).toBe(plant.slots.length);
+
+    const empty = overlayFulfillment(stripped, {
+      orders: [],
+      asns: [],
+      waves: [],
+      pickTasks: [],
+    });
+    expect(empty.outbound).toEqual([]);
+
+    const restored = overlayFulfillment(stripped, payload);
+    expect(restored.outbound.map((o) => o.code).sort()).toEqual(plant.outbound.map((o) => o.code).sort());
+    expect(restored.inbound.map((a) => a.code).sort()).toEqual(plant.inbound.map((a) => a.code).sort());
+    expect(restored.pickWaves.map((w) => w.id).sort()).toEqual(plant.pickWaves.map((w) => w.id).sort());
+    const wave = plant.pickWaves[0]!;
+    expect(restored.pickWaves.find((w) => w.id === wave.id)?.lines.length).toBe(wave.lines.length);
+  });
+
+  it("hueco bloqueado sale de locations; ocupado lo decide el stock", () => {
+    const plant = productionPlantSnapshot();
+    const slot = plant.slots.find((s) => s.status === "ocupado") ?? plant.slots[0]!;
+    const overlaid = overlayFulfillment(plant, {
+      slots: [
+        {
+          code: slot.code,
+          siteId: slot.siteId,
+          zone: slot.zone,
+          aisle: slot.aisle,
+          rack: slot.rack,
+          level: slot.level,
+          position: slot.position,
+          pickFace: slot.pickFace,
+          status: "bloqueado",
+          capacityPallets: slot.capacityPallets,
+        },
+      ],
+    });
+    expect(overlaid.slots.find((s) => s.id === slot.id)?.status).toBe("bloqueado");
   });
 });
 

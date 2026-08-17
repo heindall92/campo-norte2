@@ -3,13 +3,18 @@ import { getSupabase } from "@/lib/supabase/client";
 import { snapshotLooksUsable } from "@/lib/wms/normalize";
 import type { InventoryTxType, PalletStatus, WmsSnapshot } from "@/lib/wms/types";
 import {
+  fulfillmentPayload,
+  overlayFulfillment,
+  stripFloorForPostgres,
+  type FulfillmentRows,
+} from "./fulfillment";
+import {
   ledgerStockPayload,
   overlayStock,
   palletStockPayload,
   productionBootstrapSnapshot,
   productionPlantSnapshot,
   stockCommitBatches,
-  stripStockForFloor,
   type HandlingUnitRow,
   type LedgerRow,
 } from "./mapper";
@@ -100,7 +105,7 @@ export function createPostgresWmsAdapter(): WmsPort {
         return local;
       }
       const organizationId = toPostgresOrgId(orgId);
-      const [{ data: floorRow }, { data: huRows }, { data: txRows }] = await Promise.all([
+      const [{ data: floorRow }, { data: huRows }, { data: txRows }, fillRes] = await Promise.all([
         sb.from("wms_floor_state").select("payload").eq("organization_id", organizationId).maybeSingle(),
         sb
           .from("wms_handling_units")
@@ -115,7 +120,10 @@ export function createPostgresWmsAdapter(): WmsPort {
           )
           .eq("organization_id", organizationId)
           .order("occurred_at", { ascending: true }),
+        sb.rpc("wms_load_fulfillment", { p_organization_id: organizationId }),
       ]);
+      if (fillRes.error) throw new Error(fillRes.error.message);
+      const fulfillment = fillRes.data;
 
       const payload = floorRow?.payload as WmsSnapshot | undefined;
       const husEmpty = (huRows ?? []).length === 0;
@@ -123,9 +131,14 @@ export function createPostgresWmsAdapter(): WmsPort {
         const plant = productionPlantSnapshot();
         const { error: bootErr } = await sb.rpc("wms_save_floor", {
           p_organization_id: organizationId,
-          p_floor: stripStockForFloor(plant),
+          p_floor: stripFloorForPostgres(plant),
         });
         if (bootErr) throw new Error(bootErr.message);
+        const { error: fillErr } = await sb.rpc("wms_save_fulfillment", {
+          p_organization_id: organizationId,
+          p_payload: fulfillmentPayload(plant),
+        });
+        if (fillErr) throw new Error(fillErr.message);
         await persistStock(sb, organizationId, plant);
         memory = plant;
         cacheSet(plant);
@@ -155,7 +168,10 @@ export function createPostgresWmsAdapter(): WmsPort {
         pallet_external_id: nestOne(row.wms_handling_units)?.external_id ?? null,
       }));
 
-      const next = overlayStock(floor, hus, ledger);
+      const next = overlayFulfillment(
+        overlayStock(floor, hus, ledger),
+        (fulfillment ?? null) as FulfillmentRows | null,
+      );
       memory = next;
       cacheSet(next);
       return next;
@@ -167,10 +183,14 @@ export function createPostgresWmsAdapter(): WmsPort {
       const sb = getSupabase();
       if (!sb) return;
       const organizationId = toPostgresOrgId(user?.organizationId ?? snap.org.id);
-      const floor = stripStockForFloor(snap);
+      const { error: fillErr } = await sb.rpc("wms_save_fulfillment", {
+        p_organization_id: organizationId,
+        p_payload: fulfillmentPayload(snap),
+      });
+      if (fillErr) throw new Error(fillErr.message);
       const { error: floorErr } = await sb.rpc("wms_save_floor", {
         p_organization_id: organizationId,
-        p_floor: floor,
+        p_floor: stripFloorForPostgres(snap),
       });
       if (floorErr) throw new Error(floorErr.message);
       await persistStock(sb, organizationId, snap);

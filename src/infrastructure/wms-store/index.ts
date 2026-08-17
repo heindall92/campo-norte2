@@ -23,6 +23,13 @@ export {
   stockCommitBatches,
 } from "./mapper";
 export {
+  fulfillmentPayload,
+  overlayFulfillment,
+  stripFulfillmentForFloor,
+  stripFloorForPostgres,
+  type FulfillmentRows,
+} from "./fulfillment";
+export {
   getRfOutboxStore,
   createMemoryRfOutbox,
   mergeRfOutbox,

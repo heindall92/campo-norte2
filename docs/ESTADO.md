@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-16 · Proyecto Almacen WMS vivo (`seilzoeciirzlvzbwhml`). Alta pública cerrada. Centros Sevilla/Huelva sembrados.
+**Última actualización:** 2026-08-17 · Pedidos/ASN/olas/huecos en tablas. Operario Lucía + ola RF abierta.
 
 ---
 
@@ -37,7 +37,8 @@ Si el chat y el repo se contradicen sobre marca o personas, **manda este archivo
 ### Acceso
 
 - Producción local: Auth del proyecto **Proyecto Almacen WMS**. Login demo **cerrado**.
-- Cuenta operativa: `yoandy@campo-norte.es` (pass en el chat / no en el repo). No usar `sofia@camponorte.demo`.
+- Cuenta operativa: `yoandy@campo-norte.es` (ADMIN; pass en el chat / no en el repo).
+- Operario planta: `lucia@campo-norte.es` (CRM `guide` / WMS `PICKER`; mismo nombre que `op-03` Lucía Navarro). Pass en el chat / no en el repo.
 - Dashboard: https://supabase.com/dashboard/project/seilzoeciirzlvzbwhml
 - Alta pública: **cerrada** (trigger `wms_guard_signup` + `wms_allowed_emails`). Un alta nueva exige insertar el email en esa tabla.
 
@@ -166,13 +167,19 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS demo es semilla local (`seededFromDemo`). En PRODUCTION el stock vive en `wms_handling_units` + ledger. Batería de flota y huella: sin telemetría inventada.
 
+**Hecho (2026-08-17):** operario Auth + ola RF + fulfillment relacional.
+- Alta `lucia@campo-norte.es` (PICKER, membership active, perfil `guide`, nombre `Lucía Navarro` = `op-03`).
+- Ola abierta Sevilla `WAVE-A-0818-06` (4 líneas, operario `op-03`) sobre palets reales. Pedido `OUT-260818-07`.
+- Pedidos/ASN/olas/tareas de pick/huecos salen a tablas (`wms_save_fulfillment` / `wms_load_fulfillment`). Stock sigue en HU + ledger. Floor jsonb: flota, operarios, layout de apoyo.
+- Conteos prod: 7 pedidos, 5 ASN, 6 olas, 4 pick tasks, 351 huecos.
+
+**Siguiente:** Ctrl+F5. Login Lucía → pistola RF (cola de pick). Yoandy sigue de admin. ASN abiertos igual.
+
 **Hecho (2026-08-16 noche):** jornada operativa persistida en Postgres.
 - Pedidos **expedidos:** OUT-SEV-8840/8841/8842/8838 y OUT-HUE-2201.
 - Olas **cerradas:** wave-01, wave-02, wave-rep, wave-hue.
 - Recepción: Sevilla ASN-02 3/16 y ASN-03 abierto 1/22; Huelva H1 8/18; helado `L26H1` en `G-02-02-1`.
 - Muelle residual vaciado. Conteo cíclico Sevilla sin merma (qty real). Overlay no pisa dos HU en un hueco.
-
-**Siguiente:** Ctrl+F5. Seguir ASN abiertos o pistola RF (cola de pick vacía: las olas ya están cerradas).
 
 **Phase 0** (2026-08-16): auditoría en `docs/ARCHITECTURE_AUDIT.md`, `TARGET_ARCHITECTURE.md`, `DATABASE_PLAN.md`, `MIGRATION_PLAN.md`.
 
@@ -198,14 +205,15 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 - Seed ≥50 SKU (`seed-catalog.ts`). Docs: `INVENTORY.md`, `ORDERS.md`, `RF.md`, `QA.md`, `RUNBOOK.md`, `ARCHITECTURE.md`.
 
 **Cierre producción** (2026-08-16): adapter, no reescritura. `confirmPick` se queda; cambia quién persiste.
-- `src/infrastructure/wms-store/`: `WmsPort` + Demo (localStorage) + Postgres (`wms_save_floor` / `wms_commit_stock`).
-- Stock NUNCA jsonb. Floor (olas/flota/huecos) en `wms_floor_state`. Overlay HU+ledger al cargar.
+- `src/infrastructure/wms-store/`: `WmsPort` + Demo (localStorage) + Postgres (`wms_save_floor` / `wms_commit_stock` / `wms_save_fulfillment`).
+- Stock NUNCA jsonb. Pedidos/ASN/olas/huecos en tablas. Floor jsonb: flota/operarios/layout.
+- Overlay al cargar: HU+ledger (`overlayStock`) y fulfillment (`overlayFulfillment`).
 - `canWriteWmsProduction`: false si `forceLocalHub()`, modo demo, `provider=local` o email `@camponorte.demo`.
 - RF: IndexedDB (`rf-idb.ts`) con fallback memoria (Vitest/node). Pistola usa `confirmRfTaskOrQueue`.
 - `useWmsLive` / centros / copiloto hablan el port, no SQL.
 - Migraciones aplicadas al proyecto **Proyecto Almacen WMS** (`seilzoeciirzlvzbwhml`), no a 30mps. Ledger: INSERT+SELECT, sin UPDATE/DELETE.
 - Prod local: `.env.development.local` con `VITE_WMS_MODE=production` + usuario Auth ADMIN en org `c0a1e000-0001-4000-8000-000000000001`.
-- Tests: **201**. `tsc -b` + `vite build` OK.
+- Tests: **205**. `tsc -b` + `vite build` OK.
 
 ### Plan B — repo público (fecha límite 2026-08-22)
 
