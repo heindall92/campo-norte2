@@ -1,6 +1,6 @@
 # QA WMS (Phase 14)
 
-Dual mode: DEMO = snapshot `cn-wms-hub-v8` + ledger hidratado. PRODUCTION = `VITE_WMS_MODE=production` + Supabase (tablas `wms_*`; RPCs de stock aún pendientes de cablear al adapter).
+Dual mode: DEMO = snapshot local + ledger hidratado. PRODUCTION = `VITE_WMS_MODE=production` + Supabase. Stock: `wms_commit_stock` (HU + ledger). Pedidos/ASN/olas/huecos: `wms_save_fulfillment` / `wms_load_fulfillment`. Floor (flota/operarios): `wms_save_floor`.
 
 Checklist:
 

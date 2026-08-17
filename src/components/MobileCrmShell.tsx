@@ -16,6 +16,7 @@ import { MobileNotificationsSheet } from "@/components/MobileNotificationsSheet"
 import { MobileEcosystemCarousel } from "@/components/MobileEcosystemCarousel";
 import { MobileHomeSummary } from "@/components/MobileHomeSummary";
 import { WmsMobileHome } from "@/components/wms/WmsMobileHome";
+import { WmsSyncBanner } from "@/components/wms/WmsSyncBanner";
 import { MobileClientsScreen } from "@/components/MobileClientsScreen";
 import { MobileBookingsScreen } from "@/components/MobileBookingsScreen";
 import { MobileLeadsScreen } from "@/components/MobileLeadsScreen";
@@ -487,6 +488,7 @@ export function MobileCrmShell({
           </div>
         </div>
       </header>
+      <WmsSyncBanner lang={lang} className="mx-4 mt-2" />
 
       {cuentaOpen ? (
         <div className="px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-3">

@@ -5,7 +5,7 @@
 > memoria. El chat no es memoria: este archivo sí. Si el chat y el repo se
 > contradicen, **manda el repo**.
 
-**Última actualización:** 2026-08-17 · Pedidos/ASN/olas/huecos en tablas. Operario Lucía + ola RF abierta.
+**Última actualización:** 2026-08-17 · Aviso si falla el save WMS. Pedido fantasma OUT-260818-06 a pendiente.
 
 ---
 
@@ -121,7 +121,8 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 - Modelos entrenados (regresión / Naive Bayes) — fuera hasta `mps_lead_outcomes`
   con filas reales.
-- Auth endurecido: desactivar alta pública; promover primer admin.
+- Backup/restore y alertas de RPC. Prueba multi-pestaña / dos roles a la vez.
+- Catálogo UI como lectura directa de `wms_products` (hoy overlay del snapshot).
 
 ---
 
@@ -167,13 +168,15 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 
 > **No inventar datos.** Tesorería / P&G / tracking / plantilla salen del Hub o de lo que el usuario escribe. El snapshot WMS demo es semilla local (`seededFromDemo`). En PRODUCTION el stock vive en `wms_handling_units` + ledger. Batería de flota y huella: sin telemetría inventada.
 
+**Hecho (2026-08-17 noche):** si el save/load WMS falla, aviso en pantalla y se recarga el stock de Postgres (no se queda el pick fantasma en UI). Pedido `OUT-260818-06` (ola vacía) vuelve a `pendiente`. Lucía no ve atajos de conteo/expedir.
+
 **Hecho (2026-08-17):** operario Auth + ola RF + fulfillment relacional.
 - Alta `lucia@campo-norte.es` (PICKER, membership active, perfil `guide`, nombre `Lucía Navarro` = `op-03`).
 - Ola abierta Sevilla `WAVE-A-0818-06` (4 líneas, operario `op-03`) sobre palets reales. Pedido `OUT-260818-07`.
 - Pedidos/ASN/olas/tareas de pick/huecos salen a tablas (`wms_save_fulfillment` / `wms_load_fulfillment`). Stock sigue en HU + ledger. Floor jsonb: flota, operarios, layout de apoyo.
 - Conteos prod: 7 pedidos, 5 ASN, 6 olas, 4 pick tasks, 351 huecos.
 
-**Siguiente:** Ctrl+F5. Login Lucía → pistola RF (cola de pick). Yoandy sigue de admin. ASN abiertos igual.
+**Siguiente:** Ctrl+F5. Login Lucía → pistola RF. Si Postgres rechaza un pick, sale aviso rojo y se recarga el stock real (ya no se queda solo en consola).
 
 **Hecho (2026-08-16 noche):** jornada operativa persistida en Postgres.
 - Pedidos **expedidos:** OUT-SEV-8840/8841/8842/8838 y OUT-HUE-2201.
@@ -213,7 +216,7 @@ Referencia conceptual: no hay código, marca ni assets de terceros.
 - `useWmsLive` / centros / copiloto hablan el port, no SQL.
 - Migraciones aplicadas al proyecto **Proyecto Almacen WMS** (`seilzoeciirzlvzbwhml`), no a 30mps. Ledger: INSERT+SELECT, sin UPDATE/DELETE.
 - Prod local: `.env.development.local` con `VITE_WMS_MODE=production` + usuario Auth ADMIN en org `c0a1e000-0001-4000-8000-000000000001`.
-- Tests: **205**. `tsc -b` + `vite build` OK.
+- Tests: **206**. `tsc -b` + `vite build` OK.
 
 ### Plan B — repo público (fecha límite 2026-08-22)
 

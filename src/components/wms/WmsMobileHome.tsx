@@ -1,5 +1,5 @@
 import { Badge } from "@/components/CrmChrome";
-import { useAuth } from "@/lib/auth";
+import { useAuth, userCanAccessSection } from "@/lib/auth";
 import type { Lang } from "@/lib/i18n";
 import type { AppSection } from "@/lib/notifications";
 import {
@@ -25,6 +25,8 @@ export function WmsMobileHome({
   const jornada = matched ? operatorJornada(snap, matched.id) : null;
   const siteId = matched?.siteId ?? snap.sites[0]?.id;
   const priorities = rankDayPriorities(snap, siteId).slice(0, 5);
+  const canShip = Boolean(user && userCanAccessSection(user, "expedicion"));
+  const canCount = Boolean(user && userCanAccessSection(user, "inventario"));
 
   return (
     <div className="space-y-3">
@@ -60,7 +62,7 @@ export function WmsMobileHome({
           <button
             type="button"
             className="text-xs font-semibold text-[var(--accent)]"
-            onClick={() => onNavigate("expedicion")}
+            onClick={() => onNavigate(canShip ? "expedicion" : "picking")}
           >
             {lang === "es" ? "Ver todas" : "See all"}
           </button>
@@ -123,22 +125,26 @@ export function WmsMobileHome({
           <ArrowLeftRight className="h-5 w-5 text-[var(--accent)]" />
           <span className="text-sm font-semibold">{lang === "es" ? "Ubicar" : "Putaway"}</span>
         </button>
-        <button
-          type="button"
-          onClick={() => onNavigate("inventario")}
-          className="flex min-h-[4.5rem] items-center gap-2 rounded-[1.15rem] bg-[var(--field-bg)] px-3 py-2 text-left shadow-sm"
-        >
-          <ClipboardCheck className="h-5 w-5 text-[var(--accent)]" />
-          <span className="text-sm font-semibold">{lang === "es" ? "Conteo" : "Count"}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => onNavigate("expedicion")}
-          className="flex min-h-[4.5rem] items-center gap-2 rounded-[1.15rem] bg-[var(--field-bg)] px-3 py-2 text-left shadow-sm"
-        >
-          <Truck className="h-5 w-5 text-[var(--accent)]" />
-          <span className="text-sm font-semibold">{lang === "es" ? "Expedir" : "Ship"}</span>
-        </button>
+        {canCount && (
+          <button
+            type="button"
+            onClick={() => onNavigate("inventario")}
+            className="flex min-h-[4.5rem] items-center gap-2 rounded-[1.15rem] bg-[var(--field-bg)] px-3 py-2 text-left shadow-sm"
+          >
+            <ClipboardCheck className="h-5 w-5 text-[var(--accent)]" />
+            <span className="text-sm font-semibold">{lang === "es" ? "Conteo" : "Count"}</span>
+          </button>
+        )}
+        {canShip && (
+          <button
+            type="button"
+            onClick={() => onNavigate("expedicion")}
+            className="flex min-h-[4.5rem] items-center gap-2 rounded-[1.15rem] bg-[var(--field-bg)] px-3 py-2 text-left shadow-sm"
+          >
+            <Truck className="h-5 w-5 text-[var(--accent)]" />
+            <span className="text-sm font-semibold">{lang === "es" ? "Expedir" : "Ship"}</span>
+          </button>
+        )}
       </div>
     </div>
   );

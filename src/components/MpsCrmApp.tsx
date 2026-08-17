@@ -215,6 +215,7 @@ import { WmsSitesPanel } from "@/components/wms/WmsSites";
 import { WmsRfGunPanel } from "@/components/wms/WmsRfGun";
 import { WmsPickingPanel, WmsSlotsPanel } from "@/components/wms/AislePicking";
 import { WmsCycleCountPanel, WmsMovementsPanel } from "@/components/wms/WmsLiveOps";
+import { WmsSyncBanner } from "@/components/wms/WmsSyncBanner";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Area,
@@ -4426,6 +4427,7 @@ export function MpsCrmApp() {
         />
 
         <main className="px-4 py-5 md:px-6 md:py-6">
+          <WmsSyncBanner lang={lang} />
           {canSeeSection ? sectionPanels : <PendingAccessNotice lang={lang} />}
           <AiAssistantHost lang={lang} />
 
